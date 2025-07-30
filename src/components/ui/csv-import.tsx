@@ -255,7 +255,7 @@ export function CsvImportDialog({
     try {
       await checkAuth();
       setDebugInfo("Autenticazione verificata. Riprova il caricamento.");
-    } catch (err) {
+    } catch {
       setError("Errore nella verifica dell'autenticazione. Effettua il login.");
       setDebugInfo("");
     }
@@ -303,7 +303,7 @@ export function CsvImportDialog({
   };
 
   // Helper per convertire qualsiasi valore in stringa sicura per il rendering
-  const safeStringify = (value: any): string => {
+  const safeStringify = (value: unknown): string => {
     if (value === null || value === undefined) return "N/A";
     if (typeof value === "string") return value;
     if (typeof value === "number" || typeof value === "boolean") return String(value);

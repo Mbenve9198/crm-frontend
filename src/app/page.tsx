@@ -5,6 +5,7 @@ import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, User } from "lucide-react";
+import { Contact } from "@/types/contact";
 
 function LoadingSpinner() {
   return (
@@ -20,7 +21,7 @@ function LoadingSpinner() {
 function Dashboard() {
   const { user, logout } = useAuth();
 
-  const handleEditContact = (contact: any) => {
+  const handleEditContact = (contact: Contact) => {
     console.log('Edit contact:', contact);
     // TODO: Implementare modal di modifica
   };
@@ -30,7 +31,7 @@ function Dashboard() {
     // TODO: Implementare conferma eliminazione
   };
 
-  const handleViewContact = (contact: any) => {
+  const handleViewContact = (contact: Contact) => {
     console.log('View contact:', contact);
     // TODO: Implementare modal di visualizzazione
   };
@@ -95,7 +96,7 @@ function Dashboard() {
 }
 
 export default function Home() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Mostra loading durante la verifica dell'autenticazione
   if (isLoading) {

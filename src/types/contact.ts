@@ -4,7 +4,7 @@ export type Contact = {
   email: string;
   phone?: string;
   lists: string[];
-  properties: Record<string, any>;
+  properties: Record<string, string | number | boolean>;
   owner: {
     _id: string;
     firstName: string;
@@ -69,7 +69,7 @@ export type ContactsResponse = {
   };
 };
 
-export type ApiResponse<T = any> = {
+export type ApiResponse<T = unknown> = {
   success: boolean;
   message?: string;
   data?: T;

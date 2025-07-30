@@ -1,5 +1,41 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters } from '@/types/contact';
 
+// Tipi per statistiche e paginazione
+type PaginationData = {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+type UserStats = {
+  totalUsers: number;
+  activeUsers: number;
+  usersByRole: Record<string, number>;
+  recentRegistrations: number;
+};
+
+type ContactStats = {
+  totalContacts: number;
+  contactsThisMonth: number;
+  contactsByOwner: Record<string, number>;
+  contactsByList: Record<string, number>;
+};
+
+type CsvAnalysisResult = {
+  columns: string[];
+  preview: Record<string, string>[];
+  rowCount: number;
+};
+
+type CsvImportResult = {
+  imported: number;
+  skipped: number;
+  updated: number;
+  errors: string[];
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 class ApiClient {
@@ -143,7 +179,7 @@ class ApiClient {
     department?: string;
     isActive?: boolean;
     search?: string;
-  } = {}): Promise<ApiResponse<{ users: User[]; pagination: any }>> {
+  } = {}): Promise<ApiResponse<{ users: User[]; pagination: PaginationData }>> {
     const queryParams = new URLSearchParams();
     
     Object.entries(filters).forEach(([key, value]) => {
@@ -153,7 +189,7 @@ class ApiClient {
     });
 
     const endpoint = `/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.request<{ users: User[]; pagination: any }>(endpoint);
+    return this.request<{ users: User[]; pagination: PaginationData }>(endpoint);
   }
 
   async getUsersForAssignment(): Promise<ApiResponse<{ users: User[] }>> {
@@ -166,16 +202,16 @@ class ApiClient {
     });
   }
 
-  async getUserStats(): Promise<ApiResponse<any>> {
+  async getUserStats(): Promise<ApiResponse<UserStats>> {
     return this.request('/users/stats');
   }
 
-  async getContactStats(): Promise<ApiResponse<any>> {
+  async getContactStats(): Promise<ApiResponse<ContactStats>> {
     return this.request('/contacts/stats');
   }
 
   // Metodo per l'upload CSV
-  async importCsvAnalyze(file: File): Promise<ApiResponse<any>> {
+  async importCsvAnalyze(file: File): Promise<ApiResponse<CsvAnalysisResult>> {
     const formData = new FormData();
     formData.append('csvFile', file);
 
@@ -199,7 +235,7 @@ class ApiClient {
     file: File, 
     mapping: Record<string, string>, 
     duplicateStrategy: 'skip' | 'update' = 'skip'
-  ): Promise<ApiResponse<any>> {
+  ): Promise<ApiResponse<CsvImportResult>> {
     const formData = new FormData();
     formData.append('csvFile', file);
     formData.append('mapping', JSON.stringify(mapping));
@@ -242,8 +278,9 @@ class ApiClient {
 export const apiClient = new ApiClient(API_BASE_URL);
 
 // Hook personalizzato per errori API comuni
-export const handleApiError = (error: any) => {
-  if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+export const handleApiError = (error: unknown) => {
+  if ((error instanceof Error && error.message?.includes('401')) || 
+      (error instanceof Error && error.message?.includes('Unauthorized'))) {
     // Token scaduto o non valido
     apiClient.setToken(null);
     if (typeof window !== 'undefined') {
@@ -252,7 +289,7 @@ export const handleApiError = (error: any) => {
   }
   
   console.error('API Error:', error);
-  return error.message || 'Errore sconosciuto';
+  return error instanceof Error ? error.message : 'Errore sconosciuto';
 };
 
 export default apiClient; 

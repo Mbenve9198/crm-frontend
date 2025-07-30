@@ -94,11 +94,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           error: response.message || 'Errore durante il login' 
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setState(prev => ({ ...prev, isLoading: false }));
       return { 
         success: false, 
-        error: error.message || 'Errore di connessione' 
+        error: error instanceof Error ? error.message : 'Errore di connessione' 
       };
     }
   };

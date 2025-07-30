@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
 import { apiClient, handleApiError } from "@/lib/api";
+import { User } from "@/types/contact";
 
 type LoginFormProps = {
-  onLoginSuccess?: (user: any) => void;
+  onLoginSuccess?: (user: User) => void;
 };
 
 export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
@@ -33,7 +34,7 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
       } else {
         setError(response.message || "Errore durante il login");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMessage = handleApiError(error);
       setError(errorMessage);
     } finally {

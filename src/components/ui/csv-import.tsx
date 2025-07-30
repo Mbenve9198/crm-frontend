@@ -145,7 +145,35 @@ export function CsvImportDialog({
       
       const response = await apiClient.importCsvAnalyze(file);
       
+      // DEBUG: Log completo della risposta
+      console.log('🔍 CSV Analysis Response:', response);
+      console.log('🔍 response.success:', response.success);
+      console.log('🔍 response.data:', response.data);
+      if (response.data) {
+        console.log('🔍 response.data.columns:', response.data.columns);
+        console.log('🔍 response.data.preview:', response.data.preview);
+        console.log('🔍 response.data.rowCount:', response.data.rowCount);
+        console.log('🔍 Tipo columns:', typeof response.data.columns);
+        console.log('🔍 Array.isArray(columns):', Array.isArray(response.data.columns));
+      }
+      
       if (response.success && response.data) {
+        // Verifica che la struttura sia corretta
+        if (!response.data.columns || !Array.isArray(response.data.columns)) {
+          console.error('❌ ERRORE: response.data.columns non è un array valido');
+          console.error('   - response.data.columns:', response.data.columns);
+          console.error('   - Tipo:', typeof response.data.columns);
+          throw new Error('Struttura dati non valida dal backend: mancano le colonne');
+        }
+        
+        if (!response.data.preview || !Array.isArray(response.data.preview)) {
+          console.error('❌ ERRORE: response.data.preview non è un array valido');
+          console.error('   - response.data.preview:', response.data.preview);
+          console.error('   - Tipo:', typeof response.data.preview);
+          throw new Error('Struttura dati non valida dal backend: manca l\'anteprima');
+        }
+        
+        console.log('✅ Struttura dati validata correttamente');
         setAnalysisResult(response.data);
         setCurrentStep("mapping");
         
@@ -450,30 +478,38 @@ export function CsvImportDialog({
 
       {/* Mappatura colonne */}
       <div className="space-y-3">
-        {analysisResult?.columns.map((column) => (
-          <div key={column} className="flex items-center gap-3">
-            <div className="flex-1">
-              <Badge variant="outline">{column}</Badge>
+        {analysisResult?.columns && Array.isArray(analysisResult.columns) ? (
+          analysisResult.columns.map((column) => (
+            <div key={column} className="flex items-center gap-3">
+              <div className="flex-1">
+                <Badge variant="outline">{column}</Badge>
+              </div>
+              <div className="flex-1">
+                <Select
+                  value={columnMapping[column] || ""}
+                  onValueChange={(value) => handleMappingChange(column, value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona campo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAllAvailableFields().map((field) => (
+                      <SelectItem key={field.value} value={field.value}>
+                        {field.label} {field.required && "(Obbligatorio)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="flex-1">
-              <Select
-                value={columnMapping[column] || ""}
-                onValueChange={(value) => handleMappingChange(column, value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona campo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAllAvailableFields().map((field) => (
-                    <SelectItem key={field.value} value={field.value}>
-                      {field.label} {field.required && "(Obbligatorio)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          ))
+        ) : (
+          <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <AlertTriangle className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+            <p className="text-yellow-800">Nessuna colonna trovata nel file CSV.</p>
+            <p className="text-sm text-yellow-600 mt-1">Verifica che il file contenga le intestazioni nella prima riga.</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* Strategia duplicati */}
@@ -519,26 +555,33 @@ export function CsvImportDialog({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {analysisResult?.preview.slice(0, 3).map((row, index) => (
-              <div key={index} className="p-3 border rounded-lg bg-gray-50">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {Object.entries(columnMapping).map(([csvCol, targetField]) => {
-                    if (targetField === "ignore") return null;
-                    return (
-                      <div key={csvCol}>
-                        <span className="font-medium">
-                          {targetField.startsWith("properties.") 
-                            ? targetField.replace("properties.", "").charAt(0).toUpperCase() + targetField.replace("properties.", "").slice(1)
-                            : AVAILABLE_FIELDS.find(f => f.value === targetField)?.label || targetField
-                          }:
-                        </span>{" "}
-                        <span className="text-gray-600">{row[csvCol] || "N/A"}</span>
-                      </div>
-                    );
-                  })}
+            {analysisResult?.preview && Array.isArray(analysisResult.preview) ? (
+              analysisResult.preview.slice(0, 3).map((row, index) => (
+                <div key={index} className="p-3 border rounded-lg bg-gray-50">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    {Object.entries(columnMapping).map(([csvCol, targetField]) => {
+                      if (targetField === "ignore") return null;
+                      return (
+                        <div key={csvCol}>
+                          <span className="font-medium">
+                            {targetField.startsWith("properties.") 
+                              ? targetField.replace("properties.", "").charAt(0).toUpperCase() + targetField.replace("properties.", "").slice(1)
+                              : AVAILABLE_FIELDS.find(f => f.value === targetField)?.label || targetField
+                            }:
+                          </span>{" "}
+                          <span className="text-gray-600">{row[csvCol] || "N/A"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="text-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+                <p className="text-yellow-800">Nessun dato di anteprima disponibile.</p>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>

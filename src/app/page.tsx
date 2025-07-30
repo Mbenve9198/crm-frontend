@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
@@ -8,6 +8,7 @@ import { CsvImportDialog } from "@/components/ui/csv-import";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, User, Upload } from "lucide-react";
 import { Contact } from "@/types/contact";
+import { apiClient } from "@/lib/api";
 
 function LoadingSpinner() {
   return (
@@ -23,15 +24,53 @@ function LoadingSpinner() {
 function Dashboard() {
   const { user, logout } = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const [contactsError, setContactsError] = useState<string | null>(null);
+
+  // Carica i contatti dal database
+  const loadContacts = async () => {
+    try {
+      setIsLoadingContacts(true);
+      setContactsError(null);
+      
+      console.log('🔄 Caricamento contatti dal database...');
+      const response = await apiClient.getContacts();
+      
+      if (response.success && response.data) {
+        console.log('✅ Contatti caricati:', response.data.contacts.length);
+        setContacts(response.data.contacts);
+      } else {
+        throw new Error('Errore nel caricamento contatti');
+      }
+    } catch (error) {
+      console.error('❌ Errore caricamento contatti:', error);
+      setContactsError(error instanceof Error ? error.message : 'Errore sconosciuto');
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
+  // Carica i contatti al mount e quando refreshKey cambia
+  useEffect(() => {
+    loadContacts();
+  }, [refreshKey]);
 
   const handleEditContact = (contact: Contact) => {
     console.log('Edit contact:', contact);
     // TODO: Implementare modal di modifica
   };
 
-  const handleDeleteContact = (contactId: string) => {
+  const handleDeleteContact = async (contactId: string) => {
     console.log('Delete contact:', contactId);
-    // TODO: Implementare conferma eliminazione
+    // TODO: Implementare conferma eliminazione e chiamata API
+    try {
+      await apiClient.deleteContact(contactId);
+      // Ricarica i contatti dopo eliminazione
+      setRefreshKey(prev => prev + 1);
+    } catch (error) {
+      console.error('Errore eliminazione contatto:', error);
+    }
   };
 
   const handleViewContact = (contact: Contact) => {
@@ -41,6 +80,7 @@ function Dashboard() {
 
   const handleImportComplete = () => {
     // Aggiorna la tabella contatti dopo l'importazione
+    console.log('📥 Import CSV completato, ricarico contatti...');
     setRefreshKey(prev => prev + 1);
   };
 
@@ -105,8 +145,26 @@ function Dashboard() {
           </div>
         </div>
         
+        {/* Errore caricamento contatti */}
+        {contactsError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 text-red-800">
+              <span className="font-medium">Errore caricamento contatti:</span>
+              <span>{contactsError}</span>
+            </div>
+            <button 
+              onClick={loadContacts}
+              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+            >
+              Riprova
+            </button>
+          </div>
+        )}
+        
         <ContactsTable
           key={refreshKey}
+          contacts={contacts}
+          isLoading={isLoadingContacts}
           onEditContact={handleEditContact}
           onDeleteContact={handleDeleteContact}
           onViewContact={handleViewContact}

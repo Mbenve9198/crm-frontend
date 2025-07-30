@@ -54,7 +54,7 @@ type ImportStep = "upload" | "mapping" | "preview" | "importing" | "complete";
 
 const AVAILABLE_FIELDS = [
   { value: "name", label: "Nome", required: true },
-  { value: "email", label: "Email", required: true },
+  { value: "email", label: "Email", required: false },
   { value: "phone", label: "Telefono", required: false },
   { value: "lists", label: "Liste (separate da virgola)", required: false },
 ];
@@ -327,7 +327,7 @@ export function CsvImportDialog({
 
   const handlePreview = () => {
     if (!validateMapping()) {
-      setError("I campi Nome ed Email sono obbligatori");
+      setError("Il campo Nome è obbligatorio");
       return;
     }
     setCurrentStep("preview");
@@ -457,7 +457,7 @@ export function CsvImportDialog({
       <div className="text-center text-sm text-gray-500 space-y-1">
         <p>📋 <strong>Formato supportato:</strong> CSV (massimo 5MB)</p>
         <p>📝 <strong>Requisiti:</strong> Prima riga deve contenere i nomi delle colonne</p>
-        <p>✅ <strong>Campi obbligatori:</strong> Nome ed Email</p>
+        <p>✅ <strong>Campo obbligatorio:</strong> Nome</p>
       </div>
     </div>
   );
@@ -467,7 +467,7 @@ export function CsvImportDialog({
       <div>
         <h3 className="text-lg font-medium mb-2">Mappatura Colonne</h3>
         <p className="text-sm text-gray-600">
-          Associa le colonne del tuo CSV ai campi del CRM. I campi Nome ed Email sono obbligatori.
+          Associa le colonne del tuo CSV ai campi del CRM. Solo il campo Nome è obbligatorio.
         </p>
       </div>
 

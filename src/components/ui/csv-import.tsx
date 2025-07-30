@@ -366,7 +366,7 @@ export function CsvImportDialog({
       <div>
         <h3 className="text-lg font-medium mb-2">Anteprima Importazione</h3>
         <p className="text-sm text-gray-600">
-          Verifica i dati prima dell'importazione. Saranno importati {analysisResult?.rowCount} contatti.
+          Verifica i dati prima dell&apos;importazione. Saranno importati {analysisResult?.rowCount} contatti.
         </p>
       </div>
 
@@ -473,7 +473,7 @@ export function CsvImportDialog({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <div>
-            <p className="font-medium">Errori durante l'importazione:</p>
+            <p className="font-medium">Errori durante l&apos;importazione:</p>
             <ul className="list-disc list-inside text-sm mt-1">
               {importResult.errors.map((error, index) => (
                 <li key={index}>{error}</li>

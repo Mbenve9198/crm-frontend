@@ -6,19 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react";
-import { apiClient, handleApiError } from "@/lib/api";
-import { User } from "@/types/contact";
+import { useAuth } from "@/context/AuthContext";
 
-type LoginFormProps = {
-  onLoginSuccess?: (user: User) => void;
-};
-
-export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
+export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,17 +23,15 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const response = await apiClient.login(email, password);
+      const result = await login(email, password);
       
-      if (response.success && response.data) {
-        // Login riuscito
-        onLoginSuccess?.(response.data.user);
-      } else {
-        setError(response.message || "Errore durante il login");
+      if (!result.success) {
+        setError(result.error || "Errore durante il login");
       }
+      // Se il login ha successo, AuthContext gestirà automaticamente 
+      // l'aggiornamento dello stato e il redirect
     } catch (error: unknown) {
-      const errorMessage = handleApiError(error);
-      setError(errorMessage);
+      setError(error instanceof Error ? error.message : "Errore sconosciuto");
     } finally {
       setIsLoading(false);
     }

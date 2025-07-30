@@ -119,37 +119,58 @@ class ApiClient {
       body: JSON.stringify({ email, password }),
     });
 
+    // Debug dettagliato della risposta
+    console.log('📋 Risposta login completa:', response);
+    console.log('📋 response.success:', response.success);
+    console.log('📋 response.data:', response.data);
+    
+    if (response.data) {
+      console.log('📋 response.data.user:', response.data.user);
+      console.log('📋 response.data.token:', response.data.token);
+      console.log('📋 Tipo response.data.token:', typeof response.data.token);
+    }
+
     // Salva il token con verifica dettagliata
     if (response.success && response.data?.token) {
       const newToken = response.data.token;
       console.log('💾 ApiClient.login: Salvando token...');
-      console.log('Token da salvare:', newToken.substring(0, 20) + '...');
+      console.log('Token da salvare (type):', typeof newToken);
+      console.log('Token da salvare (length):', newToken?.length);
       
-      // Salva in memoria
-      this.token = newToken;
-      console.log('✅ Token salvato in memoria apiClient');
-      
-      // Salva in localStorage con verifica
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('auth_token', newToken);
-          console.log('✅ Token salvato in localStorage');
-          
-          // Verifica immediata che sia stato salvato
-          const verificaToken = localStorage.getItem('auth_token');
-          if (verificaToken === newToken) {
-            console.log('✅ Verifica localStorage: Token salvato correttamente');
-          } else {
-            console.error('❌ Verifica localStorage: Token NON salvato correttamente!');
-            console.error('Atteso:', newToken.substring(0, 20) + '...');
-            console.error('Trovato:', verificaToken ? verificaToken.substring(0, 20) + '...' : 'NULL');
+      if (typeof newToken === 'string' && newToken.length > 0) {
+        console.log('Token da salvare:', newToken.substring(0, 20) + '...');
+        
+        // Salva in memoria
+        this.token = newToken;
+        console.log('✅ Token salvato in memoria apiClient');
+        
+        // Salva in localStorage con verifica
+        if (typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('auth_token', newToken);
+            console.log('✅ Token salvato in localStorage');
+            
+            // Verifica immediata che sia stato salvato
+            const verificaToken = localStorage.getItem('auth_token');
+            if (verificaToken === newToken) {
+              console.log('✅ Verifica localStorage: Token salvato correttamente');
+            } else {
+              console.error('❌ Verifica localStorage: Token NON salvato correttamente!');
+              console.error('Atteso:', newToken.substring(0, 20) + '...');
+              console.error('Trovato:', verificaToken ? verificaToken.substring(0, 20) + '...' : 'NULL');
+            }
+          } catch (error) {
+            console.error('❌ Errore salvando in localStorage:', error);
           }
-        } catch (error) {
-          console.error('❌ Errore salvando in localStorage:', error);
         }
+      } else {
+        console.error('❌ Token non valido: tipo =', typeof newToken, ', length =', newToken?.length);
       }
     } else {
       console.log('❌ ApiClient.login: Nessun token nella risposta');
+      console.log('   - response.success:', response.success);
+      console.log('   - response.data:', response.data);
+      console.log('   - response.data?.token:', response.data?.token);
     }
 
     return response;

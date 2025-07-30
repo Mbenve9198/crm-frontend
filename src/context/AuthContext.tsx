@@ -121,30 +121,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (response.success && response.data) {
         const token = response.data.token;
         console.log('✅ Login riuscito, token ricevuto');
-        console.log('Token ricevuto:', token.substring(0, 20) + '...');
         
-        // Verifica immediata che il token sia stato salvato
-        const savedToken = apiClient.getToken();
-        const storageToken = localStorage.getItem('auth_token');
-        
-        console.log('Token in apiClient dopo login:', savedToken ? savedToken.substring(0, 20) + '...' : 'ERRORE: NESSUNO');
-        console.log('Token in localStorage dopo login:', storageToken ? storageToken.substring(0, 20) + '...' : 'ERRORE: NESSUNO');
-        
-        if (!savedToken || !storageToken) {
-          console.error('❌ ERRORE CRITICO: Token non salvato correttamente!');
-          throw new Error('Errore nel salvataggio del token');
+        // Verifica sicura del token
+        if (token && typeof token === 'string' && token.length > 0) {
+          console.log('Token ricevuto:', token.substring(0, 20) + '...');
+          
+          // Verifica immediata che il token sia stato salvato
+          const savedToken = apiClient.getToken();
+          const storageToken = localStorage.getItem('auth_token');
+          
+          console.log('Token in apiClient dopo login:', savedToken ? savedToken.substring(0, 20) + '...' : 'ERRORE: NESSUNO');
+          console.log('Token in localStorage dopo login:', storageToken ? storageToken.substring(0, 20) + '...' : 'ERRORE: NESSUNO');
+          
+          if (!savedToken || !storageToken) {
+            console.error('❌ ERRORE CRITICO: Token non salvato correttamente!');
+            throw new Error('Errore nel salvataggio del token');
+          }
+          
+          // Aggiorna lo stato SUBITO senza chiamare checkAuth
+          console.log('🎯 Aggiornando stato AuthContext direttamente');
+          setState({
+            user: response.data.user,
+            isLoading: false,
+            isAuthenticated: true,
+          });
+          
+          console.log('✅ Login completato, stato aggiornato');
+          return { success: true };
+        } else {
+          console.error('❌ ERRORE: Token non valido dal backend');
+          console.error('   - Tipo token:', typeof token);
+          console.error('   - Lunghezza token:', token?.length);
+          console.error('   - Valore token:', token);
+          throw new Error('Token non valido ricevuto dal backend');
         }
-        
-        // Aggiorna lo stato SUBITO senza chiamare checkAuth
-        console.log('🎯 Aggiornando stato AuthContext direttamente');
-        setState({
-          user: response.data.user,
-          isLoading: false,
-          isAuthenticated: true,
-        });
-        
-        console.log('✅ Login completato, stato aggiornato');
-        return { success: true };
         
       } else {
         setState(prev => ({ ...prev, isLoading: false }));

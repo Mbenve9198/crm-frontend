@@ -27,19 +27,31 @@ function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
   const [contactsError, setContactsError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalContacts: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [currentLimit, setCurrentLimit] = useState(10);
 
   // Carica i contatti dal database
-  const loadContacts = async () => {
+  const loadContacts = async (page: number = 1, limit: number = 10) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log('🔄 Caricamento contatti dal database...');
-      const response = await apiClient.getContacts();
+      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}`);
+      const response = await apiClient.getContacts({
+        page,
+        limit
+      });
       
       if (response.success && response.data) {
         console.log('✅ Contatti caricati:', response.data.contacts.length);
         setContacts(response.data.contacts);
+        setPagination(response.data.pagination);
       } else {
         throw new Error('Errore nel caricamento contatti');
       }
@@ -53,8 +65,19 @@ function Dashboard() {
 
   // Carica i contatti al mount e quando refreshKey cambia
   useEffect(() => {
-    loadContacts();
+    loadContacts(pagination.currentPage, currentLimit);
   }, [refreshKey]);
+
+  // Gestione cambio pagina
+  const handlePageChange = (newPage: number) => {
+    loadContacts(newPage, currentLimit);
+  };
+
+  // Gestione cambio limite per pagina
+  const handleLimitChange = (newLimit: number) => {
+    setCurrentLimit(newLimit);
+    loadContacts(1, newLimit); // Torna alla prima pagina con il nuovo limite
+  };
 
   const handleEditContact = (contact: Contact) => {
     console.log('Edit contact:', contact);
@@ -153,7 +176,7 @@ function Dashboard() {
               <span>{contactsError}</span>
             </div>
             <button 
-              onClick={loadContacts}
+              onClick={() => loadContacts(pagination.currentPage, currentLimit)}
               className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
             >
               Riprova
@@ -165,9 +188,13 @@ function Dashboard() {
           key={refreshKey}
           contacts={contacts}
           isLoading={isLoadingContacts}
+          pagination={pagination}
+          currentLimit={currentLimit}
           onEditContact={handleEditContact}
           onDeleteContact={handleDeleteContact}
           onViewContact={handleViewContact}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
         />
       </main>
     </div>

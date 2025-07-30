@@ -41,152 +41,13 @@ import {
 } from "lucide-react";
 import { Contact } from "@/types/contact";
 
-// Dati mock per il development - verranno sostituiti con chiamate API
-const mockContacts: Contact[] = [
-  {
-    _id: "1",
-    name: "Mario Rossi",
-    email: "mario.rossi@email.com",
-    phone: "+39 123 456 7890",
-    lists: ["clienti", "newsletter"],
-    properties: {
-      company: "Acme Corp",
-      notes: "Cliente VIP",
-      lastContact: "2024-01-15"
-    },
-    owner: {
-      _id: "owner1",
-      firstName: "Marco",
-      lastName: "Benvenuti",
-      email: "marco@menuchat.com",
-      role: "admin"
-    },
-    createdBy: {
-      _id: "creator1",
-      firstName: "Federico",
-      lastName: "MenuChat",
-      email: "federico@menuchat.com"
-    },
-    createdAt: "2024-01-10T10:00:00Z",
-    updatedAt: "2024-01-15T15:30:00Z"
-  },
-  {
-    _id: "2", 
-    name: "Anna Verdi",
-    email: "anna.verdi@company.com",
-    phone: "+39 987 654 3210",
-    lists: ["prospects", "webinar"],
-    properties: {
-      company: "Tech Solutions",
-      source: "Website",
-      interest: "Premium Plan"
-    },
-    owner: {
-      _id: "owner2",
-      firstName: "Federico",
-      lastName: "MenuChat", 
-      email: "federico@menuchat.com",
-      role: "manager"
-    },
-    createdBy: {
-      _id: "creator1",
-      firstName: "Marco",
-      lastName: "Benvenuti",
-      email: "marco@menuchat.com"
-    },
-    createdAt: "2024-01-12T14:20:00Z",
-    updatedAt: "2024-01-18T09:15:00Z"
-  },
-  {
-    _id: "3",
-    name: "Luca Bianchi", 
-    email: "luca.bianchi@startup.io",
-    lists: ["clienti", "tech"],
-    properties: {
-      company: "Innovation Startup",
-      role: "CTO",
-      budget: "€50,000"
-    },
-    owner: {
-      _id: "owner1",
-      firstName: "Marco", 
-      lastName: "Benvenuti",
-      email: "marco@menuchat.com",
-      role: "admin"
-    },
-    createdBy: {
-      _id: "creator2", 
-      firstName: "Federico",
-      lastName: "MenuChat",
-      email: "federico@menuchat.com"
-    },
-    createdAt: "2024-01-08T16:45:00Z",
-    updatedAt: "2024-01-20T11:00:00Z"
-  },
-  {
-    _id: "4",
-    name: "Giulia Neri",
-    email: "giulia.neri@marketing.com", 
-    phone: "+39 555 123 4567",
-    lists: ["newsletter", "marketing"],
-    properties: {
-      company: "Marketing Pro",
-      department: "Digital Marketing",
-      meetingScheduled: "2024-02-01"
-    },
-    owner: {
-      _id: "owner2",
-      firstName: "Federico",
-      lastName: "MenuChat",
-      email: "federico@menuchat.com", 
-      role: "manager"
-    },
-    createdBy: {
-      _id: "creator1",
-      firstName: "Marco",
-      lastName: "Benvenuti", 
-      email: "marco@menuchat.com"
-    },
-    createdAt: "2024-01-14T08:30:00Z",
-    updatedAt: "2024-01-22T14:45:00Z"
-  },
-  {
-    _id: "5",
-    name: "Roberto Ferrari",
-    email: "roberto.ferrari@finance.com",
-    phone: "+39 333 987 6543", 
-    lists: ["clienti", "finance"],
-    properties: {
-      company: "Finance Group",
-      position: "CFO",
-      dealValue: "€100,000",
-      priority: "High"
-    },
-    owner: {
-      _id: "owner1",
-      firstName: "Marco",
-      lastName: "Benvenuti",
-      email: "marco@menuchat.com",
-      role: "admin"
-    },
-    createdBy: {
-      _id: "creator1", 
-      firstName: "Marco",
-      lastName: "Benvenuti",
-      email: "marco@menuchat.com"
-    },
-    createdAt: "2024-01-05T12:15:00Z",
-    updatedAt: "2024-01-25T10:30:00Z"
-  }
-];
-
-const allColumns = [
+// Colonne fisse base
+const baseColumns = [
   "Contact",
   "Email", 
   "Phone",
   "Owner",
   "Lists",
-  "Company",
   "Created",
   "Actions"
 ] as const;
@@ -194,19 +55,52 @@ const allColumns = [
 type ContactsTableProps = {
   contacts?: Contact[];
   isLoading?: boolean;
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    totalContacts: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
   onEditContact?: (contact: Contact) => void;
   onDeleteContact?: (contactId: string) => void;
   onViewContact?: (contact: Contact) => void;
+  onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+  currentLimit?: number;
 };
 
+// Funzione per estrarre tutte le proprietà dinamiche disponibili
+function extractDynamicProperties(contacts: Contact[]): string[] {
+  const propertySet = new Set<string>();
+  
+  contacts.forEach(contact => {
+    if (contact.properties) {
+      Object.keys(contact.properties).forEach(key => {
+        propertySet.add(key);
+      });
+    }
+  });
+  
+  return Array.from(propertySet).sort();
+}
+
 function ContactsTable({ 
-  contacts = mockContacts,
+  contacts = [],
   isLoading = false,
+  pagination,
   onEditContact,
   onDeleteContact, 
-  onViewContact
+  onViewContact,
+  onPageChange,
+  onLimitChange,
+  currentLimit = 10
 }: ContactsTableProps) {
-  const [visibleColumns, setVisibleColumns] = useState<string[]>([...allColumns]);
+  // Genera colonne dinamiche dalle proprietà dei contatti
+  const dynamicProperties = extractDynamicProperties(contacts);
+  const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
+  
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
   const [searchFilter, setSearchFilter] = useState("");
   const [listFilter, setListFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
@@ -249,6 +143,22 @@ function ContactsTable({
     return names.length > 1 ? `${names[0][0]}${names[1][0]}` : name[0];
   };
 
+  // Funzione per ottenere il valore di una proprietà dinamica
+  const getPropertyValue = (contact: Contact, propertyName: string): string => {
+    if (!contact.properties || !contact.properties[propertyName]) return '-';
+    const value = contact.properties[propertyName];
+    return typeof value === 'string' ? value : String(value);
+  };
+
+  // Funzione per il nome visualizzato della colonna
+  const getColumnDisplayName = (columnKey: string): string => {
+    if (columnKey.startsWith('prop_')) {
+      const propName = columnKey.replace('prop_', '');
+      return propName.charAt(0).toUpperCase() + propName.slice(1);
+    }
+    return columnKey;
+  };
+
   if (isLoading) {
     return (
       <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm">
@@ -281,26 +191,58 @@ function ContactsTable({
             onChange={(e) => setOwnerFilter(e.target.value)}
             className="w-48"
           />
+          
+          {/* Selettore items per pagina */}
+          <select
+            value={currentLimit}
+            onChange={(e) => onLimitChange?.(Number(e.target.value))}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+          >
+            <option value={10}>10 per pagina</option>
+            <option value={25}>25 per pagina</option>
+            <option value={50}>50 per pagina</option>
+            <option value={100}>100 per pagina</option>
+          </select>
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              Colonne
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-48">
-            {allColumns.map((col) => (
-              <DropdownMenuCheckboxItem
-                key={col}
-                checked={visibleColumns.includes(col)}
-                onCheckedChange={() => toggleColumn(col)}
-              >
-                {col}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Colonne ({visibleColumns.length}/{allColumns.length})
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48 max-h-80 overflow-y-auto">
+              <div className="p-2 text-xs font-medium text-gray-500 border-b">Colonne Base</div>
+              {baseColumns.map((col) => (
+                <DropdownMenuCheckboxItem
+                  key={col}
+                  checked={visibleColumns.includes(col)}
+                  onCheckedChange={() => toggleColumn(col)}
+                >
+                  {col}
+                </DropdownMenuCheckboxItem>
+              ))}
+              {dynamicProperties.length > 0 && (
+                <>
+                  <div className="p-2 text-xs font-medium text-gray-500 border-b">Proprietà Dinamiche</div>
+                  {dynamicProperties.map((prop) => {
+                    const colKey = `prop_${prop}`;
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={colKey}
+                        checked={visibleColumns.includes(colKey)}
+                        onCheckedChange={() => toggleColumn(colKey)}
+                      >
+                        {getColumnDisplayName(colKey)}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <Table className="w-full">
@@ -311,8 +253,16 @@ function ContactsTable({
             {visibleColumns.includes("Phone") && <TableHead className="w-[150px]">Telefono</TableHead>}
             {visibleColumns.includes("Owner") && <TableHead className="w-[150px]">Proprietario</TableHead>}
             {visibleColumns.includes("Lists") && <TableHead className="w-[150px]">Liste</TableHead>}
-            {visibleColumns.includes("Company") && <TableHead className="w-[150px]">Azienda</TableHead>}
             {visibleColumns.includes("Created") && <TableHead className="w-[120px]">Creato</TableHead>}
+            {/* Colonne dinamiche per proprietà */}
+            {dynamicProperties.map((prop) => {
+              const colKey = `prop_${prop}`;
+              return visibleColumns.includes(colKey) && (
+                <TableHead key={colKey} className="w-[150px]">
+                  {getColumnDisplayName(colKey)}
+                </TableHead>
+              );
+            })}
             {visibleColumns.includes("Actions") && <TableHead className="w-[100px]">Azioni</TableHead>}
           </TableRow>
         </TableHeader>
@@ -430,18 +380,6 @@ function ContactsTable({
                     </div>
                   </TableCell>
                 )}
-                {visibleColumns.includes("Company") && (
-                  <TableCell>
-                    {contact.properties?.company ? (
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span>{contact.properties.company}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                )}
                 {visibleColumns.includes("Created") && (
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -450,6 +388,15 @@ function ContactsTable({
                     </div>
                   </TableCell>
                 )}
+                {/* Celle per proprietà dinamiche */}
+                {dynamicProperties.map((prop) => {
+                  const colKey = `prop_${prop}`;
+                  return visibleColumns.includes(colKey) && (
+                    <TableCell key={colKey}>
+                      <span className="text-sm">{getPropertyValue(contact, prop)}</span>
+                    </TableCell>
+                  );
+                })}
                 {visibleColumns.includes("Actions") && (
                   <TableCell>
                     <DropdownMenu>
@@ -511,6 +458,56 @@ function ContactsTable({
           )}
         </TableBody>
       </Table>
+
+      {/* Controlli di paginazione */}
+      {pagination && (
+        <div className="flex items-center justify-between px-2 py-4">
+          <div className="text-sm text-muted-foreground">
+            Pagina {pagination.currentPage} di {pagination.totalPages} 
+            ({pagination.totalContacts} contatti totali)
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(pagination.currentPage - 1)}
+              disabled={!pagination.hasPrev}
+            >
+              ← Precedente
+            </Button>
+            
+            {/* Numeri di pagina */}
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, pagination.currentPage - 2) + i;
+                if (pageNum > pagination.totalPages) return null;
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === pagination.currentPage ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onPageChange?.(pageNum)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange?.(pagination.currentPage + 1)}
+              disabled={!pagination.hasNext}
+            >
+              Successiva →
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

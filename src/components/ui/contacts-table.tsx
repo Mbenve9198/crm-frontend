@@ -214,14 +214,14 @@ function ContactsTable({
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch = !searchFilter || 
       contact.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
       (contact.phone && contact.phone.includes(searchFilter));
     
     const matchesList = !listFilter || 
-      contact.lists.some(list => list.toLowerCase().includes(listFilter.toLowerCase()));
+      (contact.lists && contact.lists.some(list => list.toLowerCase().includes(listFilter.toLowerCase())));
     
     const matchesOwner = !ownerFilter ||
-      `${contact.owner.firstName} ${contact.owner.lastName}`.toLowerCase().includes(ownerFilter.toLowerCase());
+      (contact.owner && `${contact.owner.firstName} ${contact.owner.lastName}`.toLowerCase().includes(ownerFilter.toLowerCase()));
 
     return matchesSearch && matchesList && matchesOwner;
   });
@@ -239,10 +239,12 @@ function ContactsTable({
   };
 
   const getOwnerInitials = (owner: Contact['owner']) => {
+    if (!owner || !owner.firstName || !owner.lastName) return '??';
     return `${owner.firstName[0]}${owner.lastName[0]}`;
   };
 
   const getContactInitials = (name: string) => {
+    if (!name) return '?';
     const names = name.split(' ');
     return names.length > 1 ? `${names[0][0]}${names[1][0]}` : name[0];
   };
@@ -328,7 +330,7 @@ function ContactsTable({
                       </Avatar>
                       <div>
                         <div className="font-medium">{contact.name}</div>
-                        {contact.properties.company && (
+                        {contact.properties?.company && (
                           <div className="text-xs text-muted-foreground">
                             {contact.properties.company}
                           </div>
@@ -339,15 +341,19 @@ function ContactsTable({
                 )}
                 {visibleColumns.includes("Email") && (
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        {contact.email}
-                      </a>
-                    </div>
+                    {contact.email ? (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <a
+                          href={`mailto:${contact.email}`}
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {contact.email}
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                 )}
                 {visibleColumns.includes("Phone") && (
@@ -426,7 +432,7 @@ function ContactsTable({
                 )}
                 {visibleColumns.includes("Company") && (
                   <TableCell>
-                    {contact.properties.company ? (
+                    {contact.properties?.company ? (
                       <div className="flex items-center gap-2">
                         <Building className="h-4 w-4 text-muted-foreground" />
                         <span>{contact.properties.company}</span>

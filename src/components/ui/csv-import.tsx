@@ -219,24 +219,21 @@ export function CsvImportDialog({
       console.error(err);
       
       // Gestione errori dettagliata
-      if (err instanceof Error) {
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          setError("🔐 ERRORE 401: Token non valido o sessione scaduta");
-          // Prova a verificare l'autenticazione
-          checkAuth();
-        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
-          setError("❌ Non hai i permessi per importare contatti.");
-        } else if (err.message.includes('413') || err.message.includes('too large')) {
-          setError("📦 File troppo grande. Massimo 5MB consentiti.");
-        } else if (err.message.includes('CORS')) {
-          setError("🌐 Errore di CORS. Verifica la configurazione del backend.");
-        } else if (err.message.includes('Network') || err.message.includes('Failed to fetch')) {
-          setError("🔌 Errore di connessione. Verifica che il backend sia online.");
-        } else {
-          setError(`❌ ${err.message}`);
-        }
+      const errorMessage = getErrorMessage(err);
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        setError("🔐 ERRORE 401: Token non valido o sessione scaduta");
+        // Prova a verificare l'autenticazione
+        checkAuth();
+      } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+        setError("❌ Non hai i permessi per importare contatti.");
+      } else if (errorMessage.includes('413') || errorMessage.includes('too large')) {
+        setError("📦 File troppo grande. Massimo 5MB consentiti.");
+      } else if (getErrorMessage(err).includes('CORS')) {
+        setError("🌐 Errore di CORS. Verifica la configurazione del backend.");
+      } else if (getErrorMessage(err).includes('Network') || getErrorMessage(err).includes('Failed to fetch')) {
+        setError("🔌 Errore di connessione. Verifica che il backend sia online.");
       } else {
-        setError("🔌 Errore di connessione. Verifica la tua connessione internet.");
+        setError(`❌ ${getErrorMessage(err)}`);
       }
     } finally {
       setIsLoading(false);
@@ -311,6 +308,16 @@ export function CsvImportDialog({
     return String(value);
   };
 
+  // Helper per estrarre messaggi di errore sicuri
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) return error.message;
+    if (typeof error === "string") return error;
+    if (error && typeof error === "object" && "message" in error) {
+      return String((error as any).message);
+    }
+    return "Errore sconosciuto";
+  };
+
   const validateMapping = () => {
     const requiredFields = AVAILABLE_FIELDS.filter((f) => f.required).map((f) => f.value);
     const mappedFields = Object.values(columnMapping);
@@ -343,14 +350,11 @@ export function CsvImportDialog({
       }
     } catch (err) {
       console.error('CSV import error:', err);
-      if (err instanceof Error) {
-        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          setError("🔐 Sessione scaduta. Effettua nuovamente il login e riprova.");
-        } else {
-          setError(`❌ ${err.message}`);
-        }
+      const errorMessage = getErrorMessage(err);
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        setError("🔐 Sessione scaduta. Effettua nuovamente il login e riprova.");
       } else {
-        setError("❌ Errore sconosciuto durante l'importazione");
+        setError(`❌ ${errorMessage}`);
       }
       setCurrentStep("preview");
     } finally {
@@ -428,7 +432,7 @@ export function CsvImportDialog({
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <div className="flex-1">
-            <div className="whitespace-pre-line">{error}</div>
+            <div className="whitespace-pre-line">{safeStringify(error)}</div>
             {error.includes("401") || error.includes("Sessione scaduta") ? (
               <div className="mt-3 flex gap-2">
                 <Button size="sm" variant="outline" onClick={handleReauth}>
@@ -558,7 +562,7 @@ export function CsvImportDialog({
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <span>{error}</span>
+          <span>{safeStringify(error)}</span>
         </Alert>
       )}
     </div>
@@ -686,7 +690,7 @@ export function CsvImportDialog({
             <p className="font-medium">Errori durante l&apos;importazione:</p>
             <ul className="list-disc list-inside text-sm mt-1">
               {importResult.errors.map((error, index) => (
-                <li key={index}>{error}</li>
+                <li key={index}>{safeStringify(error)}</li>
               ))}
             </ul>
           </div>

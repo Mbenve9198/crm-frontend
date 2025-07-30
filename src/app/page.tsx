@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
+import { CsvImportDialog } from "@/components/ui/csv-import";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, User } from "lucide-react";
+import { Loader2, LogOut, User, Upload } from "lucide-react";
 import { Contact } from "@/types/contact";
 
 function LoadingSpinner() {
@@ -20,6 +22,7 @@ function LoadingSpinner() {
 
 function Dashboard() {
   const { user, logout } = useAuth();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleEditContact = (contact: Contact) => {
     console.log('Edit contact:', contact);
@@ -34,6 +37,11 @@ function Dashboard() {
   const handleViewContact = (contact: Contact) => {
     console.log('View contact:', contact);
     // TODO: Implementare modal di visualizzazione
+  };
+
+  const handleImportComplete = () => {
+    // Aggiorna la tabella contatti dopo l'importazione
+    setRefreshKey(prev => prev + 1);
   };
 
   return (
@@ -77,15 +85,28 @@ function Dashboard() {
       {/* Main content */}
       <main className="container mx-auto py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Gestione Contatti
-          </h2>
-          <p className="text-gray-600">
-            Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Gestione Contatti
+              </h2>
+              <p className="text-gray-600">
+                Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
+              </p>
+            </div>
+            
+            {/* Pulsante Importa CSV */}
+            <CsvImportDialog onImportComplete={handleImportComplete}>
+              <Button className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Importa CSV
+              </Button>
+            </CsvImportDialog>
+          </div>
         </div>
         
         <ContactsTable
+          key={refreshKey}
           onEditContact={handleEditContact}
           onDeleteContact={handleDeleteContact}
           onViewContact={handleViewContact}

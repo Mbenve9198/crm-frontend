@@ -21,9 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
+import { FileUpload } from "@/components/ui/file-upload";
 import {
-  Upload,
-  FileText,
   Loader2,
   CheckCircle,
   AlertTriangle,
@@ -72,16 +71,27 @@ export function CsvImportDialog({
   const [duplicateStrategy, setDuplicateStrategy] = useState<"skip" | "update">("skip");
   const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = async (files: File[]) => {
+    const file = files[0];
     if (!file) return;
+    
+    // Verifica che sia un CSV
+    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      setError("Il file deve essere in formato CSV");
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     setCsvFile(file);
 
     try {
+      // Debug: controlla se il token è presente
+      const token = apiClient.getToken();
+      console.log('Token presente:', !!token);
+      console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api');
+      
       const response = await apiClient.importCsvAnalyze(file);
       if (response.success && response.data) {
         setAnalysisResult(response.data);
@@ -108,7 +118,22 @@ export function CsvImportDialog({
         throw new Error(response.message || "Errore nell'analisi del CSV");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      console.error('CSV upload error:', err);
+      
+      // Gestione errori migliorata
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          setError("Sessione scaduta. Effettua nuovamente il login e riprova.");
+        } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
+          setError("Non hai i permessi per importare contatti.");
+        } else if (err.message.includes('413') || err.message.includes('too large')) {
+          setError("Il file è troppo grande. Massimo 5MB consentiti.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Errore di connessione. Verifica la tua connessione internet.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -186,7 +211,16 @@ export function CsvImportDialog({
         throw new Error(response.message || "Errore durante l'importazione");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      console.error('CSV import error:', err);
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          setError("Sessione scaduta. Effettua nuovamente il login e riprova.");
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError("Errore sconosciuto durante l'importazione");
+      }
       setCurrentStep("preview");
     } finally {
       setIsLoading(false);
@@ -202,9 +236,6 @@ export function CsvImportDialog({
     setNewPropertyName("");
     setImportResult(null);
     setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
   };
 
   const handleClose = () => {
@@ -217,42 +248,21 @@ export function CsvImportDialog({
   };
 
   const renderUploadStep = () => (
-    <div className="space-y-4">
-      <div className="text-center">
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-gray-400 transition-colors">
-          <Upload className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-          <p className="text-lg font-medium mb-2">Carica file CSV</p>
-          <p className="text-sm text-gray-600 mb-4">
-            Trascina il tuo file CSV qui o clicca per selezionarlo
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
-            }}
-            className="hidden"
-          />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Analizzando...
-              </>
-            ) : (
-              <>
-                <FileText className="h-4 w-4 mr-2" />
-                Seleziona CSV
-              </>
-            )}
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="w-full max-w-4xl mx-auto min-h-96 border border-dashed bg-background border-neutral-200 dark:border-neutral-800 rounded-lg">
+        <FileUpload 
+          onChange={handleFileUpload}
+          accept={{ 'text/csv': ['.csv'] }}
+          maxSize={5 * 1024 * 1024} // 5MB
+        />
       </div>
+      
+      {isLoading && (
+        <div className="flex items-center justify-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Analizzando il file CSV...</span>
+        </div>
+      )}
       
       {error && (
         <Alert variant="destructive">
@@ -260,6 +270,12 @@ export function CsvImportDialog({
           <span>{error}</span>
         </Alert>
       )}
+      
+      <div className="text-center text-sm text-gray-500 space-y-1">
+        <p>📋 <strong>Formato supportato:</strong> CSV (massimo 5MB)</p>
+        <p>📝 <strong>Requisiti:</strong> Prima riga deve contenere i nomi delle colonne</p>
+        <p>✅ <strong>Campi obbligatori:</strong> Nome ed Email</p>
+      </div>
     </div>
   );
 

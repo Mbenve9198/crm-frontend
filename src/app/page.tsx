@@ -1,103 +1,112 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useAuth } from "@/context/AuthContext";
+import ContactsTable from "@/components/ui/contacts-table";
+import LoginForm from "@/components/ui/login-form";
+import { Button } from "@/components/ui/button";
+import { Loader2, LogOut, User } from "lucide-react";
+
+function LoadingSpinner() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+        <p className="text-gray-600">Caricamento MenuChatCRM...</p>
+      </div>
     </div>
   );
+}
+
+function Dashboard() {
+  const { user, logout } = useAuth();
+
+  const handleEditContact = (contact: any) => {
+    console.log('Edit contact:', contact);
+    // TODO: Implementare modal di modifica
+  };
+
+  const handleDeleteContact = (contactId: string) => {
+    console.log('Delete contact:', contactId);
+    // TODO: Implementare conferma eliminazione
+  };
+
+  const handleViewContact = (contact: any) => {
+    console.log('View contact:', contact);
+    // TODO: Implementare modal di visualizzazione
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">MenuChatCRM</h1>
+              <p className="text-sm text-gray-600">Gestione Contatti</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {/* Info utente */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
+                <User className="h-4 w-4 text-gray-600" />
+                <span className="text-sm font-medium">
+                  {user?.firstName} {user?.lastName}
+                </span>
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  {user?.role}
+                </span>
+              </div>
+              
+              {/* Logout */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={logout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Esci
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="container mx-auto py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Gestione Contatti
+          </h2>
+          <p className="text-gray-600">
+            Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
+          </p>
+        </div>
+        
+        <ContactsTable
+          onEditContact={handleEditContact}
+          onDeleteContact={handleDeleteContact}
+          onViewContact={handleViewContact}
+        />
+      </main>
+    </div>
+  );
+}
+
+export default function Home() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  // Mostra loading durante la verifica dell'autenticazione
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Se non autenticato, mostra il form di login
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  // Se autenticato, mostra la dashboard
+  return <Dashboard />;
 }

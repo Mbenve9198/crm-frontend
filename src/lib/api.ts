@@ -103,100 +103,130 @@ class ApiClient {
     return response;
   }
 
-  async logout(): Promise<ApiResponse> {
-    const response = await this.request('/auth/logout', {
-      method: 'POST',
-    });
-
-    // Rimuovi il token
-    this.token = null;
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
+  async logout(): Promise<ApiResponse<void>> {
+    try {
+      await this.request('/auth/logout', {
+        method: 'POST',
+      });
+    } finally {
+      // Rimuovi sempre il token anche se la chiamata fallisce
+      this.setToken(null);
     }
 
-    return response;
+    return { success: true };
   }
 
   async getMe(): Promise<ApiResponse<{ user: User }>> {
-    return this.request<{ user: User }>('/auth/me');
+    return this.request('/auth/me');
   }
 
-  // Metodi per i contatti
-  async getContacts(filters: ContactFilters = {}): Promise<ApiResponse<ContactsResponse['data']>> {
-    const queryParams = new URLSearchParams();
-    
-    if (filters.search) queryParams.append('search', filters.search);
-    if (filters.list) queryParams.append('list', filters.list);
-    if (filters.owner) queryParams.append('owner', filters.owner);
-    if (filters.page) queryParams.append('page', filters.page.toString());
-    if (filters.limit) queryParams.append('limit', filters.limit.toString());
-
-    const endpoint = `/contacts${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.request<ContactsResponse['data']>(endpoint);
-  }
-
-  async getContact(id: string): Promise<ApiResponse<{ contact: Contact }>> {
-    return this.request<{ contact: Contact }>(`/contacts/${id}`);
-  }
-
-  async createContact(contactData: Partial<Contact>): Promise<ApiResponse<{ contact: Contact }>> {
-    return this.request<{ contact: Contact }>('/contacts', {
-      method: 'POST',
-      body: JSON.stringify(contactData),
-    });
-  }
-
-  async updateContact(id: string, contactData: Partial<Contact>): Promise<ApiResponse<{ contact: Contact }>> {
-    return this.request<{ contact: Contact }>(`/contacts/${id}`, {
+  async updateMe(data: Partial<User>): Promise<ApiResponse<{ user: User }>> {
+    return this.request('/auth/me', {
       method: 'PUT',
-      body: JSON.stringify(contactData),
+      body: JSON.stringify(data),
     });
   }
 
-  async deleteContact(id: string): Promise<ApiResponse> {
+  async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<void>> {
+    return this.request('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  // Metodi per la gestione contatti
+  async getContacts(filters: ContactFilters = {}): Promise<ContactsResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters.search) params.append('search', filters.search);
+    if (filters.list) params.append('list', filters.list);
+    if (filters.owner) params.append('owner', filters.owner);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/contacts?${queryString}` : '/contacts';
+    
+    return this.request(endpoint) as Promise<ContactsResponse>;
+  }
+
+  async getContact(id: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/${id}`);
+  }
+
+  async createContact(contact: Partial<Contact>): Promise<ApiResponse<Contact>> {
+    return this.request('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(contact),
+    });
+  }
+
+  async updateContact(id: string, contact: Partial<Contact>): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(contact),
+    });
+  }
+
+  async deleteContact(id: string): Promise<ApiResponse<void>> {
     return this.request(`/contacts/${id}`, {
       method: 'DELETE',
     });
   }
 
-  async addContactToList(contactId: string, listName: string): Promise<ApiResponse<{ contact: Contact }>> {
-    return this.request<{ contact: Contact }>(`/contacts/lists/${listName}/contacts/${contactId}`, {
+  // Metodi per la gestione liste
+  async addContactToList(contactId: string, listName: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/lists/${listName}/contacts/${contactId}`, {
       method: 'POST',
     });
   }
 
-  async removeContactFromList(contactId: string, listName: string): Promise<ApiResponse<{ contact: Contact }>> {
-    return this.request<{ contact: Contact }>(`/contacts/lists/${listName}/contacts/${contactId}`, {
+  async removeContactFromList(contactId: string, listName: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/lists/${listName}/contacts/${contactId}`, {
       method: 'DELETE',
     });
   }
 
   // Metodi per la gestione utenti
-  async getUsers(filters: {
-    page?: number;
-    limit?: number;
-    role?: string;
-    department?: string;
-    isActive?: boolean;
-    search?: string;
-  } = {}): Promise<ApiResponse<{ users: User[]; pagination: PaginationData }>> {
-    const queryParams = new URLSearchParams();
+  async getUsers(filters: { role?: string; department?: string; page?: number; limit?: number } = {}): Promise<ApiResponse<{
+    users: User[];
+    pagination: PaginationData;
+  }>> {
+    const params = new URLSearchParams();
     
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined) {
-        queryParams.append(key, value.toString());
-      }
+    if (filters.role) params.append('role', filters.role);
+    if (filters.department) params.append('department', filters.department);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/users?${queryString}` : '/users';
+    
+    return this.request(endpoint);
+  }
+
+  async getUser(id: string): Promise<ApiResponse<User>> {
+    return this.request(`/users/${id}`);
+  }
+
+  async updateUser(id: string, user: Partial<User>): Promise<ApiResponse<User>> {
+    return this.request(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(user),
     });
-
-    const endpoint = `/users${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    return this.request<{ users: User[]; pagination: PaginationData }>(endpoint);
   }
 
-  async getUsersForAssignment(): Promise<ApiResponse<{ users: User[] }>> {
-    return this.request<{ users: User[] }>('/users/for-assignment');
+  async deleteUser(id: string): Promise<ApiResponse<void>> {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    });
   }
 
-  async transferContacts(fromUserId: string, toUserId: string): Promise<ApiResponse> {
+  async getUsersForAssignment(): Promise<ApiResponse<User[]>> {
+    return this.request('/users/for-assignment');
+  }
+
+  async transferContacts(fromUserId: string, toUserId: string): Promise<ApiResponse<{ transferred: number }>> {
     return this.request(`/users/${fromUserId}/transfer-contacts/${toUserId}`, {
       method: 'POST',
     });
@@ -210,25 +240,55 @@ class ApiClient {
     return this.request('/contacts/stats');
   }
 
-  // Metodo per l'upload CSV
+  // Metodo per l'upload CSV con debug migliorato
   async importCsvAnalyze(file: File): Promise<ApiResponse<CsvAnalysisResult>> {
     const formData = new FormData();
     formData.append('csvFile', file);
 
-    // Per form-data non impostiamo Content-Type, il browser lo fa automaticamente
+    // Debug logging
+    console.log('=== CSV Upload Debug ===');
+    console.log('File:', file.name, file.size, file.type);
+    console.log('Token presente:', !!this.token);
+    console.log('Token (primi 20 caratteri):', this.token ? this.token.substring(0, 20) + '...' : 'N/A');
+    console.log('API URL:', `${this.baseURL}/contacts/import-csv?phase=analyze`);
+
+    // Headers per multipart/form-data (NO Content-Type manual)
     const headers: HeadersInit = {};
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
+      console.log('Authorization header aggiunto');
+    } else {
+      console.error('ERRORE: Token mancante!');
+      throw new Error('Token di autenticazione mancante');
     }
 
-    const response = await fetch(`${this.baseURL}/contacts/import-csv?phase=analyze`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
+    try {
+      const response = await fetch(`${this.baseURL}/contacts/import-csv?phase=analyze`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include',
+      });
 
-    return response.json();
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.error('ERRORE 401: Token non valido o scaduto');
+          throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+        }
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      throw error;
+    }
   }
 
   async importCsvExecute(
@@ -241,19 +301,61 @@ class ApiClient {
     formData.append('mapping', JSON.stringify(mapping));
     formData.append('duplicateStrategy', duplicateStrategy);
 
+    // Headers per multipart/form-data
     const headers: HeadersInit = {};
     if (this.token) {
       headers.Authorization = `Bearer ${this.token}`;
+    } else {
+      throw new Error('Token di autenticazione mancante');
     }
 
-    const response = await fetch(`${this.baseURL}/contacts/import-csv?phase=import`, {
-      method: 'POST',
-      headers,
-      body: formData,
-      credentials: 'include',
-    });
+    try {
+      const response = await fetch(`${this.baseURL}/contacts/import-csv?phase=import`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include',
+      });
 
-    return response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+        }
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('CSV import error:', error);
+      throw error;
+    }
+  }
+
+  // Test di connettività per debug
+  async testAuth(): Promise<ApiResponse<{ authenticated: boolean; user?: User }>> {
+    console.log('=== Test Auth Debug ===');
+    console.log('Token presente:', !!this.token);
+    console.log('API URL:', `${this.baseURL}/auth/me`);
+    
+    try {
+      const response = await this.getMe();
+      console.log('Test auth risultato:', response);
+      return { 
+        success: true, 
+        data: { 
+          authenticated: !!response.data, 
+          user: response.data?.user 
+        } 
+      };
+    } catch (error) {
+      console.error('Test auth fallito:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Test auth failed' 
+      };
+    }
   }
 
   // Metodo per impostare il token dall'esterno

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,8 +28,11 @@ import {
   AlertTriangle,
   Plus,
   X,
+  RefreshCw,
+  Bug,
 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type CsvAnalysisResult = {
   columns: string[];
@@ -60,6 +63,7 @@ export function CsvImportDialog({
   children: React.ReactNode;
   onImportComplete?: () => void;
 }) {
+  const { user, checkAuth } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState<ImportStep>("upload");
   const [isLoading, setIsLoading] = useState(false);
@@ -71,6 +75,36 @@ export function CsvImportDialog({
   const [duplicateStrategy, setDuplicateStrategy] = useState<"skip" | "update">("skip");
   const [importResult, setImportResult] = useState<CsvImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>("");
+  const [isTestingAuth, setIsTestingAuth] = useState(false);
+
+  const handleTestAuth = async () => {
+    setIsTestingAuth(true);
+    setDebugInfo("Testing autenticazione...");
+    
+    try {
+      const result = await apiClient.testAuth();
+      const debugDetails = [
+        `🔐 Test Auth Risultato: ${result.success ? '✅ SUCCESSO' : '❌ FALLITO'}`,
+        `📋 Messaggio: ${result.success ? 'Autenticazione valida' : result.error}`,
+        `👤 Utente: ${result.data?.user?.firstName} ${result.data?.user?.lastName}`,
+        `📧 Email: ${result.data?.user?.email}`,
+        `🎭 Ruolo: ${result.data?.user?.role}`,
+        `🕒 Timestamp: ${new Date().toLocaleString()}`
+      ];
+      
+      setDebugInfo(debugDetails.join('\n'));
+      
+      if (!result.success) {
+        setError("❌ Test autenticazione fallito. Il problema è confermato con l'API di auth.");
+      }
+    } catch (err) {
+      setError("❌ Errore durante il test di autenticazione");
+      setDebugInfo(`Errore test auth: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsTestingAuth(false);
+    }
+  };
 
   const handleFileUpload = async (files: File[]) => {
     const file = files[0];
@@ -84,15 +118,33 @@ export function CsvImportDialog({
     
     setIsLoading(true);
     setError(null);
+    setDebugInfo("");
     setCsvFile(file);
 
     try {
-      // Debug: controlla se il token è presente
+      // Debug dettagliato
       const token = apiClient.getToken();
-      console.log('Token presente:', !!token);
-      console.log('API Base URL:', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api');
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      
+      const debugDetails = [
+        `🔍 Token presente: ${!!token}`,
+        `🌐 API URL: ${apiUrl}`,
+        `👤 Utente autenticato: ${user?.firstName} ${user?.lastName} (${user?.role})`,
+        `📧 Email utente: ${user?.email}`,
+        `📄 File: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`,
+        `🔗 Endpoint completo: ${apiUrl}/contacts/import-csv?phase=analyze`
+      ];
+      
+      setDebugInfo(debugDetails.join('\n'));
+      console.log('=== CSV Upload Debug ===');
+      debugDetails.forEach(detail => console.log(detail));
+      
+      if (!token) {
+        throw new Error("Token di autenticazione mancante. Effettua nuovamente il login.");
+      }
       
       const response = await apiClient.importCsvAnalyze(file);
+      
       if (response.success && response.data) {
         setAnalysisResult(response.data);
         setCurrentStep("mapping");
@@ -114,28 +166,54 @@ export function CsvImportDialog({
         });
         
         setColumnMapping(autoMapping);
+        setDebugInfo(""); // Reset debug info se tutto va bene
       } else {
         throw new Error(response.message || "Errore nell'analisi del CSV");
       }
     } catch (err) {
-      console.error('CSV upload error:', err);
+      console.error('=== CSV Upload Error ===');
+      console.error(err);
       
-      // Gestione errori migliorata
+      // Gestione errori dettagliata
       if (err instanceof Error) {
         if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          setError("Sessione scaduta. Effettua nuovamente il login e riprova.");
+          setError("🔐 ERRORE 401: Token non valido o sessione scaduta");
+          // Prova a verificare l'autenticazione
+          checkAuth();
         } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
-          setError("Non hai i permessi per importare contatti.");
+          setError("❌ Non hai i permessi per importare contatti.");
         } else if (err.message.includes('413') || err.message.includes('too large')) {
-          setError("Il file è troppo grande. Massimo 5MB consentiti.");
+          setError("📦 File troppo grande. Massimo 5MB consentiti.");
+        } else if (err.message.includes('CORS')) {
+          setError("🌐 Errore di CORS. Verifica la configurazione del backend.");
+        } else if (err.message.includes('Network') || err.message.includes('Failed to fetch')) {
+          setError("🔌 Errore di connessione. Verifica che il backend sia online.");
         } else {
-          setError(err.message);
+          setError(`❌ ${err.message}`);
         }
       } else {
-        setError("Errore di connessione. Verifica la tua connessione internet.");
+        setError("🔌 Errore di connessione. Verifica la tua connessione internet.");
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRetry = async () => {
+    if (csvFile) {
+      await handleFileUpload([csvFile]);
+    }
+  };
+
+  const handleReauth = async () => {
+    setError(null);
+    setDebugInfo("Verificando autenticazione...");
+    try {
+      await checkAuth();
+      setDebugInfo("Autenticazione verificata. Riprova il caricamento.");
+    } catch (err) {
+      setError("Errore nella verifica dell'autenticazione. Effettua il login.");
+      setDebugInfo("");
     }
   };
 
@@ -214,12 +292,12 @@ export function CsvImportDialog({
       console.error('CSV import error:', err);
       if (err instanceof Error) {
         if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          setError("Sessione scaduta. Effettua nuovamente il login e riprova.");
+          setError("🔐 Sessione scaduta. Effettua nuovamente il login e riprova.");
         } else {
-          setError(err.message);
+          setError(`❌ ${err.message}`);
         }
       } else {
-        setError("Errore sconosciuto durante l'importazione");
+        setError("❌ Errore sconosciuto durante l'importazione");
       }
       setCurrentStep("preview");
     } finally {
@@ -236,6 +314,7 @@ export function CsvImportDialog({
     setNewPropertyName("");
     setImportResult(null);
     setError(null);
+    setDebugInfo("");
   };
 
   const handleClose = () => {
@@ -264,10 +343,57 @@ export function CsvImportDialog({
         </div>
       )}
       
+      {/* Debug controls */}
+      <div className="flex gap-2 justify-center">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={handleTestAuth}
+          disabled={isTestingAuth}
+        >
+          <Bug className="h-4 w-4 mr-1" />
+          {isTestingAuth ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              Testing...
+            </>
+          ) : (
+            'Test Auth'
+          )}
+        </Button>
+      </div>
+      
+      {/* Debug info */}
+      {debugInfo && (
+        <div className="bg-gray-100 p-3 rounded text-xs font-mono whitespace-pre-line">
+          <strong>🔍 Debug Info:</strong><br />
+          {debugInfo}
+        </div>
+      )}
+      
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <span>{error}</span>
+          <div className="flex-1">
+            <div className="whitespace-pre-line">{error}</div>
+            {error.includes("401") || error.includes("Sessione scaduta") ? (
+              <div className="mt-3 flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleReauth}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Verifica Auth
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleRetry}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Riprova
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={handleRetry} className="mt-2">
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Riprova
+              </Button>
+            )}
+          </div>
         </Alert>
       )}
       

@@ -122,41 +122,44 @@ class ApiClient {
     // Debug dettagliato della risposta
     console.log('📋 Risposta login completa:', response);
     console.log('📋 response.success:', response.success);
+    console.log('📋 response.token (livello principale):', response.token);
     console.log('📋 response.data:', response.data);
     
     if (response.data) {
       console.log('📋 response.data.user:', response.data.user);
-      console.log('📋 response.data.token:', response.data.token);
-      console.log('📋 Tipo response.data.token:', typeof response.data.token);
+      console.log('📋 response.data.token (dovrebbe essere undefined):', response.data.token);
     }
 
+    // CORREZIONE: Il token è in response.token, NON in response.data.token!
+    const token = response.token; // Il backend restituisce token al livello principale
+    console.log('🎯 Token dal livello corretto:', token ? token.substring(0, 20) + '...' : 'UNDEFINED');
+
     // Salva il token con verifica dettagliata
-    if (response.success && response.data?.token) {
-      const newToken = response.data.token;
+    if (response.success && token) {
       console.log('💾 ApiClient.login: Salvando token...');
-      console.log('Token da salvare (type):', typeof newToken);
-      console.log('Token da salvare (length):', newToken?.length);
+      console.log('Token da salvare (type):', typeof token);
+      console.log('Token da salvare (length):', token?.length);
       
-      if (typeof newToken === 'string' && newToken.length > 0) {
-        console.log('Token da salvare:', newToken.substring(0, 20) + '...');
+      if (typeof token === 'string' && token.length > 0) {
+        console.log('Token da salvare:', token.substring(0, 20) + '...');
         
         // Salva in memoria
-        this.token = newToken;
+        this.token = token;
         console.log('✅ Token salvato in memoria apiClient');
         
         // Salva in localStorage con verifica
         if (typeof window !== 'undefined') {
           try {
-            localStorage.setItem('auth_token', newToken);
+            localStorage.setItem('auth_token', token);
             console.log('✅ Token salvato in localStorage');
             
             // Verifica immediata che sia stato salvato
             const verificaToken = localStorage.getItem('auth_token');
-            if (verificaToken === newToken) {
+            if (verificaToken === token) {
               console.log('✅ Verifica localStorage: Token salvato correttamente');
             } else {
               console.error('❌ Verifica localStorage: Token NON salvato correttamente!');
-              console.error('Atteso:', newToken.substring(0, 20) + '...');
+              console.error('Atteso:', token.substring(0, 20) + '...');
               console.error('Trovato:', verificaToken ? verificaToken.substring(0, 20) + '...' : 'NULL');
             }
           } catch (error) {
@@ -164,13 +167,13 @@ class ApiClient {
           }
         }
       } else {
-        console.error('❌ Token non valido: tipo =', typeof newToken, ', length =', newToken?.length);
+        console.error('❌ Token non valido: tipo =', typeof token, ', length =', token?.length);
       }
     } else {
       console.log('❌ ApiClient.login: Nessun token nella risposta');
       console.log('   - response.success:', response.success);
+      console.log('   - response.token:', response.token);
       console.log('   - response.data:', response.data);
-      console.log('   - response.data?.token:', response.data?.token);
     }
 
     return response;
@@ -474,7 +477,7 @@ class ApiClient {
   getToken(): string | null {
     return this.token;
   }
-}
+  }
 
 // Istanza singleton dell'API client
 export const apiClient = new ApiClient(API_BASE_URL);

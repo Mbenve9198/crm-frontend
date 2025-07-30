@@ -74,4 +74,5 @@ export type ApiResponse<T = unknown> = {
   message?: string;
   data?: T;
   error?: string;
+  token?: string; // Il token può essere al livello principale per il login
 }; 

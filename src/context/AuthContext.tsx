@@ -119,7 +119,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await apiClient.login(email, password);
       
       if (response.success && response.data) {
-        const token = response.data.token;
+        // CORREZIONE: Il token è in response.token, NON in response.data.token!
+        const token = response.token; // Il backend restituisce token al livello principale
         console.log('✅ Login riuscito, token ricevuto');
         
         // Verifica sicura del token

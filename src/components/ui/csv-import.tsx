@@ -177,6 +177,19 @@ export function CsvImportDialog({
         }
         
         console.log('✅ Struttura dati validata correttamente');
+        
+        // DEBUG: Kontrolliamo cosa contengono i dati per evitare errori di rendering
+        console.log('🔍 DETTAGLIO DATI CSV:');
+        console.log('   - Headers:', response.data.headers);
+        console.log('   - Numero sampleRows:', response.data.sampleRows.length);
+        console.log('   - Prima riga sample:', response.data.sampleRows[0]);
+        console.log('   - Tipi dei valori nella prima riga:');
+        if (response.data.sampleRows[0]) {
+          Object.entries(response.data.sampleRows[0]).forEach(([key, value]) => {
+            console.log(`     - ${key}: ${typeof value} =`, value);
+          });
+        }
+        
         setAnalysisResult(response.data);
         setCurrentStep("mapping");
         
@@ -287,6 +300,15 @@ export function CsvImportDialog({
       })),
       { value: "ignore", label: "Ignora colonna", required: false },
     ];
+  };
+
+  // Helper per convertire qualsiasi valore in stringa sicura per il rendering
+  const safeStringify = (value: any): string => {
+    if (value === null || value === undefined) return "N/A";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
   };
 
   const validateMapping = () => {
@@ -467,7 +489,7 @@ export function CsvImportDialog({
             <div className="mt-3 flex flex-wrap gap-2">
               {customProperties.map((prop) => (
                 <Badge key={prop} variant="secondary" className="flex items-center gap-1">
-                  {prop.replace("properties.", "")}
+                  {prop.replace("properties.", "").charAt(0).toUpperCase() + prop.replace("properties.", "").slice(1)}
                   <X
                     className="h-3 w-3 cursor-pointer"
                     onClick={() => removeCustomProperty(prop)}
@@ -485,7 +507,7 @@ export function CsvImportDialog({
           analysisResult.headers.map((column) => (
             <div key={column} className="flex items-center gap-3">
               <div className="flex-1">
-                <Badge variant="outline">{column}</Badge>
+                <Badge variant="outline">{safeStringify(column)}</Badge>
               </div>
               <div className="flex-1">
                 <Select
@@ -572,7 +594,7 @@ export function CsvImportDialog({
                               : AVAILABLE_FIELDS.find(f => f.value === targetField)?.label || targetField
                             }:
                           </span>{" "}
-                          <span className="text-gray-600">{row[csvCol] || "N/A"}</span>
+                          <span className="text-gray-600">{safeStringify(row[csvCol])}</span>
                         </div>
                       );
                     })}

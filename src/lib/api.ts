@@ -45,9 +45,25 @@ class ApiClient {
   constructor(baseURL: string) {
     this.baseURL = baseURL;
     // Recupera il token dal localStorage se disponibile
+    this.reloadTokenFromStorage();
+  }
+
+  // Metodo per ricaricare il token dal localStorage
+  private reloadTokenFromStorage() {
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+      const storedToken = localStorage.getItem('auth_token');
+      if (storedToken) {
+        console.log('🔄 ApiClient: Ricaricando token da localStorage');
+        this.token = storedToken;
+      } else {
+        console.log('📭 ApiClient: Nessun token trovato in localStorage');
+      }
     }
+  }
+
+  // Metodo pubblico per forzare il reload del token
+  public refreshTokenFromStorage() {
+    this.reloadTokenFromStorage();
   }
 
   private async request<T>(
@@ -59,6 +75,11 @@ class ApiClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
 
     // Aggiungi il token di autenticazione se disponibile
     if (this.token) {
@@ -97,6 +118,7 @@ class ApiClient {
       this.token = response.data.token;
       if (typeof window !== 'undefined') {
         localStorage.setItem('auth_token', response.data.token);
+        console.log('💾 Token salvato in localStorage e apiClient');
       }
     }
 
@@ -245,6 +267,12 @@ class ApiClient {
     const formData = new FormData();
     formData.append('csvFile', file);
 
+    // Se non abbiamo il token, prova a ricaricarlo
+    if (!this.token) {
+      console.log('🔄 Token mancante, ricarico da localStorage...');
+      this.reloadTokenFromStorage();
+    }
+
     // Debug logging
     console.log('=== CSV Upload Debug ===');
     console.log('File:', file.name, file.size, file.type);
@@ -258,7 +286,7 @@ class ApiClient {
       headers.Authorization = `Bearer ${this.token}`;
       console.log('Authorization header aggiunto');
     } else {
-      console.error('ERRORE: Token mancante!');
+      console.error('ERRORE: Token mancante dopo reload!');
       throw new Error('Token di autenticazione mancante');
     }
 
@@ -301,6 +329,11 @@ class ApiClient {
     formData.append('mapping', JSON.stringify(mapping));
     formData.append('duplicateStrategy', duplicateStrategy);
 
+    // Se non abbiamo il token, prova a ricaricarlo
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
     // Headers per multipart/form-data
     const headers: HeadersInit = {};
     if (this.token) {
@@ -336,6 +369,13 @@ class ApiClient {
   // Test di connettività per debug
   async testAuth(): Promise<ApiResponse<{ authenticated: boolean; user?: User }>> {
     console.log('=== Test Auth Debug ===');
+    
+    // Se non abbiamo il token, prova a ricaricarlo
+    if (!this.token) {
+      console.log('🔄 Test Auth: Token mancante, ricarico da localStorage...');
+      this.reloadTokenFromStorage();
+    }
+    
     console.log('Token presente:', !!this.token);
     console.log('API URL:', `${this.baseURL}/auth/me`);
     
@@ -364,8 +404,10 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('auth_token', token);
+        console.log('💾 Token impostato e salvato in localStorage');
       } else {
         localStorage.removeItem('auth_token');
+        console.log('🗑️ Token rimosso da localStorage');
       }
     }
   }

@@ -51,12 +51,16 @@ class ApiClient {
   // Metodo per ricaricare il token dal localStorage
   private reloadTokenFromStorage() {
     if (typeof window !== 'undefined') {
-      const storedToken = localStorage.getItem('auth_token');
-      if (storedToken) {
-        console.log('🔄 ApiClient: Ricaricando token da localStorage');
-        this.token = storedToken;
-      } else {
-        console.log('📭 ApiClient: Nessun token trovato in localStorage');
+      try {
+        const storedToken = localStorage.getItem('auth_token');
+        if (storedToken) {
+          console.log('🔄 ApiClient: Ricaricando token da localStorage');
+          this.token = storedToken;
+        } else {
+          console.log('📭 ApiClient: Nessun token trovato in localStorage');
+        }
+      } catch (error) {
+        console.error('❌ Errore leggendo localStorage:', error);
       }
     }
   }
@@ -108,18 +112,44 @@ class ApiClient {
 
   // Metodi per l'autenticazione
   async login(email: string, password: string): Promise<ApiResponse<{ user: User; token: string }>> {
+    console.log('🔐 ApiClient.login: Avvio login...');
+    
     const response = await this.request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
 
-    // Salva il token
+    // Salva il token con verifica dettagliata
     if (response.success && response.data?.token) {
-      this.token = response.data.token;
+      const newToken = response.data.token;
+      console.log('💾 ApiClient.login: Salvando token...');
+      console.log('Token da salvare:', newToken.substring(0, 20) + '...');
+      
+      // Salva in memoria
+      this.token = newToken;
+      console.log('✅ Token salvato in memoria apiClient');
+      
+      // Salva in localStorage con verifica
       if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', response.data.token);
-        console.log('💾 Token salvato in localStorage e apiClient');
+        try {
+          localStorage.setItem('auth_token', newToken);
+          console.log('✅ Token salvato in localStorage');
+          
+          // Verifica immediata che sia stato salvato
+          const verificaToken = localStorage.getItem('auth_token');
+          if (verificaToken === newToken) {
+            console.log('✅ Verifica localStorage: Token salvato correttamente');
+          } else {
+            console.error('❌ Verifica localStorage: Token NON salvato correttamente!');
+            console.error('Atteso:', newToken.substring(0, 20) + '...');
+            console.error('Trovato:', verificaToken ? verificaToken.substring(0, 20) + '...' : 'NULL');
+          }
+        } catch (error) {
+          console.error('❌ Errore salvando in localStorage:', error);
+        }
       }
+    } else {
+      console.log('❌ ApiClient.login: Nessun token nella risposta');
     }
 
     return response;
@@ -400,14 +430,21 @@ class ApiClient {
 
   // Metodo per impostare il token dall'esterno
   setToken(token: string | null) {
+    console.log('🔧 ApiClient.setToken chiamato');
+    
     this.token = token;
+    
     if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('auth_token', token);
-        console.log('💾 Token impostato e salvato in localStorage');
-      } else {
-        localStorage.removeItem('auth_token');
-        console.log('🗑️ Token rimosso da localStorage');
+      try {
+        if (token) {
+          localStorage.setItem('auth_token', token);
+          console.log('💾 Token impostato e salvato in localStorage');
+        } else {
+          localStorage.removeItem('auth_token');
+          console.log('🗑️ Token rimosso da localStorage');
+        }
+      } catch (error) {
+        console.error('❌ Errore setToken localStorage:', error);
       }
     }
   }

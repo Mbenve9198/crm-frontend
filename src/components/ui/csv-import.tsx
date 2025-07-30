@@ -35,9 +35,12 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 type CsvAnalysisResult = {
-  columns: string[];
-  preview: Record<string, string>[];
-  rowCount: number;
+  headers: string[];          // Il backend restituisce "headers" non "columns"
+  sampleRows: Record<string, string>[]; // Il backend restituisce "sampleRows" non "preview"
+  availableFields: {
+    existing: string[];
+    properties: string;
+  };
 };
 
 type CsvImportResult = {
@@ -150,27 +153,27 @@ export function CsvImportDialog({
       console.log('🔍 response.success:', response.success);
       console.log('🔍 response.data:', response.data);
       if (response.data) {
-        console.log('🔍 response.data.columns:', response.data.columns);
-        console.log('🔍 response.data.preview:', response.data.preview);
-        console.log('🔍 response.data.rowCount:', response.data.rowCount);
-        console.log('🔍 Tipo columns:', typeof response.data.columns);
-        console.log('🔍 Array.isArray(columns):', Array.isArray(response.data.columns));
+        console.log('🔍 response.data.headers:', response.data.headers);
+        console.log('🔍 response.data.sampleRows:', response.data.sampleRows);
+        console.log('🔍 response.data.availableFields:', response.data.availableFields);
+        console.log('🔍 Tipo headers:', typeof response.data.headers);
+        console.log('🔍 Array.isArray(headers):', Array.isArray(response.data.headers));
       }
       
       if (response.success && response.data) {
-        // Verifica che la struttura sia corretta
-        if (!response.data.columns || !Array.isArray(response.data.columns)) {
-          console.error('❌ ERRORE: response.data.columns non è un array valido');
-          console.error('   - response.data.columns:', response.data.columns);
-          console.error('   - Tipo:', typeof response.data.columns);
-          throw new Error('Struttura dati non valida dal backend: mancano le colonne');
+        // Verifica che la struttura sia corretta (struttura reale del backend)
+        if (!response.data.headers || !Array.isArray(response.data.headers)) {
+          console.error('❌ ERRORE: response.data.headers non è un array valido');
+          console.error('   - response.data.headers:', response.data.headers);
+          console.error('   - Tipo:', typeof response.data.headers);
+          throw new Error('Struttura dati non valida dal backend: mancano gli headers');
         }
         
-        if (!response.data.preview || !Array.isArray(response.data.preview)) {
-          console.error('❌ ERRORE: response.data.preview non è un array valido');
-          console.error('   - response.data.preview:', response.data.preview);
-          console.error('   - Tipo:', typeof response.data.preview);
-          throw new Error('Struttura dati non valida dal backend: manca l\'anteprima');
+        if (!response.data.sampleRows || !Array.isArray(response.data.sampleRows)) {
+          console.error('❌ ERRORE: response.data.sampleRows non è un array valido');
+          console.error('   - response.data.sampleRows:', response.data.sampleRows);
+          console.error('   - Tipo:', typeof response.data.sampleRows);
+          throw new Error('Struttura dati non valida dal backend: mancano i sampleRows');
         }
         
         console.log('✅ Struttura dati validata correttamente');
@@ -179,7 +182,7 @@ export function CsvImportDialog({
         
         // Auto-mappatura intelligente
         const autoMapping: Record<string, string> = {};
-        response.data.columns.forEach((column) => {
+        response.data.headers.forEach((column) => {
           const normalizedColumn = column.toLowerCase().trim();
           
           if (normalizedColumn.includes("nome") || normalizedColumn.includes("name")) {
@@ -478,8 +481,8 @@ export function CsvImportDialog({
 
       {/* Mappatura colonne */}
       <div className="space-y-3">
-        {analysisResult?.columns && Array.isArray(analysisResult.columns) ? (
-          analysisResult.columns.map((column) => (
+        {analysisResult?.headers && Array.isArray(analysisResult.headers) ? (
+          analysisResult.headers.map((column) => (
             <div key={column} className="flex items-center gap-3">
               <div className="flex-1">
                 <Badge variant="outline">{column}</Badge>
@@ -544,7 +547,7 @@ export function CsvImportDialog({
       <div>
         <h3 className="text-lg font-medium mb-2">Anteprima Importazione</h3>
         <p className="text-sm text-gray-600">
-          Verifica i dati prima dell&apos;importazione. Saranno importati {analysisResult?.rowCount} contatti.
+          Verifica i dati prima dell&apos;importazione. Saranno importati {analysisResult?.sampleRows?.length || 0} contatti (anteprima).
         </p>
       </div>
 
@@ -555,8 +558,8 @@ export function CsvImportDialog({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {analysisResult?.preview && Array.isArray(analysisResult.preview) ? (
-              analysisResult.preview.slice(0, 3).map((row, index) => (
+            {analysisResult?.sampleRows && Array.isArray(analysisResult.sampleRows) ? (
+              analysisResult.sampleRows.slice(0, 3).map((row, index) => (
                 <div key={index} className="p-3 border rounded-lg bg-gray-50">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     {Object.entries(columnMapping).map(([csvCol, targetField]) => {
@@ -591,9 +594,9 @@ export function CsvImportDialog({
         <Card>
           <CardContent className="pt-4">
             <div className="text-2xl font-bold text-blue-600">
-              {analysisResult?.rowCount}
+              {analysisResult?.sampleRows?.length || 0}
             </div>
-            <div className="text-sm text-gray-600">Contatti da importare</div>
+            <div className="text-sm text-gray-600">Righe di anteprima</div>
           </CardContent>
         </Card>
         <Card>

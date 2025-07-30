@@ -24,9 +24,12 @@ type ContactStats = {
 };
 
 type CsvAnalysisResult = {
-  columns: string[];
-  preview: Record<string, string>[];
-  rowCount: number;
+  headers: string[];          // Il backend restituisce "headers" non "columns"
+  sampleRows: Record<string, string>[]; // Il backend restituisce "sampleRows" non "preview"
+  availableFields: {
+    existing: string[];
+    properties: string;
+  };
 };
 
 type CsvImportResult = {

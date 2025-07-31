@@ -24,7 +24,7 @@ function LoadingSpinner() {
 }
 
 function Dashboard() {
-  const { user, logout } = useAuth();
+  const {} = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
@@ -91,7 +91,7 @@ function Dashboard() {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      const filters: any = { page, limit };
+      const filters: { page: number; limit: number; list?: string } = { page, limit };
       if (list && list.trim() !== '') {
         filters.list = list;
       }

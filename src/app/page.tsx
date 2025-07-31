@@ -195,6 +195,7 @@ function Dashboard() {
           onViewContact={handleViewContact}
           onPageChange={handlePageChange}
           onLimitChange={handleLimitChange}
+          onRefresh={() => setRefreshKey(prev => prev + 1)}
         />
       </main>
     </div>

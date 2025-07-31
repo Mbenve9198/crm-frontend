@@ -253,6 +253,22 @@ class ApiClient {
     });
   }
 
+  async deleteContactsBulk(contactIds: string[]): Promise<ApiResponse<{
+    deletedCount: number;
+    requestedCount: number;
+    unauthorizedCount: number;
+    unauthorizedContacts: string[];
+    hasMoreUnauthorized: boolean;
+  }>> {
+    return this.request('/contacts/bulk', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ contactIds }),
+    });
+  }
+
   // Metodi per la gestione liste
   async addContactToList(contactId: string, listName: string): Promise<ApiResponse<Contact>> {
     return this.request(`/contacts/lists/${listName}/contacts/${contactId}`, {
@@ -317,6 +333,10 @@ class ApiClient {
 
   async getContactStats(): Promise<ApiResponse<ContactStats>> {
     return this.request('/contacts/stats');
+  }
+
+  async getDynamicProperties(): Promise<ApiResponse<{ properties: string[]; count: number; lastUpdated: string }>> {
+    return this.request('/contacts/dynamic-properties');
   }
 
   // Metodo per l'upload CSV con debug migliorato

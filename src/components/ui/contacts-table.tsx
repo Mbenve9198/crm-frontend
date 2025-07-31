@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Eye, 
   Mail, 
@@ -37,9 +37,13 @@ import {
   Building, 
   Edit, 
   Trash2,
-  MoreHorizontal 
+  MoreHorizontal,
+  Check,
+  X,
+  Loader2
 } from "lucide-react";
 import { Contact } from "@/types/contact";
+import { apiClient } from "@/lib/api";
 
 // Colonne fisse base
 const baseColumns = [
@@ -67,6 +71,7 @@ type ContactsTableProps = {
   onViewContact?: (contact: Contact) => void;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
+  onRefresh?: () => void;
   currentLimit?: number;
 };
 
@@ -94,16 +99,60 @@ function ContactsTable({
   onViewContact,
   onPageChange,
   onLimitChange,
+  onRefresh,
   currentLimit = 10
 }: ContactsTableProps) {
-  // Genera colonne dinamiche dalle proprietà dei contatti
-  const dynamicProperties = extractDynamicProperties(contacts);
+  // Stato per le proprietà dinamiche caricate dal server
+  const [allDynamicProperties, setAllDynamicProperties] = useState<string[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false);
+
+  // Genera colonne dinamiche: usa quelle dal server se disponibili, altrimenti quelle locali come fallback
+  const localDynamicProperties = extractDynamicProperties(contacts);
+  const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
   const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
   
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
   const [searchFilter, setSearchFilter] = useState("");
   const [listFilter, setListFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
+
+  // Stato per la selezione multipla
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Carica le proprietà dinamiche dal server all'avvio
+  useEffect(() => {
+    const loadDynamicProperties = async () => {
+      try {
+        setIsLoadingProperties(true);
+        console.log('🔍 Caricamento proprietà dinamiche dal server...');
+        
+        const response = await apiClient.getDynamicProperties();
+        if (response.success && response.data) {
+          console.log('✅ Proprietà dinamiche caricate:', response.data.properties);
+          setAllDynamicProperties(response.data.properties);
+        } else {
+          console.warn('⚠️ Fallback alle proprietà locali');
+        }
+      } catch (error) {
+        console.error('❌ Errore caricamento proprietà dinamiche:', error);
+        console.warn('⚠️ Usando proprietà locali come fallback');
+      } finally {
+        setIsLoadingProperties(false);
+      }
+    };
+
+    loadDynamicProperties();
+  }, []);
+
+  // Log per debug
+  useEffect(() => {
+    console.log('🔍 Debug ContactsTable:');
+    console.log('  - allDynamicProperties (server):', allDynamicProperties);
+    console.log('  - localDynamicProperties (local):', localDynamicProperties);
+    console.log('  - dynamicProperties (used):', dynamicProperties);
+    console.log('  - allColumns:', allColumns);
+  }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch = !searchFilter || 
@@ -157,6 +206,77 @@ function ContactsTable({
       return propName.charAt(0).toUpperCase() + propName.slice(1);
     }
     return columnKey;
+  };
+
+  // Funzioni per la selezione multipla
+  const toggleContactSelection = (contactId: string) => {
+    setSelectedContacts(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(contactId)) {
+        newSelection.delete(contactId);
+      } else {
+        newSelection.add(contactId);
+      }
+      return newSelection;
+    });
+  };
+
+  const selectAllContacts = () => {
+    const allContactIds = filteredContacts.map(contact => contact._id);
+    setSelectedContacts(new Set(allContactIds));
+  };
+
+  const clearSelection = () => {
+    setSelectedContacts(new Set());
+  };
+
+  const isAllSelected = filteredContacts.length > 0 && filteredContacts.every(contact => selectedContacts.has(contact._id));
+  const isSomeSelected = selectedContacts.size > 0;
+
+  // Gestione eliminazione bulk
+  const handleBulkDelete = async () => {
+    if (selectedContacts.size === 0) return;
+
+    const confirmMessage = `Sei sicuro di voler eliminare ${selectedContacts.size} contatti selezionati? Questa azione non può essere annullata.`;
+    
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const contactIds = Array.from(selectedContacts);
+      
+      console.log('🗑️ Eliminazione bulk di', contactIds.length, 'contatti');
+      const response = await apiClient.deleteContactsBulk(contactIds);
+      
+      if (response.success && response.data) {
+        const { deletedCount, unauthorizedCount, unauthorizedContacts } = response.data;
+        
+        // Messaggio di successo
+        let message = `✅ Eliminati ${deletedCount} contatti con successo.`;
+        if (unauthorizedCount > 0) {
+          message += `\n⚠️ Non hai i permessi per eliminare ${unauthorizedCount} contatti.`;
+          if (unauthorizedContacts.length > 0) {
+            message += `\nContatti non autorizzati: ${unauthorizedContacts.join(', ')}`;
+          }
+        }
+        
+        alert(message);
+        
+        // Pulisce la selezione e ricarica i dati
+        clearSelection();
+        // Trigger refresh della tabella
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        throw new Error(response.message || 'Errore durante l\'eliminazione');
+      }
+    } catch (error) {
+      console.error('❌ Errore eliminazione bulk:', error);
+      alert(`❌ Errore durante l'eliminazione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -223,21 +343,29 @@ function ContactsTable({
                   {col}
                 </DropdownMenuCheckboxItem>
               ))}
-              {dynamicProperties.length > 0 && (
+              {(dynamicProperties.length > 0 || isLoadingProperties) && (
                 <>
-                  <div className="p-2 text-xs font-medium text-gray-500 border-b">Proprietà Dinamiche</div>
-                  {dynamicProperties.map((prop) => {
-                    const colKey = `prop_${prop}`;
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={colKey}
-                        checked={visibleColumns.includes(colKey)}
-                        onCheckedChange={() => toggleColumn(colKey)}
-                      >
-                        {getColumnDisplayName(colKey)}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
+                  <div className="p-2 text-xs font-medium text-gray-500 border-b">
+                    Proprietà Dinamiche
+                    {isLoadingProperties && " (caricamento...)"}
+                    {!isLoadingProperties && allDynamicProperties.length > 0 && ` (${allDynamicProperties.length} dal server)`}
+                  </div>
+                  {isLoadingProperties ? (
+                    <div className="p-2 text-xs text-gray-400">Caricamento proprietà...</div>
+                  ) : (
+                    dynamicProperties.map((prop) => {
+                      const colKey = `prop_${prop}`;
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={colKey}
+                          checked={visibleColumns.includes(colKey)}
+                          onCheckedChange={() => toggleColumn(colKey)}
+                        >
+                          {getColumnDisplayName(colKey)}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })
+                  )}
                 </>
               )}
             </DropdownMenuContent>
@@ -248,6 +376,21 @@ function ContactsTable({
       <Table className="w-full">
         <TableHeader>
           <TableRow>
+            {/* Checkbox per selezionare tutti */}
+            <TableHead className="w-[50px]">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    selectAllContacts();
+                  } else {
+                    clearSelection();
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </TableHead>
             {visibleColumns.includes("Contact") && <TableHead className="w-[200px]">Contatto</TableHead>}
             {visibleColumns.includes("Email") && <TableHead className="w-[250px]">Email</TableHead>}
             {visibleColumns.includes("Phone") && <TableHead className="w-[150px]">Telefono</TableHead>}
@@ -269,7 +412,16 @@ function ContactsTable({
         <TableBody>
           {filteredContacts.length ? (
             filteredContacts.map((contact) => (
-              <TableRow key={contact._id}>
+              <TableRow key={contact._id} className={selectedContacts.has(contact._id) ? "bg-blue-50" : ""}>
+                {/* Checkbox per selezione singola */}
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selectedContacts.has(contact._id)}
+                    onChange={() => toggleContactSelection(contact._id)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </TableCell>
                 {visibleColumns.includes("Contact") && (
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -443,7 +595,7 @@ function ContactsTable({
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={visibleColumns.length} className="text-center py-8">
+              <TableCell colSpan={visibleColumns.length + 1} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
                   <User className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
@@ -505,6 +657,51 @@ function ContactsTable({
             >
               Successiva →
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Banner azioni bulk */}
+      {isSomeSelected && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-white border border-gray-200 rounded-lg shadow-lg px-6 py-4 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-blue-600" />
+              <span className="font-medium">
+                {selectedContacts.size} contatto{selectedContacts.size !== 1 ? 'i' : ''} selezionato{selectedContacts.size !== 1 ? 'i' : ''}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearSelection}
+                disabled={isBulkDeleting}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Deseleziona
+              </Button>
+              
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting}
+              >
+                {isBulkDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Elimina {selectedContacts.size}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}

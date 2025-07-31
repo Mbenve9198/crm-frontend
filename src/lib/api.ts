@@ -1,4 +1,4 @@
-import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse } from '@/types/contact';
+import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, ContactList } from '@/types/contact';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -556,6 +556,109 @@ class ApiClient {
       method: 'PUT',
       headers,
       body: JSON.stringify({ tablePreferences }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+      }
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  }
+
+  // === GESTIONE LISTE CONTATTI ===
+
+  // Ottiene tutte le liste di contatti disponibili con conteggio
+  async getContactLists(): Promise<ApiResponse<ContactList[]>> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
+    // Aggiungi il token di autenticazione se disponibile
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/contacts/lists`, {
+      method: 'GET',
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+      }
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  }
+
+  // Crea una nuova lista
+  async createContactList(listName: string): Promise<ApiResponse> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
+    // Aggiungi il token di autenticazione se disponibile
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/contacts/lists`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ listName }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+      }
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  }
+
+  // Aggiunge contatti a una lista
+  async addContactsToList(contactIds: string[], listName: string): Promise<ApiResponse> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
+    // Aggiungi il token di autenticazione se disponibile
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/contacts/lists/${encodeURIComponent(listName)}/bulk-add`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ contactIds }),
     });
 
     const data = await response.json();

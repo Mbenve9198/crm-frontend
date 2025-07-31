@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
+import { CrmSidebar } from "@/components/ui/crm-sidebar";
+import { BulkActionsBanner } from "@/components/ui/bulk-actions-banner";
 import { CsvImportDialog } from "@/components/ui/csv-import";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, User, Upload } from "lucide-react";
-import { Contact } from "@/types/contact";
+import { Loader2, Upload } from "lucide-react";
+import { Contact, ContactList } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 
 function LoadingSpinner() {
@@ -36,6 +38,9 @@ function Dashboard() {
   });
   const [currentLimit, setCurrentLimit] = useState(10);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [selectedList, setSelectedList] = useState<string>('');
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [availableLists, setAvailableLists] = useState<ContactList[]>([]);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -60,17 +65,39 @@ function Dashboard() {
     loadUserPreferences();
   }, []); // Carica solo una volta al montaggio
 
+  // Carica le liste disponibili
+  useEffect(() => {
+    const loadAvailableLists = async () => {
+      try {
+        console.log('🔍 Caricamento liste disponibili...');
+        const response = await apiClient.getContactLists();
+        
+        if (response.success && response.data) {
+          console.log('✅ Liste disponibili caricate:', response.data);
+          setAvailableLists(response.data);
+        }
+      } catch (error) {
+        console.error('❌ Errore nel caricamento liste disponibili:', error);
+        setAvailableLists([]);
+      }
+    };
+
+    loadAvailableLists();
+  }, [refreshKey]); // Ricarica quando refreshKey cambia
+
   // Carica i contatti dal database
-  const loadContacts = async (page: number = 1, limit: number = 10) => {
+  const loadContacts = async (page: number = 1, limit: number = 10, list?: string) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}`);
-      const response = await apiClient.getContacts({
-        page,
-        limit
-      });
+      const filters: any = { page, limit };
+      if (list && list.trim() !== '') {
+        filters.list = list;
+      }
+      
+      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}, lista: "${list || 'tutte'}"`);
+      const response = await apiClient.getContacts(filters);
       
       if (response.success && response.data) {
         console.log('✅ Contatti caricati:', response.data.contacts.length);
@@ -87,22 +114,28 @@ function Dashboard() {
     }
   };
 
-  // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
+  // Carica i contatti al mount e quando refreshKey/selectedList cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
-      loadContacts(pagination.currentPage, currentLimit);
+      loadContacts(pagination.currentPage, currentLimit, selectedList);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit]);
+  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {
-    loadContacts(newPage, currentLimit);
+    loadContacts(newPage, currentLimit, selectedList);
   };
 
   // Gestione cambio limite per pagina
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
-    loadContacts(1, newLimit); // Torna alla prima pagina con il nuovo limite
+    loadContacts(1, newLimit, selectedList); // Torna alla prima pagina con il nuovo limite
+  };
+
+  // Gestione selezione lista dalla sidebar
+  const handleListSelect = (listName: string) => {
+    setSelectedList(listName);
+    // Il reload dei contatti viene gestito dall'useEffect
   };
 
   const handleEditContact = (contact: Contact) => {
@@ -133,46 +166,52 @@ function Dashboard() {
     setRefreshKey(prev => prev + 1);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">MenuChatCRM</h1>
-              <p className="text-sm text-gray-600">Gestione Contatti</p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {/* Info utente */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <User className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium">
-                  {user?.firstName} {user?.lastName}
-                </span>
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {user?.role}
-                </span>
-              </div>
-              
-              {/* Logout */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="flex items-center gap-2"
-              >
-                <LogOut className="h-4 w-4" />
-                Esci
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+  // Gestione bulk actions
+  const handleBulkActionComplete = () => {
+    // Ricarica contatti e liste dopo un'azione bulk
+    console.log('✅ Azione bulk completata, ricarico dati...');
+    setSelectedContactIds([]);
+    setRefreshKey(prev => prev + 1);
+  };
 
-      {/* Main content */}
-      <main className="container mx-auto py-8">
+  const handleClearSelection = () => {
+    setSelectedContactIds([]);
+  };
+
+  const handleContactsSelectionChange = (selectedIds: string[]) => {
+    setSelectedContactIds(selectedIds);
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-100 dark:bg-neutral-800 overflow-hidden">
+      {/* Bulk Actions Banner */}
+      <BulkActionsBanner
+        selectedContactIds={selectedContactIds}
+        onClear={handleClearSelection}
+        onActionComplete={handleBulkActionComplete}
+        availableLists={availableLists}
+      />
+
+      {/* Sidebar */}
+      <CrmSidebar 
+        onListSelect={handleListSelect}
+        selectedList={selectedList}
+      />
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-neutral-900">
+        {/* Header semplificato */}
+        <div className="border-b border-gray-200 dark:border-neutral-700 px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {selectedList ? `Lista: ${selectedList}` : 'Tutti i Contatti'}
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {pagination.totalContacts} contatti totali
+          </p>
+        </div>
+
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-6">
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
@@ -202,7 +241,7 @@ function Dashboard() {
               <span>{contactsError}</span>
             </div>
             <button 
-              onClick={() => loadContacts(pagination.currentPage, currentLimit)}
+              onClick={() => loadContacts(pagination.currentPage, currentLimit, selectedList)}
               className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
             >
               Riprova
@@ -222,8 +261,11 @@ function Dashboard() {
           onPageChange={handlePageChange}
           onLimitChange={handleLimitChange}
           onRefresh={() => setRefreshKey(prev => prev + 1)}
+          onSelectionChange={handleContactsSelectionChange}
+          selectedContactIds={selectedContactIds}
         />
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

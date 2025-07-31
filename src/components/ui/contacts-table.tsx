@@ -72,6 +72,8 @@ type ContactsTableProps = {
   onLimitChange?: (limit: number) => void;
   onRefresh?: () => void;
   currentLimit?: number;
+  onSelectionChange?: (selectedIds: string[]) => void;
+  selectedContactIds?: string[];
 };
 
 // Funzione per estrarre tutte le proprietà dinamiche disponibili
@@ -99,7 +101,9 @@ function ContactsTable({
   onPageChange,
   onLimitChange,
   onRefresh,
-  currentLimit = 10
+  currentLimit = 10,
+  onSelectionChange,
+  selectedContactIds = []
 }: ContactsTableProps) {
   // Stato per le proprietà dinamiche caricate dal server
   const [allDynamicProperties, setAllDynamicProperties] = useState<string[]>([]);
@@ -118,9 +122,20 @@ function ContactsTable({
   const [listFilter, setListFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
 
-  // Stato per la selezione multipla
-  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  // Stato per la selezione multipla (sincronizzato con parent)
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set(selectedContactIds));
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Sincronizza selectedContacts con selectedContactIds dal parent
+  useEffect(() => {
+    setSelectedContacts(new Set(selectedContactIds));
+  }, [selectedContactIds]);
+
+  // Notifica il parent quando la selezione cambia
+  useEffect(() => {
+    const selectedArray = Array.from(selectedContacts);
+    onSelectionChange?.(selectedArray);
+  }, [selectedContacts, onSelectionChange]);
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {

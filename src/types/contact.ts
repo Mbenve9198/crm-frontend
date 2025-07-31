@@ -61,6 +61,11 @@ export type TablePreferencesResponse = {
   };
 };
 
+export type ContactList = {
+  name: string;
+  count: number;
+};
+
 export type ContactFilters = {
   search?: string;
   list?: string;

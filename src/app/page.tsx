@@ -24,7 +24,8 @@ function LoadingSpinner() {
 }
 
 function Dashboard() {
-  const {} = useAuth();
+  // Rimuoviamo la destructuring vuota che può causare errori React #185
+  useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);

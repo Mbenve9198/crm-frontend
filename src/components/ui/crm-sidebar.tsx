@@ -68,17 +68,12 @@ export function CrmSidebar({ onListSelect, selectedList }: CrmSidebarProps) {
     },
   ];
 
-  // Collegamenti settings e logout
+  // Collegamenti settings (rimuoviamo logout per ora)
   const bottomLinks = [
     {
       label: "Impostazioni",
       href: "/settings",
       icon: <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
-    },
-    {
-      label: "Esci",
-      href: "#",
-      icon: <LogOut className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
     },
   ];
 
@@ -193,9 +188,18 @@ export function CrmSidebar({ onListSelect, selectedList }: CrmSidebarProps) {
             <SidebarLink 
               key={`bottom-${idx}`} 
               link={link}
-              onClick={idx === 1 ? logout : undefined}
             />
           ))}
+          
+          {/* Logout separato */}
+          <SidebarLink 
+            link={{
+              label: "Esci",
+              href: "#",
+              icon: <LogOut className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+            }}
+            onClick={logout}
+          />
         </div>
       </SidebarBody>
     </Sidebar>

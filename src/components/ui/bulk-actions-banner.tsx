@@ -170,18 +170,20 @@ export function BulkActionsBanner({
                       )}
 
                       {/* Liste esistenti */}
-                      {availableLists.map((list) => (
-                        <Button
-                          key={list.name}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAddToList(list.name)}
-                          className="w-full justify-start text-left"
-                        >
-                          <Hash className="h-4 w-4 mr-2" />
-                          {list.name} ({list.count})
-                        </Button>
-                      ))}
+                      {availableLists
+                        .filter(list => list && list.name && list.name.trim())
+                        .map((list) => (
+                          <Button
+                            key={list.name}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleAddToList(list.name)}
+                            className="w-full justify-start text-left"
+                          >
+                            <Hash className="h-4 w-4 mr-2" />
+                            {list.name} ({list.count || 0})
+                          </Button>
+                        ))}
 
                       {availableLists.length === 0 && (
                         <p className="text-sm text-gray-500 p-2">

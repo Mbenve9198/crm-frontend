@@ -83,7 +83,10 @@ function extractDynamicProperties(contacts: Contact[]): string[] {
   contacts.forEach(contact => {
     if (contact.properties) {
       Object.keys(contact.properties).forEach(key => {
-        propertySet.add(key);
+        // Filtriamo chiavi vuote, undefined, null e spazi
+        if (key && typeof key === 'string' && key.trim()) {
+          propertySet.add(key.trim());
+        }
       });
     }
   });
@@ -113,7 +116,7 @@ function ContactsTable({
   const localDynamicProperties = extractDynamicProperties(contacts);
   const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
   const allColumns = useMemo(() => {
-    return [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
+    return [...baseColumns, ...dynamicProperties.filter(prop => prop && prop.trim()).map(prop => `prop_${prop}`)];
   }, [dynamicProperties]);
   
   // Stato per le preferenze tabella
@@ -437,18 +440,20 @@ function ContactsTable({
                   {isLoadingProperties ? (
                     <div className="p-2 text-xs text-gray-400">Caricamento proprietà...</div>
                   ) : (
-                    dynamicProperties.map((prop) => {
-                      const colKey = `prop_${prop}`;
-                      return (
-                        <DropdownMenuCheckboxItem
-                          key={colKey}
-                          checked={visibleColumns.includes(colKey)}
-                          onCheckedChange={() => toggleColumn(colKey)}
-                        >
-                          {getColumnDisplayName(colKey)}
-                        </DropdownMenuCheckboxItem>
-                      );
-                    })
+                    dynamicProperties
+                      .filter(prop => prop && prop.trim())
+                      .map((prop) => {
+                        const colKey = `prop_${prop}`;
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={colKey}
+                            checked={visibleColumns.includes(colKey)}
+                            onCheckedChange={() => toggleColumn(colKey)}
+                          >
+                            {getColumnDisplayName(colKey)}
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })
                   )}
                 </>
               )}
@@ -482,14 +487,16 @@ function ContactsTable({
             {visibleColumns.includes("Lists") && <TableHead className="w-[150px]">Liste</TableHead>}
             {visibleColumns.includes("Created") && <TableHead className="w-[120px]">Creato</TableHead>}
             {/* Colonne dinamiche per proprietà */}
-            {dynamicProperties.map((prop) => {
-              const colKey = `prop_${prop}`;
-              return visibleColumns.includes(colKey) && (
-                <TableHead key={colKey} className="w-[150px]">
-                  {getColumnDisplayName(colKey)}
-                </TableHead>
-              );
-            })}
+            {dynamicProperties
+              .filter(prop => prop && prop.trim())
+              .map((prop) => {
+                const colKey = `prop_${prop}`;
+                return visibleColumns.includes(colKey) && (
+                  <TableHead key={colKey} className="w-[150px]">
+                    {getColumnDisplayName(colKey)}
+                  </TableHead>
+                );
+              })}
             {visibleColumns.includes("Actions") && <TableHead className="w-[100px]">Azioni</TableHead>}
           </TableRow>
         </TableHeader>
@@ -625,14 +632,16 @@ function ContactsTable({
                   </TableCell>
                 )}
                 {/* Celle per proprietà dinamiche */}
-                {dynamicProperties.map((prop) => {
-                  const colKey = `prop_${prop}`;
-                  return visibleColumns.includes(colKey) && (
-                    <TableCell key={colKey}>
-                      <span className="text-sm">{getPropertyValue(contact, prop)}</span>
-                    </TableCell>
-                  );
-                })}
+                {dynamicProperties
+                  .filter(prop => prop && prop.trim())
+                  .map((prop) => {
+                    const colKey = `prop_${prop}`;
+                    return visibleColumns.includes(colKey) && (
+                      <TableCell key={colKey}>
+                        <span className="text-sm">{getPropertyValue(contact, prop)}</span>
+                      </TableCell>
+                    );
+                  })}
                 {visibleColumns.includes("Actions") && (
                   <TableCell>
                     <DropdownMenu>

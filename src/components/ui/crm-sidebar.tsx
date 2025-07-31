@@ -136,21 +136,23 @@ export function CrmSidebar({ onListSelect, selectedList }: CrmSidebarProps) {
                   </motion.span>
                 </div>
               ) : lists.length > 0 ? (
-                lists.map((list, idx) => (
-                  <SidebarLink 
-                    key={`list-${idx}`} 
-                    link={{
-                      label: `${list.name} (${list.count})`,
-                      href: "#",
-                      icon: <Hash className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-                    }}
-                    className={cn(
-                      "pl-6", // Indentazione per le liste
-                      selectedList === list.name && "bg-neutral-200 dark:bg-neutral-700 rounded-md"
-                    )}
-                    onClick={() => onListSelect?.(list.name)}
-                  />
-                ))
+                lists
+                  .filter(list => list && list.name && list.name.trim())
+                  .map((list, idx) => (
+                    <SidebarLink 
+                      key={`list-${idx}`} 
+                      link={{
+                        label: `${list.name} (${list.count || 0})`,
+                        href: "#",
+                        icon: <Hash className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+                      }}
+                      className={cn(
+                        "pl-6", // Indentazione per le liste
+                        selectedList === list.name && "bg-neutral-200 dark:bg-neutral-700 rounded-md"
+                      )}
+                      onClick={() => onListSelect?.(list.name)}
+                    />
+                  ))
               ) : (
                 <motion.div
                   animate={{

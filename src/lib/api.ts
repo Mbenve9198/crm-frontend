@@ -1,4 +1,4 @@
-import { Contact, ContactsResponse, User, ApiResponse, ContactFilters } from '@/types/contact';
+import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse } from '@/types/contact';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -499,6 +499,75 @@ class ApiClient {
   // Metodo per ottenere il token corrente
   getToken(): string | null {
     return this.token;
+  }
+
+  // === PREFERENZE TABELLA ===
+
+  // Ottiene le preferenze di visualizzazione tabella dell'utente corrente
+  async getTablePreferences(): Promise<TablePreferencesResponse> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
+    // Aggiungi il token di autenticazione se disponibile
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/users/me/table-preferences`, {
+      method: 'GET',
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+      }
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  }
+
+  // Aggiorna le preferenze di visualizzazione tabella dell'utente corrente
+  async updateTablePreferences(tablePreferences: TablePreferences): Promise<TablePreferencesResponse> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Se non abbiamo il token, prova a ricaricarlo dal localStorage
+    if (!this.token) {
+      this.reloadTokenFromStorage();
+    }
+
+    // Aggiungi il token di autenticazione se disponibile
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(`${this.baseURL}/users/me/table-preferences`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ tablePreferences }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Token di autenticazione non valido o scaduto. Effettua nuovamente il login.');
+      }
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
   }
   }
 

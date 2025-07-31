@@ -47,6 +47,20 @@ export type User = {
   updatedAt: string;
 };
 
+export type TablePreferences = {
+  contacts: {
+    visibleColumns: string[];
+    pageSize: number;
+  };
+};
+
+export type TablePreferencesResponse = {
+  success: boolean;
+  data: {
+    tablePreferences: TablePreferences;
+  };
+};
+
 export type ContactFilters = {
   search?: string;
   list?: string;

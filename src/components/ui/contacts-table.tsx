@@ -34,7 +34,6 @@ import {
   Phone, 
   User, 
   Calendar, 
-  Building, 
   Edit, 
   Trash2,
   MoreHorizontal,
@@ -111,7 +110,10 @@ function ContactsTable({
   const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
   const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
   
+  // Stato per le preferenze tabella
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [listFilter, setListFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
@@ -119,6 +121,37 @@ function ContactsTable({
   // Stato per la selezione multipla
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Carica le preferenze tabella dell'utente all'avvio
+  useEffect(() => {
+    const loadTablePreferences = async () => {
+      try {
+        setIsLoadingPreferences(true);
+        console.log('🔍 Caricamento preferenze tabella utente...');
+        
+        const response = await apiClient.getTablePreferences();
+        
+        if (response.success && response.data?.tablePreferences?.contacts) {
+          const { visibleColumns: savedColumns } = response.data.tablePreferences.contacts;
+          
+          if (savedColumns && Array.isArray(savedColumns) && savedColumns.length > 0) {
+            setVisibleColumns(savedColumns);
+            console.log('✅ Preferenze tabella caricate:', savedColumns);
+          }
+        }
+        
+        setPreferencesLoaded(true);
+      } catch (error) {
+        console.error('❌ Errore nel caricamento preferenze tabella:', error);
+        // In caso di errore, usa i valori di default
+        setPreferencesLoaded(true);
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+
+    loadTablePreferences();
+  }, []); // Carica solo una volta al montaggio
 
   // Carica le proprietà dinamiche dal server all'avvio
   useEffect(() => {
@@ -169,12 +202,29 @@ function ContactsTable({
     return matchesSearch && matchesList && matchesOwner;
   });
 
-  const toggleColumn = (col: string) => {
-    setVisibleColumns((prev) =>
-      prev.includes(col)
-        ? prev.filter((c) => c !== col)
-        : [...prev, col]
-    );
+  const toggleColumn = async (col: string) => {
+    const newVisibleColumns = visibleColumns.includes(col)
+      ? visibleColumns.filter((c) => c !== col)
+      : [...visibleColumns, col];
+    
+    // Aggiorna lo stato locale immediatamente
+    setVisibleColumns(newVisibleColumns);
+    
+    // Salva le preferenze solo se sono già state caricate
+    if (preferencesLoaded) {
+      try {
+        await apiClient.updateTablePreferences({
+          contacts: {
+            visibleColumns: newVisibleColumns,
+            pageSize: currentLimit
+          }
+        });
+        console.log('✅ Preferenze colonne salvate:', newVisibleColumns);
+      } catch (error) {
+        console.error('❌ Errore nel salvataggio preferenze colonne:', error);
+        // Non interrompiamo l'UX per errori di salvataggio
+      }
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -207,6 +257,27 @@ function ContactsTable({
     }
     return columnKey;
   };
+
+  // Salva automaticamente il pageSize quando cambia
+  useEffect(() => {
+    if (preferencesLoaded && currentLimit !== 10) { // Solo se diverso dal default
+      const savePageSize = async () => {
+        try {
+          await apiClient.updateTablePreferences({
+            contacts: {
+              visibleColumns,
+              pageSize: currentLimit
+            }
+          });
+          console.log('✅ Preferenze pageSize salvate:', currentLimit);
+        } catch (error) {
+          console.error('❌ Errore nel salvataggio preferenze pageSize:', error);
+        }
+      };
+
+      savePageSize();
+    }
+  }, [currentLimit, preferencesLoaded, visibleColumns]);
 
   // Funzioni per la selezione multipla
   const toggleContactSelection = (contactId: string) => {

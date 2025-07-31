@@ -35,6 +35,30 @@ function Dashboard() {
     hasPrev: false
   });
   const [currentLimit, setCurrentLimit] = useState(10);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // Carica le preferenze utente per pageSize all'avvio
+  useEffect(() => {
+    const loadUserPreferences = async () => {
+      try {
+        console.log('🔍 Caricamento preferenze utente per pageSize...');
+        const response = await apiClient.getTablePreferences();
+        
+        if (response.success && response.data?.tablePreferences?.contacts?.pageSize) {
+          const savedPageSize = response.data.tablePreferences.contacts.pageSize;
+          console.log('✅ PageSize salvato caricato:', savedPageSize);
+          setCurrentLimit(savedPageSize);
+        }
+      } catch (error) {
+        console.error('❌ Errore nel caricamento preferenze pageSize:', error);
+        // In caso di errore, mantieni il valore di default (10)
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    };
+
+    loadUserPreferences();
+  }, []); // Carica solo una volta al montaggio
 
   // Carica i contatti dal database
   const loadContacts = async (page: number = 1, limit: number = 10) => {
@@ -63,10 +87,12 @@ function Dashboard() {
     }
   };
 
-  // Carica i contatti al mount e quando refreshKey cambia
+  // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
-    loadContacts(pagination.currentPage, currentLimit);
-  }, [refreshKey]);
+    if (preferencesLoaded) {
+      loadContacts(pagination.currentPage, currentLimit);
+    }
+  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit]);
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {

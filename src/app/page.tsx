@@ -118,9 +118,9 @@ function Dashboard() {
   // Carica i contatti al mount e quando refreshKey/selectedList cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
-      loadContacts(pagination.currentPage, currentLimit, selectedList);
+      loadContacts(1, currentLimit, selectedList); // Sempre pagina 1 per refresh/filtri
     }
-  }, [loadContacts, refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
+  }, [loadContacts, refreshKey, preferencesLoaded, currentLimit, selectedList]);
 
   // Gestione cambio pagina
   const handlePageChange = useCallback((newPage: number) => {

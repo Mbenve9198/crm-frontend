@@ -79,7 +79,9 @@ function Dashboard() {
         }
       } catch (error) {
         console.error('❌ Errore nel caricamento liste disponibili:', error);
+        // Fallback: usa una lista vuota per evitare che l'app si blocchi
         setAvailableLists([]);
+        // Non mostrare l'errore all'utente per questo endpoint non critico
       }
     };
 

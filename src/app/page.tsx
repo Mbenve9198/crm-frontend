@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
@@ -87,7 +87,7 @@ function Dashboard() {
   }, [refreshKey]); // Ricarica quando refreshKey cambia
 
   // Carica i contatti dal database
-  const loadContacts = async (page: number = 1, limit: number = 10, list?: string) => {
+  const loadContacts = useCallback(async (page: number = 1, limit: number = 10, list?: string) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
@@ -113,25 +113,25 @@ function Dashboard() {
     } finally {
       setIsLoadingContacts(false);
     }
-  };
+  }, []);
 
   // Carica i contatti al mount e quando refreshKey/selectedList cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
       loadContacts(pagination.currentPage, currentLimit, selectedList);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
+  }, [loadContacts, refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
 
   // Gestione cambio pagina
-  const handlePageChange = (newPage: number) => {
+  const handlePageChange = useCallback((newPage: number) => {
     loadContacts(newPage, currentLimit, selectedList);
-  };
+  }, [loadContacts, currentLimit, selectedList]);
 
   // Gestione cambio limite per pagina
-  const handleLimitChange = (newLimit: number) => {
+  const handleLimitChange = useCallback((newLimit: number) => {
     setCurrentLimit(newLimit);
     loadContacts(1, newLimit, selectedList); // Torna alla prima pagina con il nuovo limite
-  };
+  }, [loadContacts, selectedList]);
 
   // Gestione selezione lista dalla sidebar
   const handleListSelect = (listName: string) => {
@@ -139,12 +139,12 @@ function Dashboard() {
     // Il reload dei contatti viene gestito dall'useEffect
   };
 
-  const handleEditContact = (contact: Contact) => {
+  const handleEditContact = useCallback((contact: Contact) => {
     console.log('Edit contact:', contact);
     // TODO: Implementare modal di modifica
-  };
+  }, []);
 
-  const handleDeleteContact = async (contactId: string) => {
+  const handleDeleteContact = useCallback(async (contactId: string) => {
     console.log('Delete contact:', contactId);
     // TODO: Implementare conferma eliminazione e chiamata API
     try {
@@ -154,12 +154,12 @@ function Dashboard() {
     } catch (error) {
       console.error('Errore eliminazione contatto:', error);
     }
-  };
+  }, []);
 
-  const handleViewContact = (contact: Contact) => {
+  const handleViewContact = useCallback((contact: Contact) => {
     console.log('View contact:', contact);
     // TODO: Implementare modal di visualizzazione
-  };
+  }, []);
 
   const handleImportComplete = () => {
     // Aggiorna la tabella contatti dopo l'importazione
@@ -179,9 +179,9 @@ function Dashboard() {
     setSelectedContactIds([]);
   };
 
-  const handleContactsSelectionChange = (selectedIds: string[]) => {
+  const handleContactsSelectionChange = useCallback((selectedIds: string[]) => {
     setSelectedContactIds(selectedIds);
-  };
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-neutral-800 overflow-hidden">

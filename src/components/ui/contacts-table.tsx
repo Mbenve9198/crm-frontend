@@ -113,8 +113,11 @@ function ContactsTable({
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
 
   // Genera colonne dinamiche: usa quelle dal server se disponibili, altrimenti quelle locali come fallback
-  const localDynamicProperties = extractDynamicProperties(contacts);
-  const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
+  const localDynamicProperties = useMemo(() => extractDynamicProperties(contacts), [contacts]);
+  const dynamicProperties = useMemo(() => 
+    allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties,
+    [allDynamicProperties, localDynamicProperties]
+  );
   const allColumns = useMemo(() => {
     return [...baseColumns, ...dynamicProperties.filter(prop => prop && prop.trim()).map(prop => `prop_${prop}`)];
   }, [dynamicProperties]);
@@ -135,11 +138,13 @@ function ContactsTable({
     setSelectedContacts(new Set(selectedContactIds));
   }, [selectedContactIds]);
 
-  // Notifica il parent quando la selezione cambia
+  // Notifica il parent quando la selezione cambia (usando useCallback per evitare loop)
   useEffect(() => {
     const selectedArray = Array.from(selectedContacts);
-    onSelectionChange?.(selectedArray);
-  }, [selectedContacts, onSelectionChange]);
+    if (onSelectionChange) {
+      onSelectionChange(selectedArray);
+    }
+  }, [selectedContacts]); // Rimosso onSelectionChange dalle dipendenze per evitare loop
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {
@@ -194,14 +199,12 @@ function ContactsTable({
     loadDynamicProperties();
   }, []);
 
-  // Log per debug
+  // Log per debug (solo quando cambia allDynamicProperties dal server)
   useEffect(() => {
-    console.log('🔍 Debug ContactsTable:');
-    console.log('  - allDynamicProperties (server):', allDynamicProperties);
-    console.log('  - localDynamicProperties (local):', localDynamicProperties);
-    console.log('  - dynamicProperties (used):', dynamicProperties);
-    console.log('  - allColumns:', allColumns);
-  }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
+    if (allDynamicProperties.length > 0) {
+      console.log('🔍 Debug ContactsTable - proprietà dinamiche caricate dal server:', allDynamicProperties);
+    }
+  }, [allDynamicProperties]);
 
   const filteredContacts = contacts.filter((contact) => {
     const matchesSearch = !searchFilter || 
@@ -274,7 +277,7 @@ function ContactsTable({
     return columnKey;
   };
 
-  // Salva automaticamente il pageSize quando cambia
+  // Salva automaticamente il pageSize quando cambia (solo per currentLimit, non visibleColumns)
   useEffect(() => {
     if (preferencesLoaded && currentLimit !== 10) { // Solo se diverso dal default
       const savePageSize = async () => {
@@ -293,7 +296,7 @@ function ContactsTable({
 
       savePageSize();
     }
-  }, [currentLimit, preferencesLoaded, visibleColumns]);
+  }, [currentLimit, preferencesLoaded]); // Rimosso visibleColumns dalle dipendenze
 
   // Funzioni per la selezione multipla
   const toggleContactSelection = (contactId: string) => {

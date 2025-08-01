@@ -489,9 +489,10 @@ function ContactsTable({
             {/* Colonne dinamiche per proprietà */}
             {dynamicProperties
               .filter(prop => prop && prop.trim())
+              .filter(prop => visibleColumns.includes(`prop_${prop}`))
               .map((prop) => {
                 const colKey = `prop_${prop}`;
-                return visibleColumns.includes(colKey) && (
+                return (
                   <TableHead key={colKey} className="w-[150px]">
                     {getColumnDisplayName(colKey)}
                   </TableHead>
@@ -634,9 +635,10 @@ function ContactsTable({
                 {/* Celle per proprietà dinamiche */}
                 {dynamicProperties
                   .filter(prop => prop && prop.trim())
+                  .filter(prop => visibleColumns.includes(`prop_${prop}`))
                   .map((prop) => {
                     const colKey = `prop_${prop}`;
-                    return visibleColumns.includes(colKey) && (
+                    return (
                       <TableCell key={colKey}>
                         <span className="text-sm">{getPropertyValue(contact, prop)}</span>
                       </TableCell>

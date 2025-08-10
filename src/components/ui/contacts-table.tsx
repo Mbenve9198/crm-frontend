@@ -516,7 +516,8 @@ function ContactsTable({
         </div>
       </div>
 
-      <Table className="w-full">
+      <div className="overflow-auto max-h-[calc(100vh-300px)] relative">
+        <Table className="w-full">
         <TableHeader>
           <TableRow>
             {/* Checkbox per selezionare tutti */}
@@ -752,7 +753,7 @@ function ContactsTable({
                 )}
                 
                 {/* Colonna Status sempre visibile e fissa a destra */}
-                <TableCell className="sticky right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] min-w-[140px] z-10 relative">
+                <TableCell className="sticky top-0 right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] min-w-[140px] z-10">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
                     <span className="text-sm font-medium text-gray-800">{getStatusLabel(contact.status)}</span>
@@ -777,6 +778,7 @@ function ContactsTable({
           )}
         </TableBody>
       </Table>
+      </div>
 
       {/* Controlli di paginazione */}
       {pagination && (

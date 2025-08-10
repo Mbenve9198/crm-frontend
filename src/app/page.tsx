@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
@@ -66,7 +66,7 @@ function Dashboard() {
   }, []); // Carica solo una volta al montaggio
 
   // Carica i contatti dal database
-  const loadContacts = async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList) => {
+  const loadContacts = useCallback(async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
@@ -91,7 +91,7 @@ function Dashboard() {
     } finally {
       setIsLoadingContacts(false);
     }
-  };
+  }, [selectedList]);
 
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {

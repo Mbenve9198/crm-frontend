@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Contact, User, ContactStatus } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { getPipelineStatuses, getStatusLabel, getStatusColor, formatMRR } from "@/lib/status-utils";
+import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Users, Euro, TrendingUp } from "lucide-react";
 
 function LoadingSpinner() {
@@ -22,11 +23,73 @@ function LoadingSpinner() {
   );
 }
 
+// Componente Card Contatto con Drag & Drop
+function ContactCard({ 
+  contact, 
+  onMove, 
+  onClick 
+}: { 
+  contact: Contact; 
+  onMove: (id: string, status: ContactStatus) => void; 
+  onClick: (contact: Contact) => void;
+}) {
+  return (
+    <Card 
+      className="cursor-pointer bg-white hover:shadow-lg transition-all duration-200 border-2 border-transparent hover:border-blue-200 group active:scale-95"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('contact-id', contact._id);
+        e.dataTransfer.effectAllowed = 'move';
+        e.currentTarget.style.opacity = '0.6';
+        e.currentTarget.style.transform = 'rotate(2deg)';
+      }}
+      onDragEnd={(e) => {
+        e.currentTarget.style.opacity = '1';
+        e.currentTarget.style.transform = 'rotate(0deg)';
+      }}
+      onClick={() => onClick(contact)}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between mb-2">
+          <h4 className="font-medium text-sm text-gray-900 truncate flex-1 pr-2">{contact.name}</h4>
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(contact.status)}`} />
+        </div>
+        
+        <p className="text-xs text-gray-600 mb-2 truncate">{contact.email}</p>
+        
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-semibold text-green-600">
+            {formatMRR(contact.mrr)}
+          </div>
+          <div className="text-xs text-gray-500 truncate max-w-[60px]">
+            {contact.owner.firstName}
+          </div>
+        </div>
+        
+        <div className="text-xs text-gray-400">
+          {new Date(contact.updatedAt).toLocaleDateString('it-IT')}
+        </div>
+
+        {/* Indicatore drag */}
+        <div className="mt-2 text-center">
+          <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+            <span className="text-blue-500">⋮⋮</span>
+            <span>Trascina per spostare</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PipelinePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
+  const [dragOverColumn, setDragOverColumn] = useState<ContactStatus | null>(null);
 
   useEffect(() => {
     loadData();
@@ -82,19 +145,77 @@ function PipelinePage() {
     return acc;
   }, { count: 0, totalMRR: 0 });
 
+  // Gestione sidebar contatto
+  const handleContactClick = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsContactSidebarOpen(true);
+  };
+
+  const handleContactUpdate = (updatedContact: Contact) => {
+    // Aggiorna il contatto nella lista
+    setContacts(prev => prev.map(c => 
+      c._id === updatedContact._id ? updatedContact : c
+    ));
+    setSelectedContact(updatedContact);
+  };
+
+  const handleCloseSidebar = () => {
+    setIsContactSidebarOpen(false);
+    setSelectedContact(null);
+  };
+
+  // Drag & Drop per spostare contatti
+  const handleContactMove = async (contactId: string, newStatus: ContactStatus) => {
+    try {
+      const contact = contacts.find(c => c._id === contactId);
+      if (!contact || contact.status === newStatus) return;
+
+      // Aggiorna subito l'UI per feedback immediato
+      setContacts(prev => prev.map(c => 
+        c._id === contactId ? { ...c, status: newStatus } : c
+      ));
+
+      // Chiama API per salvare il cambio
+      const response = await apiClient.updateContactStatus(contactId, {
+        status: newStatus,
+        mrr: contact.mrr || (newStatus === 'interessato' ? 0 : undefined)
+      });
+
+      if (!response.success) {
+        // Se fallisce, rollback
+        setContacts(prev => prev.map(c => 
+          c._id === contactId ? { ...c, status: contact.status } : c
+        ));
+        alert('Errore durante lo spostamento del contatto');
+      }
+    } catch (error) {
+      console.error('Errore spostamento contatto:', error);
+      // Rollback in caso di errore
+      loadData();
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ModernSidebar 
-        onImportComplete={() => {}}
-        onListSelect={() => {}}
-        selectedList={null}
-      />
+      {/* Sidebar moderna */}
+      <div className={`transition-all duration-300 ${
+        isContactSidebarOpen ? 'blur-sm' : ''
+      }`}>
+        <ModernSidebar 
+          onImportComplete={() => {}}
+          onListSelect={() => {}}
+          selectedList={null}
+        />
+      </div>
 
-      <main className="pl-16">
+      {/* Main content con padding-left per la sidebar */}
+      <main className={`pl-16 transition-all duration-300 ${
+        isContactSidebarOpen ? 'blur-sm' : ''
+      }`}>
         <div className="container mx-auto py-8 px-6">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Pipeline Vendite</h1>
@@ -169,23 +290,54 @@ function PipelinePage() {
                     <p className="text-sm">{stats.count} • {formatMRR(stats.totalMRR)}</p>
                   </div>
 
-                  <div className="bg-gray-100 min-h-[400px] p-3 space-y-3 rounded-b-lg">
+                  <div 
+                    className={`min-h-[400px] p-3 space-y-3 rounded-b-lg transition-all duration-200 ${
+                      dragOverColumn === status 
+                        ? 'bg-blue-50 border-2 border-dashed border-blue-300' 
+                        : 'bg-gray-100'
+                    }`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOverColumn(status);
+                    }}
+                    onDragLeave={(e) => {
+                      // Solo se lasciamo completamente la colonna
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        setDragOverColumn(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setDragOverColumn(null);
+                      const contactId = e.dataTransfer.getData('contact-id');
+                      if (contactId) {
+                        handleContactMove(contactId, status);
+                      }
+                    }}
+                  >
                     {statusContacts.map((contact) => (
-                      <Card key={contact._id} className="bg-white hover:shadow-md transition-shadow">
-                        <CardContent className="p-3">
-                          <h4 className="font-medium text-sm">{contact.name}</h4>
-                          <p className="text-xs text-gray-600 mb-2">{contact.email}</p>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-semibold text-green-600">
-                              {formatMRR(contact.mrr)}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {contact.owner.firstName}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <ContactCard 
+                        key={contact._id} 
+                        contact={contact} 
+                        onMove={handleContactMove}
+                        onClick={handleContactClick}
+                      />
                     ))}
+                    
+                    {statusContacts.length === 0 && (
+                      <div className={`text-center py-8 transition-all duration-200 ${
+                        dragOverColumn === status 
+                          ? 'text-blue-600 font-medium' 
+                          : 'text-gray-500'
+                      }`}>
+                        <p className="text-sm">
+                          {dragOverColumn === status 
+                            ? '📎 Rilascia qui il contatto' 
+                            : 'Nessuna opportunità'
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -193,6 +345,16 @@ function PipelinePage() {
           </div>
         </div>
       </main>
+
+      {/* Contact Detail Sidebar */}
+      {selectedContact && (
+        <ContactDetailSidebar
+          contact={selectedContact}
+          isOpen={isContactSidebarOpen}
+          onClose={handleCloseSidebar}
+          onContactUpdate={handleContactUpdate}
+        />
+      )}
     </div>
   );
 }

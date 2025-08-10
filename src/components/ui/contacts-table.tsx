@@ -520,7 +520,7 @@ function ContactsTable({
         <TableHeader>
           <TableRow>
             {/* Checkbox per selezionare tutti */}
-            <TableHead className="w-[50px]">
+            <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[50px]">
               <input
                 type="checkbox"
                 checked={isAllSelected}
@@ -534,26 +534,26 @@ function ContactsTable({
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </TableHead>
-            {visibleColumns.includes("Contact") && <TableHead className="w-[200px]">Contatto</TableHead>}
-            {visibleColumns.includes("Email") && <TableHead className="w-[250px]">Email</TableHead>}
-            {visibleColumns.includes("Phone") && <TableHead className="w-[150px]">Telefono</TableHead>}
-            {visibleColumns.includes("Owner") && <TableHead className="w-[150px]">Proprietario</TableHead>}
-            {visibleColumns.includes("Lists") && <TableHead className="w-[150px]">Liste</TableHead>}
-            {visibleColumns.includes("Created") && <TableHead className="w-[120px]">Creato</TableHead>}
+            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[200px]">Contatto</TableHead>}
+            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[250px]">Email</TableHead>}
+            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Telefono</TableHead>}
+            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Proprietario</TableHead>}
+            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Liste</TableHead>}
+            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[120px]">Creato</TableHead>}
             {/* Colonne dinamiche per proprietà */}
             {dynamicProperties.map((prop) => {
               const colKey = `prop_${prop}`;
               return visibleColumns.includes(colKey) && (
-                <TableHead key={colKey} className="w-[150px]">
+                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">
                   {getColumnDisplayName(colKey)}
                 </TableHead>
               );
             })}
-            {visibleColumns.includes("Actions") && <TableHead className="w-[100px]">Azioni</TableHead>}
+            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[100px]">Azioni</TableHead>}
             
             {/* Colonna Status sempre visibile e fissa a destra */}
-            <TableHead className="sticky right-0 bg-white border-l shadow-lg w-[140px]">
-              Status
+            <TableHead className="sticky top-0 right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05),0_2px_8px_-2px_rgba(0,0,0,0.1)] w-[140px] z-30">
+              <div className="font-semibold text-gray-800">Status</div>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -752,10 +752,10 @@ function ContactsTable({
                 )}
                 
                 {/* Colonna Status sempre visibile e fissa a destra */}
-                <TableCell className="sticky right-0 bg-white border-l shadow-lg min-w-[140px]">
+                <TableCell className="sticky right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] min-w-[140px] z-10 relative">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
-                    <span className="text-sm font-medium">{getStatusLabel(contact.status)}</span>
+                    <span className="text-sm font-medium text-gray-800">{getStatusLabel(contact.status)}</span>
                   </div>
                 </TableCell>
               </TableRow>

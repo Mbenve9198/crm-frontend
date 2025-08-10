@@ -516,12 +516,12 @@ function ContactsTable({
         </div>
       </div>
 
-      <div className="overflow-auto max-h-[calc(100vh-300px)] relative">
+      <div className="relative">
         <Table className="w-full">
         <TableHeader>
           <TableRow>
             {/* Checkbox per selezionare tutti */}
-            <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[50px]">
+            <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[50px] border-b-2 border-gray-100">
               <input
                 type="checkbox"
                 checked={isAllSelected}
@@ -535,26 +535,26 @@ function ContactsTable({
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </TableHead>
-            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[200px]">Contatto</TableHead>}
-            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[250px]">Email</TableHead>}
-            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Telefono</TableHead>}
-            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Proprietario</TableHead>}
-            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">Liste</TableHead>}
-            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[120px]">Creato</TableHead>}
+            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[200px] border-b-2 border-gray-100">Contatto</TableHead>}
+            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[250px] border-b-2 border-gray-100">Email</TableHead>}
+            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Telefono</TableHead>}
+            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Proprietario</TableHead>}
+            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Liste</TableHead>}
+            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[120px] border-b-2 border-gray-100">Creato</TableHead>}
             {/* Colonne dinamiche per proprietà */}
             {dynamicProperties.map((prop) => {
               const colKey = `prop_${prop}`;
               return visibleColumns.includes(colKey) && (
-                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px]">
+                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">
                   {getColumnDisplayName(colKey)}
                 </TableHead>
               );
             })}
-            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] z-20 w-[100px]">Azioni</TableHead>}
+            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[100px] border-b-2 border-gray-100">Azioni</TableHead>}
             
             {/* Colonna Status sempre visibile e fissa a destra */}
-            <TableHead className="sticky top-0 right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05),0_2px_8px_-2px_rgba(0,0,0,0.1)] w-[140px] z-30">
-              <div className="font-semibold text-gray-800">Status</div>
+            <TableHead className="sticky top-0 right-0 bg-white border-l-2 border-gray-200 shadow-[0_0_20px_-5px_rgba(0,0,0,0.2),0_8px_16px_-8px_rgba(0,0,0,0.15),0_4px_8px_-4px_rgba(0,0,0,0.1)] w-[140px] z-30 border-b-2 border-gray-100">
+              <div className="font-semibold text-gray-800 px-1">Status</div>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -753,7 +753,7 @@ function ContactsTable({
                 )}
                 
                 {/* Colonna Status sempre visibile e fissa a destra */}
-                <TableCell className="sticky top-0 right-0 bg-white border-l shadow-[0_0_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-2px_rgba(0,0,0,0.05)] min-w-[140px] z-10">
+                <TableCell className="sticky right-0 bg-white border-l-2 border-gray-200 shadow-[0_0_20px_-5px_rgba(0,0,0,0.2),0_8px_16px_-8px_rgba(0,0,0,0.15),0_4px_8px_-4px_rgba(0,0,0,0.1)] min-w-[140px] z-10">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
                     <span className="text-sm font-medium text-gray-800">{getStatusLabel(contact.status)}</span>

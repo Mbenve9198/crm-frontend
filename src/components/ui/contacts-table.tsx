@@ -593,7 +593,13 @@ function ContactsTable({
             filteredContacts.map((contact, index) => (
               <TableRow 
                 key={contact._id} 
-                className={`${selectedContacts.has(contact._id) ? "bg-blue-50" : ""} transition-all duration-200 ${isSearching ? 'opacity-80' : 'opacity-100'}`}
+                className={`${
+                  selectedContacts.has(contact._id) 
+                    ? "bg-blue-100 hover:bg-blue-150" 
+                    : index % 2 === 0 
+                      ? "bg-white hover:bg-gray-50" 
+                      : "bg-gray-50 hover:bg-gray-100"
+                } transition-all duration-200 ${isSearching ? 'opacity-80' : 'opacity-100'}`}
                 style={{ 
                   animationDelay: `${index * 20}ms`,
                   animation: !isSearching ? 'fadeInUp 0.3s ease-out forwards' : 'none'
@@ -799,7 +805,7 @@ function ContactsTable({
               </TableRow>
             ))
           ) : (
-            <TableRow>
+            <TableRow className="bg-white hover:bg-gray-50">
               <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />

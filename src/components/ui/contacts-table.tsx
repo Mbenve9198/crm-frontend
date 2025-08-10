@@ -412,12 +412,19 @@ function ContactsTable({
     <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm overflow-x-auto">
       <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
         <div className="flex gap-2 flex-wrap">
-          <Input
-            placeholder="Cerca contatti..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="w-48"
-          />
+          <div className="relative">
+            <Input
+              placeholder="Cerca contatti (min 3 caratteri)..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="w-60"
+            />
+            {searchQuery && searchQuery.length > 0 && searchQuery.length < 3 && (
+              <div className="absolute top-full mt-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border">
+                Digita almeno 3 caratteri per cercare
+              </div>
+            )}
+          </div>
 
           <Select value={ownerFilter} onValueChange={setOwnerFilter}>
             <SelectTrigger className="w-52">

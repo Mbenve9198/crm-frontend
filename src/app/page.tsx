@@ -103,15 +103,26 @@ function Dashboard() {
     }
   }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, searchQuery, loadContacts]);
 
-  // Debounce per la ricerca - ricarica dopo 500ms di inattività
+  // Debounce intelligente per la ricerca
   useEffect(() => {
-    if (!searchQuery) return; // Non fare niente se search è vuoto
+    // Se la ricerca è vuota, cancella immediatamente i risultati
+    if (searchQuery === "") {
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      loadContacts(1, currentLimit, selectedList, "");
+      return;
+    }
 
+    // Se la ricerca è troppo corta (< 3 caratteri), non fare niente
+    if (searchQuery.length < 3) {
+      return;
+    }
+
+    // Debounce di 1 secondo per ricerche con 3+ caratteri
     const timer = setTimeout(() => {
-      // Reset alla prima pagina quando si fa una ricerca
+      console.log(`🔍 Ricerca attivata per: "${searchQuery}"`);
       setPagination(prev => ({ ...prev, currentPage: 1 }));
       loadContacts(1, currentLimit, selectedList, searchQuery);
-    }, 500);
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, [searchQuery, currentLimit, selectedList, loadContacts]);

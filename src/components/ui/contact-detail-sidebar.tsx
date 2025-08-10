@@ -19,7 +19,6 @@ interface ContactDetailSidebarProps {
 }
 
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate }: ContactDetailSidebarProps) {
-  const [isEditing, setIsEditing] = useState(false);
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
@@ -73,7 +72,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
       if (response.success && response.data) {
         onContactUpdate(response.data);
-        setIsEditing(false);
+        setEditedContact(response.data);
       }
     } catch (error) {
       console.error('Errore aggiornamento contatto:', error);
@@ -82,9 +81,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleResetChanges = () => {
     setEditedContact(contact ? { ...contact } : null);
-    setIsEditing(false);
   };
 
   const handleAddActivity = async () => {
@@ -155,112 +153,126 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   return (
     <>
-      {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 flex flex-col border-l border-gray-200">
+      {/* Sidebar con animazione moderna */}
+      <div className={`fixed right-0 top-0 h-full bg-white shadow-2xl z-50 flex flex-col border-l border-gray-200 transition-all duration-300 ease-out ${
+        isOpen ? 'w-[80vw] translate-x-0' : 'w-0 translate-x-full'
+      }`}>
         {/* Header */}
-        <div className="p-6 border-b bg-gray-50">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Dettaglio Contatto</h2>
+        <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <UserIcon className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">{contact.name}</h2>
+                <p className="text-sm text-gray-600">{contact.email}</p>
+              </div>
+            </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <UserIcon className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-lg">{contact.name}</h3>
-              <p className="text-sm text-gray-600">{contact.email}</p>
-            </div>
-            {!isEditing && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                <Edit className="h-4 w-4 mr-2" />
-                Modifica
-              </Button>
-            )}
-          </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Sezione dati contatto */}
-          <div className="p-6 border-b">
-            <h4 className="font-semibold mb-4">Informazioni</h4>
-            
-            {isEditing && editedContact ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Nome</label>
-                  <Input
-                    value={editedContact.name}
-                    onChange={(e) => setEditedContact(prev => prev ? { ...prev, name: e.target.value } : null)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Email</label>
-                  <Input
-                    type="email"
-                    value={editedContact.email || ''}
-                    onChange={(e) => setEditedContact(prev => prev ? { ...prev, email: e.target.value } : null)}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Telefono</label>
-                  <Input
-                    value={editedContact.phone || ''}
-                    onChange={(e) => setEditedContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveContact} disabled={isSaving}>
-                    <Save className="h-4 w-4 mr-2" />
-                    {isSaving ? 'Salvataggio...' : 'Salva'}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                    <X className="h-4 w-4 mr-2" />
-                    Annulla
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div>
-                  <span className="text-sm text-gray-600">Email</span>
-                  <p className="text-sm font-medium">{contact.email || 'Non specificata'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Telefono</span>
-                  <p className="text-sm font-medium">{contact.phone || 'Non specificato'}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-600">Proprietario</span>
-                  <p className="text-sm font-medium">
-                    {contact.owner.firstName} {contact.owner.lastName}
-                  </p>
-                </div>
-                {contact.lists.length > 0 && (
+        {/* Content - Layout a due colonne */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Colonna sinistra - Proprietà contatto */}
+          <div className="w-80 border-r border-gray-200 overflow-y-auto">
+            <div className="p-4">
+              <h3 className="font-semibold text-lg mb-4 text-gray-900">Proprietà</h3>
+              
+              {editedContact && (
+                <div className="space-y-4">
+                  {/* Proprietà base */}
                   <div>
-                    <span className="text-sm text-gray-600">Liste</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {contact.lists.map((list, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {list}
-                        </Badge>
-                      ))}
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Nome</label>
+                    <Input
+                      value={editedContact.name}
+                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, name: e.target.value } : null)}
+                      onBlur={() => handleSaveContact()}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Email</label>
+                    <Input
+                      type="email"
+                      value={editedContact.email || ''}
+                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, email: e.target.value } : null)}
+                      onBlur={() => handleSaveContact()}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Telefono</label>
+                    <Input
+                      value={editedContact.phone || ''}
+                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                      onBlur={() => handleSaveContact()}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Proprietario</label>
+                    <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded">
+                      {contact.owner.firstName} {contact.owner.lastName}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+
+                  {/* Proprietà dinamiche */}
+                  {contact.properties && Object.keys(contact.properties).length > 0 && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Proprietà Aggiuntive</h4>
+                      <div className="space-y-3">
+                        {Object.entries(contact.properties).map(([key, value]) => (
+                          <div key={key}>
+                            <label className="text-sm font-medium text-gray-700 block mb-1 capitalize">
+                              {key.replace(/_/g, ' ')}
+                            </label>
+                            <Input
+                              value={String(editedContact.properties?.[key] || '')}
+                              onChange={(e) => setEditedContact(prev => prev ? {
+                                ...prev,
+                                properties: { ...prev.properties, [key]: e.target.value }
+                              } : null)}
+                              onBlur={() => handleSaveContact()}
+                              placeholder={`Inserisci ${key.replace(/_/g, ' ')}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Liste */}
+                  {contact.lists.length > 0 && (
+                    <div className="border-t pt-4">
+                      <label className="text-sm font-medium text-gray-700 block mb-2">Liste</label>
+                      <div className="flex flex-wrap gap-1">
+                        {contact.lists.map((list, index) => (
+                          <Badge key={index} variant="secondary" className="text-xs">
+                            {list}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button size="sm" onClick={handleResetChanges} variant="outline">
+                      <X className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Sezione Activities */}
-          <div className="p-6">
+          {/* Colonna destra - Activities */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold">Cronologia Activities</h4>
               <Button 
@@ -410,6 +422,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                 <p className="text-sm">Aggiungi la prima interazione con questo contatto</p>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

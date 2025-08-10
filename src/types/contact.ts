@@ -3,7 +3,7 @@ export type Contact = {
   name: string;
   email: string;
   phone?: string;
-  lists: string[] | null | undefined;
+  lists: string[];
   properties: Record<string, string | number | boolean>;
   owner: {
     _id: string;

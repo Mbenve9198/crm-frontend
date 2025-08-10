@@ -14,7 +14,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
+import {
+  Avatar,
+  AvatarFallback,
+} from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -80,13 +83,8 @@ type ContactsTableProps = {
 function extractDynamicProperties(contacts: Contact[]): string[] {
   const propertySet = new Set<string>();
   
-  // Verifica che contacts sia un array
-  if (!Array.isArray(contacts)) {
-    return [];
-  }
-  
   contacts.forEach(contact => {
-    if (contact && contact.properties) {
+    if (contact.properties) {
       Object.keys(contact.properties).forEach(key => {
         propertySet.add(key);
       });
@@ -114,9 +112,7 @@ function ContactsTable({
 
   // Genera colonne dinamiche: usa quelle dal server se disponibili, altrimenti quelle locali come fallback
   const localDynamicProperties = extractDynamicProperties(contacts);
-  const dynamicProperties = (Array.isArray(allDynamicProperties) && allDynamicProperties.length > 0) 
-    ? allDynamicProperties 
-    : localDynamicProperties;
+  const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
   const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
   
   // Stato per le preferenze tabella
@@ -197,7 +193,7 @@ function ContactsTable({
     console.log('  - allColumns:', allColumns);
   }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
 
-  const filteredContacts = Array.isArray(contacts) ? contacts.filter((contact) => {
+  const filteredContacts = contacts.filter((contact) => {
     const matchesSearch = !searchFilter || 
       contact.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
       (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
@@ -207,7 +203,7 @@ function ContactsTable({
       (contact.owner && contact.owner._id === ownerFilter);
 
     return matchesSearch && matchesOwner;
-  }) : [];
+  });
 
   const toggleColumn = async (col: string) => {
     const newVisibleColumns = visibleColumns.includes(col)
@@ -238,7 +234,16 @@ function ContactsTable({
     return new Date(dateString).toLocaleDateString('it-IT');
   };
 
+  const getOwnerInitials = (owner: Contact['owner']) => {
+    if (!owner || !owner.firstName || !owner.lastName) return '??';
+    return `${owner.firstName[0]}${owner.lastName[0]}`;
+  };
 
+  const getContactInitials = (name: string) => {
+    if (!name) return '?';
+    const names = name.split(' ');
+    return names.length > 1 ? `${names[0][0]}${names[1][0]}` : name[0];
+  };
 
   // Funzione per ottenere il valore di una proprietà dinamica
   const getPropertyValue = (contact: Contact, propertyName: string): string => {
@@ -507,33 +512,40 @@ function ContactsTable({
                 </TableCell>
                 {visibleColumns.includes("Contact") && (
                   <TableCell className="font-medium w-[200px]">
-                    <div className="min-w-0">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="font-medium truncate cursor-help">
-                              {contact.name}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="max-w-xs break-words">{contact.name}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {contact.properties?.company && (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {getContactInitials(contact.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="text-xs text-muted-foreground truncate cursor-help mt-1">
-                                {contact.properties.company}
+                              <div className="font-medium truncate cursor-help">
+                                {contact.name}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p className="max-w-xs break-words">{contact.properties.company}</p>
+                              <p className="max-w-xs break-words">{contact.name}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      )}
+                        {contact.properties?.company && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-xs text-muted-foreground truncate cursor-help">
+                                  {contact.properties.company}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs break-words">{contact.properties.company}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                 )}
@@ -576,13 +588,15 @@ function ContactsTable({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="cursor-pointer">
-                            <div className="text-sm font-medium">
+                          <div className="flex items-center gap-2 cursor-pointer">
+                            <Avatar className="h-7 w-7">
+                              <AvatarFallback className="bg-secondary text-xs">
+                                {getOwnerInitials(contact.owner)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm">
                               {contact.owner.firstName} {contact.owner.lastName}
-                            </div>
-                            <div className="text-xs text-muted-foreground capitalize">
-                              {contact.owner.role}
-                            </div>
+                            </span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -599,35 +613,29 @@ function ContactsTable({
                 {visibleColumns.includes("Lists") && (
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {contact.lists && Array.isArray(contact.lists) ? (
-                        <>
-                          {contact.lists.slice(0, 2).map((list, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {list}
-                            </Badge>
-                          ))}
-                          {contact.lists.length > 2 && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-xs cursor-pointer">
-                                    +{contact.lists.length - 2}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-sm">
-                                    <p className="font-medium">Tutte le liste:</p>
-                                    {contact.lists.map((list, idx) => (
-                                      <p key={idx} className="text-xs">{list}</p>
-                                    ))}
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">-</span>
+                      {contact.lists.slice(0, 2).map((list, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {list}
+                        </Badge>
+                      ))}
+                      {contact.lists.length > 2 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="text-xs cursor-pointer">
+                                +{contact.lists.length - 2}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-sm">
+                                <p className="font-medium">Tutte le liste:</p>
+                                {contact.lists.map((list, idx) => (
+                                  <p key={idx} className="text-xs">{list}</p>
+                                ))}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   </TableCell>

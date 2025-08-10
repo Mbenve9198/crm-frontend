@@ -43,7 +43,6 @@ export type User = {
     lastLogin?: string;
     loginCount: number;
   };
-  currentContactsCount?: number; // Per getUsersForAssignment
   createdAt: string;
   updatedAt: string;
 };

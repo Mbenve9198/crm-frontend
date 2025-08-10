@@ -40,14 +40,11 @@ import {
   Check,
   X,
   Loader2,
-  Tag,
-  UserCheck
+  Tag
 } from "lucide-react";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
-import { OwnerChangeDialog } from "./owner-change-dialog";
-import { UserSelect } from "./user-select";
 
 // Colonne fisse base
 const baseColumns = [
@@ -126,7 +123,6 @@ function ContactsTable({
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showListDialog, setShowListDialog] = useState(false);
-  const [showOwnerDialog, setShowOwnerDialog] = useState(false);
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {
@@ -200,7 +196,7 @@ function ContactsTable({
       (contact.phone && contact.phone.includes(searchFilter));
     
     const matchesOwner = !ownerFilter ||
-      (contact.owner && contact.owner._id === ownerFilter);
+      (contact.owner && `${contact.owner.firstName} ${contact.owner.lastName}`.toLowerCase().includes(ownerFilter.toLowerCase()));
 
     return matchesSearch && matchesOwner;
   });
@@ -362,15 +358,6 @@ function ContactsTable({
     }
   };
 
-  // Gestione completamento dialog cambio owner
-  const handleOwnerChangeComplete = () => {
-    // Pulisce la selezione e ricarica i dati
-    clearSelection();
-    if (onRefresh) {
-      onRefresh();
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm">
@@ -392,12 +379,11 @@ function ContactsTable({
             className="w-48"
           />
 
-          <UserSelect
+          <Input
+            placeholder="Filtra per owner..."
             value={ownerFilter}
-            onValueChange={setOwnerFilter}
-            placeholder="Filtra per proprietario..."
+            onChange={(e) => setOwnerFilter(e.target.value)}
             className="w-48"
-            includeAllOption={true}
           />
           
           {/* Selettore items per pagina */}
@@ -802,16 +788,6 @@ function ContactsTable({
               </Button>
               
               <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setShowOwnerDialog(true)}
-                disabled={isBulkDeleting}
-              >
-                <UserCheck className="h-4 w-4 mr-1" />
-                Cambia Owner
-              </Button>
-              
-              <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
@@ -841,15 +817,6 @@ function ContactsTable({
         selectedContacts={selectedContacts}
         contactsCount={contacts.length}
         onComplete={handleListManagementComplete}
-      />
-
-      {/* Dialog cambio owner */}
-      <OwnerChangeDialog
-        open={showOwnerDialog}
-        onOpenChange={setShowOwnerDialog}
-        selectedContacts={selectedContacts}
-        contactsCount={contacts.length}
-        onComplete={handleOwnerChangeComplete}
       />
     </div>
   );

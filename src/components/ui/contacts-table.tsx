@@ -545,89 +545,46 @@ function ContactsTable({
         </div>
       </div>
 
-      {/* Header sticky separato */}
-      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] border-b-2 border-gray-200 overflow-x-auto">
-        <div className="flex min-w-max">
-          {/* Checkbox per selezionare tutti */}
-          <div className="flex items-center justify-center w-[50px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  selectAllContacts();
-                } else {
-                  clearSelection();
-                }
-              }}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-          </div>
-          
-          {visibleColumns.includes("Contact") && (
-            <div className="flex items-center w-[200px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Contatto
-            </div>
-          )}
-          
-          {visibleColumns.includes("Email") && (
-            <div className="flex items-center w-[250px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Email
-            </div>
-          )}
-          
-          {visibleColumns.includes("Phone") && (
-            <div className="flex items-center w-[150px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Telefono
-            </div>
-          )}
-          
-          {visibleColumns.includes("Owner") && (
-            <div className="flex items-center w-[150px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Proprietario
-            </div>
-          )}
-          
-          {visibleColumns.includes("Lists") && (
-            <div className="flex items-center w-[150px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Liste
-            </div>
-          )}
-          
-          {visibleColumns.includes("Created") && (
-            <div className="flex items-center w-[120px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Creato
-            </div>
-          )}
-          
-          {/* Colonne dinamiche per proprietà */}
-          {dynamicProperties.map((prop) => {
-            const colKey = `prop_${prop}`;
-            return visibleColumns.includes(colKey) && (
-              <div key={colKey} className="flex items-center w-[150px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-                {getColumnDisplayName(colKey)}
-              </div>
-            );
-          })}
-          
-          {visibleColumns.includes("Actions") && (
-            <div className="flex items-center w-[100px] h-12 px-2 border-r border-gray-200 font-semibold text-sm">
-              Azioni
-            </div>
-          )}
-          
-          {/* Colonna Status sempre visibile */}
-          <div className="flex items-center justify-center w-[140px] h-12 px-2 bg-white/95 border-l-2 border-gray-300 font-bold text-sm text-gray-900 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.15)]">
-            Status
-          </div>
-        </div>
-      </div>
-
       <div className="relative overflow-x-auto">
         <Table className="w-full">
-        <TableHeader className="sr-only">
+        <TableHeader>
           <TableRow>
-            <TableHead>Hidden</TableHead>
+            {/* Checkbox per selezionare tutti */}
+            <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[50px] border-b-2 border-gray-200 backdrop-blur-sm">
+              <input
+                type="checkbox"
+                checked={isAllSelected}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    selectAllContacts();
+                  } else {
+                    clearSelection();
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            </TableHead>
+            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Contatto</TableHead>}
+            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[250px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Email</TableHead>}
+            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Telefono</TableHead>}
+            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Proprietario</TableHead>}
+            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Liste</TableHead>}
+            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[120px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Creato</TableHead>}
+            {/* Colonne dinamiche per proprietà */}
+            {dynamicProperties.map((prop) => {
+              const colKey = `prop_${prop}`;
+              return visibleColumns.includes(colKey) && (
+                <TableHead key={colKey} className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                  {getColumnDisplayName(colKey)}
+                </TableHead>
+              );
+            })}
+            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white/95 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-50 w-[100px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Azioni</TableHead>}
+            
+            {/* Colonna Status sempre visibile e fissa a destra */}
+            <TableHead className="sticky top-0 right-0 bg-white/95 border-l-2 border-gray-300 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),0_2px_8px_-2px_rgba(0,0,0,0.2),-8px_0_16px_-8px_rgba(0,0,0,0.15)] w-[140px] z-[60] border-b-2 border-gray-200 backdrop-blur-sm">
+              <div className="font-bold text-gray-900 px-1">Status</div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

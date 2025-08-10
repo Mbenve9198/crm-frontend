@@ -80,8 +80,13 @@ type ContactsTableProps = {
 function extractDynamicProperties(contacts: Contact[]): string[] {
   const propertySet = new Set<string>();
   
+  // Verifica che contacts sia un array
+  if (!Array.isArray(contacts)) {
+    return [];
+  }
+  
   contacts.forEach(contact => {
-    if (contact.properties) {
+    if (contact && contact.properties) {
       Object.keys(contact.properties).forEach(key => {
         propertySet.add(key);
       });
@@ -109,7 +114,9 @@ function ContactsTable({
 
   // Genera colonne dinamiche: usa quelle dal server se disponibili, altrimenti quelle locali come fallback
   const localDynamicProperties = extractDynamicProperties(contacts);
-  const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
+  const dynamicProperties = (Array.isArray(allDynamicProperties) && allDynamicProperties.length > 0) 
+    ? allDynamicProperties 
+    : localDynamicProperties;
   const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
   
   // Stato per le preferenze tabella
@@ -190,7 +197,7 @@ function ContactsTable({
     console.log('  - allColumns:', allColumns);
   }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
 
-  const filteredContacts = contacts.filter((contact) => {
+  const filteredContacts = Array.isArray(contacts) ? contacts.filter((contact) => {
     const matchesSearch = !searchFilter || 
       contact.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
       (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
@@ -200,7 +207,7 @@ function ContactsTable({
       (contact.owner && contact.owner._id === ownerFilter);
 
     return matchesSearch && matchesOwner;
-  });
+  }) : [];
 
   const toggleColumn = async (col: string) => {
     const newVisibleColumns = visibleColumns.includes(col)
@@ -592,29 +599,35 @@ function ContactsTable({
                 {visibleColumns.includes("Lists") && (
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {contact.lists.slice(0, 2).map((list, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {list}
-                        </Badge>
-                      ))}
-                      {contact.lists.length > 2 && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="text-xs cursor-pointer">
-                                +{contact.lists.length - 2}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-sm">
-                                <p className="font-medium">Tutte le liste:</p>
-                                {contact.lists.map((list, idx) => (
-                                  <p key={idx} className="text-xs">{list}</p>
-                                ))}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                      {contact.lists && Array.isArray(contact.lists) ? (
+                        <>
+                          {contact.lists.slice(0, 2).map((list, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {list}
+                            </Badge>
+                          ))}
+                          {contact.lists.length > 2 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs cursor-pointer">
+                                    +{contact.lists.length - 2}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <div className="text-sm">
+                                    <p className="font-medium">Tutte le liste:</p>
+                                    {contact.lists.map((list, idx) => (
+                                      <p key={idx} className="text-xs">{list}</p>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
                       )}
                     </div>
                   </TableCell>

@@ -124,7 +124,7 @@ function ContactsTable({
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
+  const [ownerFilter, setOwnerFilter] = useState("all");
   
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -228,7 +228,7 @@ function ContactsTable({
       (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
       (contact.phone && contact.phone.includes(searchFilter));
     
-    const matchesOwner = !ownerFilter || (contact.owner && contact.owner._id === ownerFilter);
+    const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
 
     return matchesSearch && matchesOwner;
   });
@@ -416,9 +416,9 @@ function ContactsTable({
               <SelectValue placeholder="Filtra per proprietario..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Tutti i proprietari</SelectItem>
+              <SelectItem value="all">Tutti i proprietari</SelectItem>
               {isLoadingUsers ? (
-                <SelectItem value="" disabled>
+                <SelectItem value="loading" disabled>
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Caricamento...
@@ -435,7 +435,7 @@ function ContactsTable({
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>
+                <SelectItem value="empty" disabled>
                   Nessun utente disponibile
                 </SelectItem>
               )}
@@ -749,7 +749,7 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {searchFilter || ownerFilter 
+                    {searchFilter || (ownerFilter && ownerFilter !== "all")
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }

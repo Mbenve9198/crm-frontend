@@ -14,10 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -262,16 +259,7 @@ function ContactsTable({
     return new Date(dateString).toLocaleDateString('it-IT');
   };
 
-  const getOwnerInitials = (owner: Contact['owner']) => {
-    if (!owner || !owner.firstName || !owner.lastName) return '??';
-    return `${owner.firstName[0]}${owner.lastName[0]}`;
-  };
 
-  const getContactInitials = (name: string) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    return names.length > 1 ? `${names[0][0]}${names[1][0]}` : name[0];
-  };
 
   // Funzione per ottenere il valore di una proprietà dinamica
   const getPropertyValue = (contact: Contact, propertyName: string): string => {
@@ -412,25 +400,29 @@ function ContactsTable({
           />
 
           <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-52">
               <SelectValue placeholder="Filtra per proprietario..." />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="w-64">
               <SelectItem value="all">Tutti i proprietari</SelectItem>
               {isLoadingUsers ? (
                 <SelectItem value="loading" disabled>
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Caricamento...
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                    <span>Caricamento...</span>
                   </div>
                 </SelectItem>
               ) : Array.isArray(availableUsers) && availableUsers.length > 0 ? (
                 availableUsers.map((user) => (
                   <SelectItem key={user._id} value={user._id}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      {user.firstName} {user.lastName}
-                      <span className="text-xs text-muted-foreground">({user.role})</span>
+                    <div className="flex items-center gap-2 w-full min-w-0">
+                      <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                      <span className="truncate flex-1">
+                        {user.firstName} {user.lastName}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        ({user.role})
+                      </span>
                     </div>
                   </SelectItem>
                 ))
@@ -554,13 +546,7 @@ function ContactsTable({
                 </TableCell>
                 {visibleColumns.includes("Contact") && (
                   <TableCell className="font-medium w-[200px]">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {getContactInitials(contact.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -587,7 +573,6 @@ function ContactsTable({
                             </Tooltip>
                           </TooltipProvider>
                         )}
-                      </div>
                     </div>
                   </TableCell>
                 )}
@@ -630,12 +615,7 @@ function ContactsTable({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2 cursor-pointer">
-                            <Avatar className="h-7 w-7">
-                              <AvatarFallback className="bg-secondary text-xs">
-                                {getOwnerInitials(contact.owner)}
-                              </AvatarFallback>
-                            </Avatar>
+                          <div className="cursor-pointer">
                             <span className="text-sm">
                               {contact.owner.firstName} {contact.owner.lastName}
                             </span>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { User, LogOut, Upload, Users, Settings, Home, Menu, List, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -21,6 +22,7 @@ type ContactList = {
 
 export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: ModernSidebarProps) {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [lists, setLists] = useState<ContactList[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(false);
@@ -28,21 +30,15 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
 
   const menuItems = [
     {
-      icon: Home,
-      label: "Dashboard",
-      active: selectedList === null,
-      onClick: () => onListSelect?.(null),
-    },
-    {
       icon: Users,
       label: "Tutti i Contatti",
-      active: selectedList === null,
+      active: pathname === "/" && selectedList === null,
       onClick: () => onListSelect?.(null),
     },
     {
       icon: BarChart3,
       label: "Pipeline",
-      active: false,
+      active: pathname === "/pipeline",
       href: "/pipeline",
     },
     {

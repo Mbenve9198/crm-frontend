@@ -199,9 +199,9 @@ function ContactsTable({
         console.log('👥 Caricamento utenti per filtro owner...');
         
         const response = await apiClient.getUsersForAssignment();
-        if (response.success && response.data) {
-          console.log('✅ Utenti caricati:', response.data.length);
-          setAvailableUsers(response.data);
+        if (response.success && response.data?.users) {
+          console.log('✅ Utenti caricati:', response.data.users.length);
+          setAvailableUsers(response.data.users);
         }
       } catch (error) {
         console.error('❌ Errore caricamento utenti:', error);
@@ -424,7 +424,7 @@ function ContactsTable({
                     Caricamento...
                   </div>
                 </SelectItem>
-              ) : (
+              ) : Array.isArray(availableUsers) && availableUsers.length > 0 ? (
                 availableUsers.map((user) => (
                   <SelectItem key={user._id} value={user._id}>
                     <div className="flex items-center gap-2">
@@ -434,6 +434,10 @@ function ContactsTable({
                     </div>
                   </SelectItem>
                 ))
+              ) : (
+                <SelectItem value="" disabled>
+                  Nessun utente disponibile
+                </SelectItem>
               )}
             </SelectContent>
           </Select>

@@ -333,7 +333,7 @@ class ApiClient {
     });
   }
 
-  async getUsersForAssignment(): Promise<ApiResponse<User[]>> {
+  async getUsersForAssignment(): Promise<ApiResponse<{ users: User[] }>> {
     return this.request('/users/for-assignment');
   }
 

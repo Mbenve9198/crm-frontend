@@ -130,8 +130,10 @@ function ContactsTable({
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  // searchFilter rimosso - ora usiamo searchQuery dal server
+  // Stati per ricerca ibrida
   const [ownerFilter, setOwnerFilter] = useState("all");
+  const [isSearching, setIsSearching] = useState(false);
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
   
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -231,10 +233,25 @@ function ContactsTable({
     console.log('  - allColumns:', allColumns);
   }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
 
-  // Filtraggio contatti (search gestito dal server, qui solo owner filter)
+  // Reset stato ricerca quando arrivano nuovi contatti dal server
+  useEffect(() => {
+    if (!isLoading && isSearching) {
+      setIsSearching(false);
+    }
+  }, [contacts, isLoading, isSearching]);
+
+  // Filtraggio ibrido: locale immediato + owner filter
   const filteredContacts = contacts.filter((contact) => {
+    // Owner filter
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
-    return matchesOwner;
+    
+    // Local search filter (immediato)
+    const matchesLocalSearch = !localSearchQuery || 
+      contact.name.toLowerCase().includes(localSearchQuery.toLowerCase()) ||
+      (contact.email && contact.email.toLowerCase().includes(localSearchQuery.toLowerCase())) ||
+      (contact.phone && contact.phone.includes(localSearchQuery));
+    
+    return matchesOwner && matchesLocalSearch;
   });
 
   const toggleColumn = async (col: string) => {
@@ -414,14 +431,32 @@ function ContactsTable({
         <div className="flex gap-2 flex-wrap">
           <div className="relative">
             <Input
-              placeholder="Cerca contatti (min 3 caratteri)..."
+              placeholder="Cerca contatti..."
               value={searchQuery}
-              onChange={(e) => onSearchChange?.(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                // Filtro locale immediato
+                setLocalSearchQuery(newValue);
+                // Ricerca server con debounce
+                onSearchChange?.(newValue);
+                // Mostra stato loading se stiamo per cercare sul server
+                if (newValue.length >= 3) {
+                  setIsSearching(true);
+                }
+              }}
               className="w-60"
             />
+            {/* Indicatore di ricerca */}
+            {isSearching && searchQuery.length >= 3 && (
+              <div className="absolute right-3 top-3">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              </div>
+            )}
+            
+            {/* Helper per ricerca server */}
             {searchQuery && searchQuery.length > 0 && searchQuery.length < 3 && (
-              <div className="absolute top-full mt-1 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded border">
-                Digita almeno 3 caratteri per cercare
+              <div className="absolute top-full mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                🔍 Ricerca locale attiva • Digita 3+ caratteri per ricerca completa
               </div>
             )}
           </div>
@@ -566,8 +601,15 @@ function ContactsTable({
         </TableHeader>
         <TableBody>
           {filteredContacts.length ? (
-            filteredContacts.map((contact) => (
-              <TableRow key={contact._id} className={selectedContacts.has(contact._id) ? "bg-blue-50" : ""}>
+            filteredContacts.map((contact, index) => (
+              <TableRow 
+                key={contact._id} 
+                className={`${selectedContacts.has(contact._id) ? "bg-blue-50" : ""} transition-all duration-200 ${isSearching ? 'opacity-80' : 'opacity-100'}`}
+                style={{ 
+                  animationDelay: `${index * 20}ms`,
+                  animation: !isSearching ? 'fadeInUp 0.3s ease-out forwards' : 'none'
+                }}
+              >
                 {/* Checkbox per selezione singola */}
                 <TableCell>
                   <input
@@ -911,4 +953,26 @@ function ContactsTable({
   );
 }
 
-export default ContactsTable; 
+export default ContactsTable;
+
+// CSS per le animazioni smooth
+const styles = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
+} 

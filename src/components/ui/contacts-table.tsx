@@ -130,10 +130,10 @@ function ContactsTable({
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  // Stati per ricerca ibrida
+  // Stati per ricerca
   const [ownerFilter, setOwnerFilter] = useState("all");
   const [isSearching, setIsSearching] = useState(false);
-  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const [inputValue, setInputValue] = useState(searchQuery || "");
   
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -240,18 +240,10 @@ function ContactsTable({
     }
   }, [contacts, isLoading, isSearching]);
 
-  // Filtraggio ibrido: locale immediato + owner filter
+  // Filtraggio solo owner (search gestito completamente dal server)
   const filteredContacts = contacts.filter((contact) => {
-    // Owner filter
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
-    
-    // Local search filter (immediato)
-    const matchesLocalSearch = !localSearchQuery || 
-      contact.name.toLowerCase().includes(localSearchQuery.toLowerCase()) ||
-      (contact.email && contact.email.toLowerCase().includes(localSearchQuery.toLowerCase())) ||
-      (contact.phone && contact.phone.includes(localSearchQuery));
-    
-    return matchesOwner && matchesLocalSearch;
+    return matchesOwner;
   });
 
   const toggleColumn = async (col: string) => {
@@ -429,42 +421,32 @@ function ContactsTable({
     <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm overflow-x-auto">
       <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
         <div className="flex gap-2 flex-wrap">
-          <div className="flex gap-2">
-            <div className="relative">
-              <Input
-                placeholder="Cerca contatti..."
-                value={localSearchQuery}
-                onChange={(e) => {
-                  // Solo filtro locale immediato
-                  setLocalSearchQuery(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setIsSearching(true);
-                    onSearchSubmit?.(localSearchQuery);
-                  }
-                }}
-                className="w-60"
-              />
-              {/* Indicatore di ricerca in corso */}
-              {isSearching && (
-                <div className="absolute right-3 top-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                </div>
-              )}
-            </div>
-            <Button
-              onClick={() => {
-                setIsSearching(true);
-                onSearchSubmit?.(localSearchQuery);
+          <div className="relative">
+            <Input
+              placeholder="Cerca contatti (premi Enter)..."
+              value={inputValue}
+              onChange={(e) => {
+                // Solo aggiorna il valore input, NO filtro
+                setInputValue(e.target.value);
               }}
-              variant="outline"
-              size="default"
-              disabled={isSearching}
-              className="px-4"
-            >
-              🔍 Cerca
-            </Button>
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setIsSearching(true);
+                  onSearchSubmit?.(inputValue);
+                }
+              }}
+              className="w-60"
+            />
+            {/* Indicatori di stato */}
+            {isSearching ? (
+              <div className="absolute right-3 top-3">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              </div>
+            ) : inputValue.length > 0 ? (
+              <div className="absolute right-3 top-3 text-gray-400">
+                <kbd className="px-1 py-0.5 text-xs bg-gray-100 border rounded">Enter</kbd>
+              </div>
+            ) : null}
           </div>
 
           <Select value={ownerFilter} onValueChange={setOwnerFilter}>
@@ -821,7 +803,7 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {localSearchQuery || (ownerFilter && ownerFilter !== "all")
+                    {searchQuery || (ownerFilter && ownerFilter !== "all")
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }

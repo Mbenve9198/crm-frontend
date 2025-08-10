@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, LogOut, Upload, Users, Settings, Home, Menu, X, List, ChevronDown, ChevronRight } from "lucide-react";
+import { User, LogOut, Upload, Users, Settings, Home, Menu, List, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";

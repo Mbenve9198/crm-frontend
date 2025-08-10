@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Eye, 
   Mail, 
@@ -116,7 +116,7 @@ function ContactsTable({
   // Genera colonne dinamiche: usa quelle dal server se disponibili, altrimenti quelle locali come fallback
   const localDynamicProperties = extractDynamicProperties(contacts);
   const dynamicProperties = allDynamicProperties.length > 0 ? allDynamicProperties : localDynamicProperties;
-  const allColumns = [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)];
+  const allColumns = useMemo(() => [...baseColumns, ...dynamicProperties.map(prop => `prop_${prop}`)], [dynamicProperties]);
   
   // Stato per le preferenze tabella
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
@@ -856,7 +856,6 @@ function ContactsTable({
         open={showListDialog}
         onOpenChange={setShowListDialog}
         selectedContacts={selectedContacts}
-        contactsCount={contacts.length}
         onComplete={handleListManagementComplete}
       />
     </div>

@@ -8,7 +8,7 @@ import { CsvImportDialog } from "@/components/ui/csv-import";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Button } from "@/components/ui/button";
-import { Loader2, LogOut, User, Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 
@@ -24,7 +24,7 @@ function LoadingSpinner() {
 }
 
 function Dashboard() {
-  const { user, logout } = useAuth();
+  const {} = useAuth();
   const [refreshKey, setRefreshKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
@@ -98,7 +98,7 @@ function Dashboard() {
     if (preferencesLoaded) {
       loadContacts(pagination.currentPage, currentLimit, selectedList);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
+  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, loadContacts]);
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {

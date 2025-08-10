@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { X, Edit, Save, Cancel, Plus, Mail, Phone, MessageCircle, Instagram, Clock, User as UserIcon } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { X, Edit, Save, Plus, Mail, Phone, MessageCircle, Instagram, Clock, User as UserIcon } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
@@ -34,15 +34,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     data: {}
   });
 
-  // Carica activities quando cambia il contatto
-  useEffect(() => {
-    if (contact && isOpen) {
-      loadActivities();
-      setEditedContact({ ...contact });
-    }
-  }, [contact, isOpen]);
-
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     if (!contact) return;
     
     try {
@@ -57,10 +49,18 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     } finally {
       setIsLoadingActivities(false);
     }
-  };
+  }, [contact]);
+
+  // Carica activities quando cambia il contatto
+  useEffect(() => {
+    if (contact && isOpen) {
+      loadActivities();
+      setEditedContact({ ...contact });
+    }
+  }, [contact, isOpen, loadActivities]);
 
   const handleSaveContact = async () => {
-    if (!editedContact) return;
+    if (!editedContact || !contact) return;
 
     try {
       setIsSaving(true);
@@ -72,7 +72,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
         properties: editedContact.properties
       });
 
-      if (response.success) {
+      if (response.success && response.data) {
         onContactUpdate(response.data);
         setIsEditing(false);
       }
@@ -220,7 +220,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     {isSaving ? 'Salvataggio...' : 'Salva'}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                    <Cancel className="h-4 w-4 mr-2" />
+                    <X className="h-4 w-4 mr-2" />
                     Annulla
                   </Button>
                 </div>
@@ -293,7 +293,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   <Input
                     placeholder="Titolo activity..."
                     value={newActivity.title}
-                    onChange={(e) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
                   />
 
                   {newActivity.type === 'call' && (
@@ -320,20 +320,20 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   )}
 
                   {(newActivity.type === 'whatsapp' || newActivity.type === 'instagram_dm') && (
-                    <Textarea
-                      placeholder="Testo del messaggio..."
-                      value={newActivity.data?.messageText || ''}
-                      onChange={(e) => setNewActivity(prev => ({ 
-                        ...prev, 
-                        data: { ...prev.data, messageText: e.target.value }
-                      }))}
-                    />
+                                      <Textarea
+                    placeholder="Testo del messaggio..."
+                    value={newActivity.data?.messageText || ''}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewActivity(prev => ({ 
+                      ...prev, 
+                      data: { ...prev.data, messageText: e.target.value }
+                    }))}
+                  />
                   )}
 
                   <Textarea
                     placeholder="Note aggiuntive..."
                     value={newActivity.description || ''}
-                    onChange={(e) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewActivity(prev => ({ ...prev, description: e.target.value }))}
                   />
 
                   <div className="flex gap-2">
@@ -379,7 +379,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           
                           {activity.data?.messageText && (
                             <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                              "{activity.data.messageText}"
+                              &ldquo;{activity.data.messageText}&rdquo;
                             </div>
                           )}
                           

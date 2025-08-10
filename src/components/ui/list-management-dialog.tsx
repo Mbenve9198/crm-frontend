@@ -24,7 +24,6 @@ interface ListManagementDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedContacts: Set<string>;
-  contactsCount: number;
   onComplete: () => void;
 }
 
@@ -37,7 +36,6 @@ export function ListManagementDialog({
   open,
   onOpenChange,
   selectedContacts,
-  contactsCount,
   onComplete
 }: ListManagementDialogProps) {
   const [lists, setLists] = useState<ContactList[]>([]);
@@ -98,7 +96,7 @@ export function ListManagementDialog({
       const response = await apiClient.addContactsToListBulk(contactIds, listName);
       
       if (response.success && response.data) {
-        const { addedCount, alreadyInList, totalProcessed } = response.data;
+        const { addedCount, alreadyInList } = response.data;
         
         let message = `✅ Operazione completata!`;
         if (addedCount > 0) {

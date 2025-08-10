@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Edit, Save, Plus, Mail, Phone, MessageCircle, Instagram, Clock, User as UserIcon, ArrowRight } from "lucide-react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";

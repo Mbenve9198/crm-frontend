@@ -165,14 +165,20 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar moderna */}
-      <ModernSidebar 
-        onImportComplete={handleImportComplete}
-        onListSelect={handleListSelect}
-        selectedList={selectedList}
-      />
+      <div className={`transition-all duration-300 ${
+        isContactSidebarOpen ? 'blur-sm' : ''
+      }`}>
+        <ModernSidebar 
+          onImportComplete={handleImportComplete}
+          onListSelect={handleListSelect}
+          selectedList={selectedList}
+        />
+      </div>
 
       {/* Main content con padding-left per la sidebar */}
-      <main className="pl-16 transition-all duration-300">
+      <main className={`pl-16 transition-all duration-300 ${
+        isContactSidebarOpen ? 'blur-sm' : ''
+      }`}>
         <div className="container mx-auto py-8 px-6">
           <div className="mb-8">
             <div className="flex items-center justify-end">

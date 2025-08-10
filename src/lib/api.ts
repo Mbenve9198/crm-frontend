@@ -343,6 +343,25 @@ class ApiClient {
     });
   }
 
+  async changeContactsOwnerBulk(contactIds: string[], newOwnerId: string): Promise<ApiResponse<{
+    updatedCount: number;
+    skippedCount: number;
+    totalRequested: number;
+    newOwner: {
+      _id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+    unauthorizedContacts: string[];
+    hasMoreUnauthorized: boolean;
+  }>> {
+    return this.request('/contacts/change-owner-bulk', {
+      method: 'PUT',
+      body: JSON.stringify({ contactIds, newOwnerId }),
+    });
+  }
+
   async getUserStats(): Promise<ApiResponse<UserStats>> {
     return this.request('/users/stats');
   }

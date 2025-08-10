@@ -14,10 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -40,11 +37,14 @@ import {
   Check,
   X,
   Loader2,
-  Tag
+  Tag,
+  UserCheck
 } from "lucide-react";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
+import { OwnerChangeDialog } from "./owner-change-dialog";
+import { UserSelect } from "./user-select";
 
 // Colonne fisse base
 const baseColumns = [
@@ -117,13 +117,13 @@ function ContactsTable({
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
-  const [listFilter, setListFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
 
   // Stato per la selezione multipla
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showListDialog, setShowListDialog] = useState(false);
+  const [showOwnerDialog, setShowOwnerDialog] = useState(false);
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {
@@ -196,13 +196,10 @@ function ContactsTable({
       (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
       (contact.phone && contact.phone.includes(searchFilter));
     
-    const matchesList = !listFilter || 
-      (contact.lists && contact.lists.some(list => list.toLowerCase().includes(listFilter.toLowerCase())));
-    
     const matchesOwner = !ownerFilter ||
-      (contact.owner && `${contact.owner.firstName} ${contact.owner.lastName}`.toLowerCase().includes(ownerFilter.toLowerCase()));
+      (contact.owner && contact.owner._id === ownerFilter);
 
-    return matchesSearch && matchesList && matchesOwner;
+    return matchesSearch && matchesOwner;
   });
 
   const toggleColumn = async (col: string) => {
@@ -234,16 +231,7 @@ function ContactsTable({
     return new Date(dateString).toLocaleDateString('it-IT');
   };
 
-  const getOwnerInitials = (owner: Contact['owner']) => {
-    if (!owner || !owner.firstName || !owner.lastName) return '??';
-    return `${owner.firstName[0]}${owner.lastName[0]}`;
-  };
 
-  const getContactInitials = (name: string) => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    return names.length > 1 ? `${names[0][0]}${names[1][0]}` : name[0];
-  };
 
   // Funzione per ottenere il valore di una proprietà dinamica
   const getPropertyValue = (contact: Contact, propertyName: string): string => {
@@ -362,6 +350,15 @@ function ContactsTable({
     }
   };
 
+  // Gestione completamento dialog cambio owner
+  const handleOwnerChangeComplete = () => {
+    // Pulisce la selezione e ricarica i dati
+    clearSelection();
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm">
@@ -382,17 +379,13 @@ function ContactsTable({
             onChange={(e) => setSearchFilter(e.target.value)}
             className="w-48"
           />
-          <Input
-            placeholder="Filtra per lista..."
-            value={listFilter}
-            onChange={(e) => setListFilter(e.target.value)}
-            className="w-48"
-          />
-          <Input
-            placeholder="Filtra per owner..."
+
+          <UserSelect
             value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
+            onValueChange={setOwnerFilter}
+            placeholder="Filtra per proprietario..."
             className="w-48"
+            includeAllOption={true}
           />
           
           {/* Selettore items per pagina */}
@@ -506,21 +499,34 @@ function ContactsTable({
                   />
                 </TableCell>
                 {visibleColumns.includes("Contact") && (
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {getContactInitials(contact.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{contact.name}</div>
-                        {contact.properties?.company && (
-                          <div className="text-xs text-muted-foreground">
-                            {contact.properties.company}
-                          </div>
-                        )}
-                      </div>
+                  <TableCell className="font-medium w-[200px]">
+                    <div className="min-w-0">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="font-medium truncate cursor-help">
+                              {contact.name}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs break-words">{contact.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {contact.properties?.company && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="text-xs text-muted-foreground truncate cursor-help mt-1">
+                                {contact.properties.company}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs break-words">{contact.properties.company}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                   </TableCell>
                 )}
@@ -563,15 +569,13 @@ function ContactsTable({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="flex items-center gap-2 cursor-pointer">
-                            <Avatar className="h-7 w-7">
-                              <AvatarFallback className="bg-secondary text-xs">
-                                {getOwnerInitials(contact.owner)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm">
+                          <div className="cursor-pointer">
+                            <div className="text-sm font-medium">
                               {contact.owner.firstName} {contact.owner.lastName}
-                            </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground capitalize">
+                              {contact.owner.role}
+                            </div>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -682,7 +686,7 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <User className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {searchFilter || listFilter || ownerFilter 
+                    {searchFilter || ownerFilter 
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }
@@ -777,6 +781,16 @@ function ContactsTable({
               </Button>
               
               <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowOwnerDialog(true)}
+                disabled={isBulkDeleting}
+              >
+                <UserCheck className="h-4 w-4 mr-1" />
+                Cambia Owner
+              </Button>
+              
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
@@ -806,6 +820,15 @@ function ContactsTable({
         selectedContacts={selectedContacts}
         contactsCount={contacts.length}
         onComplete={handleListManagementComplete}
+      />
+
+      {/* Dialog cambio owner */}
+      <OwnerChangeDialog
+        open={showOwnerDialog}
+        onOpenChange={setShowOwnerDialog}
+        selectedContacts={selectedContacts}
+        contactsCount={contacts.length}
+        onComplete={handleOwnerChangeComplete}
       />
     </div>
   );

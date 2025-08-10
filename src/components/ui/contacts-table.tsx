@@ -418,7 +418,7 @@ function ContactsTable({
   }
 
   return (
-    <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm overflow-x-auto">
+    <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm">
       <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
         <div className="flex gap-2 flex-wrap">
           <div className="relative">
@@ -545,12 +545,13 @@ function ContactsTable({
         </div>
       </div>
 
-      <div className="relative">
+      {/* Container con scroll per la tabella */}
+      <div className="relative max-h-[70vh] overflow-y-auto overflow-x-auto border rounded-lg bg-white">
         <Table className="w-full">
         <TableHeader>
           <TableRow>
             {/* Checkbox per selezionare tutti */}
-            <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[50px] border-b-2 border-gray-100">
+            <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[50px] border-b-2 border-gray-200 backdrop-blur-sm">
               <input
                 type="checkbox"
                 checked={isAllSelected}
@@ -564,26 +565,26 @@ function ContactsTable({
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </TableHead>
-            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[200px] border-b-2 border-gray-100">Contatto</TableHead>}
-            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[250px] border-b-2 border-gray-100">Email</TableHead>}
-            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Telefono</TableHead>}
-            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Proprietario</TableHead>}
-            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">Liste</TableHead>}
-            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[120px] border-b-2 border-gray-100">Creato</TableHead>}
+            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Contatto</TableHead>}
+            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[250px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Email</TableHead>}
+            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Telefono</TableHead>}
+            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Proprietario</TableHead>}
+            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Liste</TableHead>}
+            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[120px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Creato</TableHead>}
             {/* Colonne dinamiche per proprietà */}
             {dynamicProperties.map((prop) => {
               const colKey = `prop_${prop}`;
               return visibleColumns.includes(colKey) && (
-                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[150px] border-b-2 border-gray-100">
+                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
                   {getColumnDisplayName(colKey)}
                 </TableHead>
               );
             })}
-            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_4px_12px_-4px_rgba(0,0,0,0.15),0_2px_6px_-2px_rgba(0,0,0,0.1)] z-20 w-[100px] border-b-2 border-gray-100">Azioni</TableHead>}
+            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[100px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Azioni</TableHead>}
             
             {/* Colonna Status sempre visibile e fissa a destra */}
-            <TableHead className="sticky top-0 right-0 bg-white border-l-2 border-gray-200 shadow-[0_0_20px_-5px_rgba(0,0,0,0.2),0_8px_16px_-8px_rgba(0,0,0,0.15),0_4px_8px_-4px_rgba(0,0,0,0.1)] w-[140px] z-30 border-b-2 border-gray-100">
-              <div className="font-semibold text-gray-800 px-1">Status</div>
+            <TableHead className="sticky top-0 right-0 bg-white border-l-2 border-gray-300 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),0_2px_8px_-2px_rgba(0,0,0,0.2),-8px_0_16px_-8px_rgba(0,0,0,0.15)] w-[140px] z-30 border-b-2 border-gray-200 backdrop-blur-sm">
+              <div className="font-bold text-gray-900 px-1">Status</div>
             </TableHead>
           </TableRow>
         </TableHeader>

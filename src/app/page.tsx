@@ -143,16 +143,7 @@ function Dashboard() {
       <main className="pl-16 transition-all duration-300">
         <div className="container mx-auto py-8 px-6">
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  Gestione Contatti
-                </h2>
-                <p className="text-gray-600">
-                  Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
-                </p>
-              </div>
-              
+            <div className="flex items-center justify-end">
               {/* Pulsante Importa CSV per desktop */}
               <div className="hidden lg:block">
                 <CsvImportDialog onImportComplete={handleImportComplete}>

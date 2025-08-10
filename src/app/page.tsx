@@ -41,7 +41,7 @@ function Dashboard() {
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
-  const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: any } | undefined>();
+  const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: object } | undefined>();
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {

@@ -18,7 +18,7 @@ interface ContactDetailSidebarProps {
   onContactUpdate: (contact: Contact) => void;
   initialActivity?: {
     type: ActivityType;
-    data?: any;
+    data?: object;
   };
 }
 

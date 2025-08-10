@@ -103,29 +103,12 @@ function Dashboard() {
     }
   }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, searchQuery, loadContacts]);
 
-  // Debounce intelligente per la ricerca
-  useEffect(() => {
-    // Se la ricerca è vuota, cancella immediatamente i risultati
-    if (searchQuery === "") {
-      setPagination(prev => ({ ...prev, currentPage: 1 }));
-      loadContacts(1, currentLimit, selectedList, "");
-      return;
-    }
-
-    // Se la ricerca è troppo corta (< 3 caratteri), non fare niente
-    if (searchQuery.length < 3) {
-      return;
-    }
-
-    // Debounce di 1 secondo per ricerche con 3+ caratteri
-    const timer = setTimeout(() => {
-      console.log(`🔍 Ricerca attivata per: "${searchQuery}"`);
-      setPagination(prev => ({ ...prev, currentPage: 1 }));
-      loadContacts(1, currentLimit, selectedList, searchQuery);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, currentLimit, selectedList, loadContacts]);
+  // Ricerca manuale su richiesta (Enter o click)
+  const performSearch = (query: string) => {
+    console.log(`🔍 Ricerca manuale attivata per: "${query}"`);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    loadContacts(1, currentLimit, selectedList, query);
+  };
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {
@@ -264,7 +247,7 @@ function Dashboard() {
             pagination={pagination}
             currentLimit={currentLimit}
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchSubmit={performSearch}
             onEditContact={handleEditContact}
             onDeleteContact={handleDeleteContact}
             onViewContact={handleViewContact}

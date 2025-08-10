@@ -74,7 +74,7 @@ type ContactsTableProps = {
     hasPrev: boolean;
   };
   searchQuery?: string;
-  onSearchChange?: (query: string) => void;
+  onSearchSubmit?: (query: string) => void;
   onEditContact?: (contact: Contact) => void;
   onDeleteContact?: (contactId: string) => void;
   onViewContact?: (contact: Contact) => void;
@@ -106,7 +106,7 @@ function ContactsTable({
   isLoading = false,
   pagination,
   searchQuery = "",
-  onSearchChange,
+  onSearchSubmit,
   onEditContact,
   onDeleteContact, 
   onViewContact,
@@ -429,36 +429,42 @@ function ContactsTable({
     <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm overflow-x-auto">
       <div className="flex flex-wrap gap-4 items-center justify-between mb-6">
         <div className="flex gap-2 flex-wrap">
-          <div className="relative">
-            <Input
-              placeholder="Cerca contatti..."
-              value={searchQuery}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                // Filtro locale immediato
-                setLocalSearchQuery(newValue);
-                // Ricerca server con debounce
-                onSearchChange?.(newValue);
-                // Mostra stato loading se stiamo per cercare sul server
-                if (newValue.length >= 3) {
-                  setIsSearching(true);
-                }
+          <div className="flex gap-2">
+            <div className="relative">
+              <Input
+                placeholder="Cerca contatti..."
+                value={localSearchQuery}
+                onChange={(e) => {
+                  // Solo filtro locale immediato
+                  setLocalSearchQuery(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsSearching(true);
+                    onSearchSubmit?.(localSearchQuery);
+                  }
+                }}
+                className="w-60"
+              />
+              {/* Indicatore di ricerca in corso */}
+              {isSearching && (
+                <div className="absolute right-3 top-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                </div>
+              )}
+            </div>
+            <Button
+              onClick={() => {
+                setIsSearching(true);
+                onSearchSubmit?.(localSearchQuery);
               }}
-              className="w-60"
-            />
-            {/* Indicatore di ricerca */}
-            {isSearching && searchQuery.length >= 3 && (
-              <div className="absolute right-3 top-3">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-              </div>
-            )}
-            
-            {/* Helper per ricerca server */}
-            {searchQuery && searchQuery.length > 0 && searchQuery.length < 3 && (
-              <div className="absolute top-full mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">
-                🔍 Ricerca locale attiva • Digita 3+ caratteri per ricerca completa
-              </div>
-            )}
+              variant="outline"
+              size="default"
+              disabled={isSearching}
+              className="px-4"
+            >
+              🔍 Cerca
+            </Button>
           </div>
 
           <Select value={ownerFilter} onValueChange={setOwnerFilter}>
@@ -815,7 +821,7 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery || (ownerFilter && ownerFilter !== "all")
+                    {localSearchQuery || (ownerFilter && ownerFilter !== "all")
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }

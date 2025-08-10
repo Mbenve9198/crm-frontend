@@ -1,4 +1,5 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse } from '@/types/contact';
+import { Activity, ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -583,9 +584,55 @@ class ApiClient {
       throw new Error(data.message || `HTTP error! status: ${response.status}`);
     }
 
-    return data;
+        return data;
   }
+
+  // === METODI PER LE ACTIVITIES ===
+
+  // Ottiene le activities di un contatto
+  async getContactActivities(contactId: string, filters: ActivityFilters = {}): Promise<ActivitiesResponse> {
+    const params = new URLSearchParams();
+    
+    if (filters.type) params.append('type', filters.type);
+    if (filters.page) params.append('page', filters.page.toString());
+    if (filters.limit) params.append('limit', filters.limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = queryString ? 
+      `/contacts/${contactId}/activities?${queryString}` : 
+      `/contacts/${contactId}/activities`;
+    
+    return this.request(endpoint) as Promise<ActivitiesResponse>;
   }
+
+  // Crea una nuova activity per un contatto
+  async createActivity(contactId: string, activity: CreateActivityRequest): Promise<ActivityResponse> {
+    return this.request(`/contacts/${contactId}/activities`, {
+      method: 'POST',
+      body: JSON.stringify(activity),
+    }) as Promise<ActivityResponse>;
+  }
+
+  // Aggiorna un'activity esistente
+  async updateActivity(activityId: string, updates: UpdateActivityRequest): Promise<ActivityResponse> {
+    return this.request(`/activities/${activityId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }) as Promise<ActivityResponse>;
+  }
+
+  // Elimina un'activity
+  async deleteActivity(activityId: string): Promise<ApiResponse<void>> {
+    return this.request(`/activities/${activityId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Ottiene le statistiche delle activities di un contatto
+  async getContactActivityStats(contactId: string): Promise<ActivityStatsResponse> {
+    return this.request(`/contacts/${contactId}/activities/stats`) as Promise<ActivityStatsResponse>;
+  }
+}
 
 // Istanza singleton dell'API client
 export const apiClient = new ApiClient(API_BASE_URL);

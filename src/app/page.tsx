@@ -6,6 +6,7 @@ import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
 import { CsvImportDialog } from "@/components/ui/csv-import";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
+import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, User, Upload } from "lucide-react";
 import { Contact } from "@/types/contact";
@@ -38,6 +39,8 @@ function Dashboard() {
   const [currentLimit, setCurrentLimit] = useState(10);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -137,6 +140,22 @@ function Dashboard() {
     // TODO: Implementare modal di visualizzazione
   };
 
+  const handleContactClick = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsContactSidebarOpen(true);
+  };
+
+  const handleContactUpdate = (updatedContact: Contact) => {
+    // Aggiorna il contatto nella lista
+    setContacts(prev => prev.map(c => c._id === updatedContact._id ? updatedContact : c));
+    setSelectedContact(updatedContact);
+  };
+
+  const handleCloseSidebar = () => {
+    setIsContactSidebarOpen(false);
+    setSelectedContact(null);
+  };
+
   const handleImportComplete = () => {
     // Aggiorna la tabella contatti dopo l'importazione
     console.log('📥 Import CSV completato, ricarico contatti...');
@@ -194,12 +213,21 @@ function Dashboard() {
             onEditContact={handleEditContact}
             onDeleteContact={handleDeleteContact}
             onViewContact={handleViewContact}
+            onContactClick={handleContactClick}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
           />
         </div>
       </main>
+
+      {/* Sidebar dettaglio contatto */}
+      <ContactDetailSidebar
+        contact={selectedContact}
+        isOpen={isContactSidebarOpen}
+        onClose={handleCloseSidebar}
+        onContactUpdate={handleContactUpdate}
+      />
     </div>
   );
 }

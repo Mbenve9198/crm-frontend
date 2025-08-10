@@ -74,6 +74,7 @@ type ContactsTableProps = {
   onEditContact?: (contact: Contact) => void;
   onDeleteContact?: (contactId: string) => void;
   onViewContact?: (contact: Contact) => void;
+  onContactClick?: (contact: Contact) => void;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
   onRefresh?: () => void;
@@ -102,6 +103,7 @@ function ContactsTable({
   onEditContact,
   onDeleteContact, 
   onViewContact,
+  onContactClick,
   onPageChange,
   onLimitChange,
   onRefresh,
@@ -550,7 +552,10 @@ function ContactsTable({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="font-medium truncate cursor-help">
+                              <div 
+                                className="font-medium truncate cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => onContactClick?.(contact)}
+                              >
                                 {contact.name}
                               </div>
                             </TooltipTrigger>

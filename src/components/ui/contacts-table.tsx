@@ -73,6 +73,8 @@ type ContactsTableProps = {
     hasNext: boolean;
     hasPrev: boolean;
   };
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
   onEditContact?: (contact: Contact) => void;
   onDeleteContact?: (contactId: string) => void;
   onViewContact?: (contact: Contact) => void;
@@ -103,6 +105,8 @@ function ContactsTable({
   contacts = [],
   isLoading = false,
   pagination,
+  searchQuery = "",
+  onSearchChange,
   onEditContact,
   onDeleteContact, 
   onViewContact,
@@ -126,7 +130,7 @@ function ContactsTable({
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [searchFilter, setSearchFilter] = useState("");
+  // searchFilter rimosso - ora usiamo searchQuery dal server
   const [ownerFilter, setOwnerFilter] = useState("all");
   
   // Stato per gli utenti disponibili per il filtro owner
@@ -227,15 +231,10 @@ function ContactsTable({
     console.log('  - allColumns:', allColumns);
   }, [allDynamicProperties, localDynamicProperties, dynamicProperties, allColumns]);
 
+  // Filtraggio contatti (search gestito dal server, qui solo owner filter)
   const filteredContacts = contacts.filter((contact) => {
-    const matchesSearch = !searchFilter || 
-      contact.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-      (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
-      (contact.phone && contact.phone.includes(searchFilter));
-    
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
-
-    return matchesSearch && matchesOwner;
+    return matchesOwner;
   });
 
   const toggleColumn = async (col: string) => {
@@ -415,8 +414,8 @@ function ContactsTable({
         <div className="flex gap-2 flex-wrap">
           <Input
             placeholder="Cerca contatti..."
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
             className="w-48"
           />
 
@@ -767,7 +766,7 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {searchFilter || (ownerFilter && ownerFilter !== "all")
+                    {searchQuery || (ownerFilter && ownerFilter !== "all")
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }

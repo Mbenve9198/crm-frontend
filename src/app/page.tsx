@@ -42,6 +42,7 @@ function Dashboard() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
   const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: object } | undefined>();
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -67,16 +68,17 @@ function Dashboard() {
   }, []); // Carica solo una volta al montaggio
 
   // Carica i contatti dal database
-  const loadContacts = useCallback(async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList) => {
+  const loadContacts = useCallback(async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList, searchQuery?: string) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}, lista ${listFilter || 'tutte'}`);
+      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}, lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
       const response = await apiClient.getContacts({
         page,
         limit,
-        list: listFilter || undefined
+        list: listFilter || undefined,
+        search: searchQuery || undefined
       });
       
       if (response.success && response.data) {
@@ -97,19 +99,32 @@ function Dashboard() {
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
-      loadContacts(pagination.currentPage, currentLimit, selectedList);
+      loadContacts(pagination.currentPage, currentLimit, selectedList, searchQuery);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, loadContacts]);
+  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, searchQuery, loadContacts]);
+
+  // Debounce per la ricerca - ricarica dopo 500ms di inattività
+  useEffect(() => {
+    if (!searchQuery) return; // Non fare niente se search è vuoto
+
+    const timer = setTimeout(() => {
+      // Reset alla prima pagina quando si fa una ricerca
+      setPagination(prev => ({ ...prev, currentPage: 1 }));
+      loadContacts(1, currentLimit, selectedList, searchQuery);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, currentLimit, selectedList, loadContacts]);
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {
-    loadContacts(newPage, currentLimit, selectedList);
+    loadContacts(newPage, currentLimit, selectedList, searchQuery);
   };
 
   // Gestione cambio limite per pagina
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
-    loadContacts(1, newLimit, selectedList); // Torna alla prima pagina con il nuovo limite
+    loadContacts(1, newLimit, selectedList, searchQuery); // Torna alla prima pagina con il nuovo limite
   };
 
   // Gestione selezione lista dalla sidebar
@@ -237,6 +252,8 @@ function Dashboard() {
             isLoading={isLoadingContacts}
             pagination={pagination}
             currentLimit={currentLimit}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
             onEditContact={handleEditContact}
             onDeleteContact={handleDeleteContact}
             onViewContact={handleViewContact}

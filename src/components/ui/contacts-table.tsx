@@ -49,6 +49,7 @@ import {
 import { Contact, User } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
+import { PhoneActionDialog } from "./phone-action-dialog";
 
 // Colonne fisse base
 const baseColumns = [
@@ -75,6 +76,7 @@ type ContactsTableProps = {
   onDeleteContact?: (contactId: string) => void;
   onViewContact?: (contact: Contact) => void;
   onContactClick?: (contact: Contact) => void;
+  onPhoneClick?: (contact: Contact, action: 'call' | 'whatsapp') => void;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
   onRefresh?: () => void;
@@ -104,6 +106,7 @@ function ContactsTable({
   onDeleteContact, 
   onViewContact,
   onContactClick,
+  onPhoneClick,
   onPageChange,
   onLimitChange,
   onRefresh,
@@ -133,6 +136,8 @@ function ContactsTable({
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showListDialog, setShowListDialog] = useState(false);
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false);
+  const [selectedContactForPhone, setSelectedContactForPhone] = useState<Contact | null>(null);
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {
@@ -380,6 +385,19 @@ function ContactsTable({
     }
   };
 
+  // Gestione click su numero telefono
+  const handlePhoneClick = (contact: Contact, e: React.MouseEvent) => {
+    e.preventDefault(); // Previeni l'azione di default del link
+    setSelectedContactForPhone(contact);
+    setShowPhoneDialog(true);
+  };
+
+  const handlePhoneAction = (action: 'call' | 'whatsapp') => {
+    if (selectedContactForPhone && onPhoneClick) {
+      onPhoneClick(selectedContactForPhone, action);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container my-10 space-y-4 p-4 border border-border rounded-lg bg-background shadow-sm">
@@ -603,12 +621,12 @@ function ContactsTable({
                     {contact.phone ? (
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <a
-                          href={`tel:${contact.phone}`}
-                          className="text-blue-600 hover:text-blue-800"
+                        <button
+                          onClick={(e) => handlePhoneClick(contact, e)}
+                          className="text-blue-600 hover:text-blue-800 underline hover:bg-blue-50 px-1 py-0.5 rounded transition-colors"
                         >
                           {contact.phone}
-                        </a>
+                        </button>
                       </div>
                     ) : (
                       <span className="text-muted-foreground">-</span>
@@ -857,6 +875,15 @@ function ContactsTable({
         onOpenChange={setShowListDialog}
         selectedContacts={selectedContacts}
         onComplete={handleListManagementComplete}
+      />
+
+      {/* Dialog per azioni telefono */}
+      <PhoneActionDialog
+        open={showPhoneDialog}
+        onOpenChange={setShowPhoneDialog}
+        phoneNumber={selectedContactForPhone?.phone || ''}
+        contactName={selectedContactForPhone?.name || ''}
+        onAction={handlePhoneAction}
       />
     </div>
   );

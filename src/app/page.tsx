@@ -41,6 +41,7 @@ function Dashboard() {
   const [selectedList, setSelectedList] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
+  const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: any } | undefined>();
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -154,6 +155,26 @@ function Dashboard() {
   const handleCloseSidebar = () => {
     setIsContactSidebarOpen(false);
     setSelectedContact(null);
+    setInitialActivity(undefined);
+  };
+
+  const handlePhoneAction = (contact: Contact, action: 'call' | 'whatsapp') => {
+    // Imposta l'activity iniziale basata sull'azione
+    if (action === 'call') {
+      setInitialActivity({
+        type: 'call',
+        data: {}
+      });
+    } else if (action === 'whatsapp') {
+      setInitialActivity({
+        type: 'whatsapp',
+        data: {}
+      });
+    }
+    
+    // Apri la sidebar del contatto
+    setSelectedContact(contact);
+    setIsContactSidebarOpen(true);
   };
 
   const handleImportComplete = () => {
@@ -220,6 +241,7 @@ function Dashboard() {
             onDeleteContact={handleDeleteContact}
             onViewContact={handleViewContact}
             onContactClick={handleContactClick}
+            onPhoneClick={handlePhoneAction}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
@@ -233,6 +255,7 @@ function Dashboard() {
         isOpen={isContactSidebarOpen}
         onClose={handleCloseSidebar}
         onContactUpdate={handleContactUpdate}
+        initialActivity={initialActivity}
       />
     </div>
   );

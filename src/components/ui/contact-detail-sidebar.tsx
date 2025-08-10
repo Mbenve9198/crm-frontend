@@ -16,9 +16,13 @@ interface ContactDetailSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onContactUpdate: (contact: Contact) => void;
+  initialActivity?: {
+    type: ActivityType;
+    data?: any;
+  };
 }
 
-export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate }: ContactDetailSidebarProps) {
+export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
@@ -54,8 +58,18 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     if (contact && isOpen) {
       loadActivities();
       setEditedContact({ ...contact });
+      
+      // Se c'è un'activity iniziale, apri il form e precompilalo
+      if (initialActivity) {
+        setShowAddActivity(true);
+        setNewActivity({
+          type: initialActivity.type,
+          description: '',
+          data: initialActivity.data || {}
+        });
+      }
     }
-  }, [contact, isOpen, loadActivities]);
+  }, [contact, isOpen, loadActivities, initialActivity]);
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;

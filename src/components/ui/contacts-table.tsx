@@ -25,6 +25,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
@@ -32,7 +39,7 @@ import {
   Eye, 
   Mail, 
   Phone, 
-  User, 
+  User as UserIcon, 
   Calendar, 
   Edit, 
   Trash2,
@@ -42,7 +49,7 @@ import {
   Loader2,
   Tag
 } from "lucide-react";
-import { Contact } from "@/types/contact";
+import { Contact, User } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 
@@ -118,6 +125,10 @@ function ContactsTable({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
+  
+  // Stato per gli utenti disponibili per il filtro owner
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
   // Stato per la selezione multipla
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
@@ -180,6 +191,28 @@ function ContactsTable({
     loadDynamicProperties();
   }, []);
 
+  // Carica gli utenti disponibili per il filtro owner
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setIsLoadingUsers(true);
+        console.log('👥 Caricamento utenti per filtro owner...');
+        
+        const response = await apiClient.getUsersForAssignment();
+        if (response.success && response.data) {
+          console.log('✅ Utenti caricati:', response.data.length);
+          setAvailableUsers(response.data);
+        }
+      } catch (error) {
+        console.error('❌ Errore caricamento utenti:', error);
+      } finally {
+        setIsLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
   // Log per debug
   useEffect(() => {
     console.log('🔍 Debug ContactsTable:');
@@ -195,8 +228,7 @@ function ContactsTable({
       (contact.email && contact.email.toLowerCase().includes(searchFilter.toLowerCase())) ||
       (contact.phone && contact.phone.includes(searchFilter));
     
-    const matchesOwner = !ownerFilter ||
-      (contact.owner && `${contact.owner.firstName} ${contact.owner.lastName}`.toLowerCase().includes(ownerFilter.toLowerCase()));
+    const matchesOwner = !ownerFilter || (contact.owner && contact.owner._id === ownerFilter);
 
     return matchesSearch && matchesOwner;
   });
@@ -379,12 +411,32 @@ function ContactsTable({
             className="w-48"
           />
 
-          <Input
-            placeholder="Filtra per owner..."
-            value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
-            className="w-48"
-          />
+          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtra per proprietario..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Tutti i proprietari</SelectItem>
+              {isLoadingUsers ? (
+                <SelectItem value="" disabled>
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Caricamento...
+                  </div>
+                </SelectItem>
+              ) : (
+                availableUsers.map((user) => (
+                  <SelectItem key={user._id} value={user._id}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      {user.firstName} {user.lastName}
+                      <span className="text-xs text-muted-foreground">({user.role})</span>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
           
           {/* Selettore items per pagina */}
           <select
@@ -691,7 +743,7 @@ function ContactsTable({
             <TableRow>
               <TableCell colSpan={visibleColumns.length + 1} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
-                  <User className="h-8 w-8 text-muted-foreground" />
+                  <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     {searchFilter || ownerFilter 
                       ? "Nessun contatto trovato con i filtri applicati"

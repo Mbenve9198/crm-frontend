@@ -60,7 +60,7 @@ export interface ActivityStats {
 
 export interface CreateActivityRequest {
   type: ActivityType;
-  title: string;
+  title?: string; // Opzionale, viene generato automaticamente
   description?: string;
   data?: ActivityData;
 }

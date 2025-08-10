@@ -29,7 +29,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   // Stato per nuova activity
   const [newActivity, setNewActivity] = useState<CreateActivityRequest>({
     type: 'email',
-    title: '',
     description: '',
     data: {}
   });
@@ -99,7 +98,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
         setShowAddActivity(false);
         setNewActivity({
           type: 'email',
-          title: '',
           description: '',
           data: {}
         });
@@ -129,32 +127,36 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 1) return 'Oggi';
-    if (diffDays === 2) return 'Ieri';
-    if (diffDays <= 7) return `${diffDays} giorni fa`;
+    const time = date.toLocaleTimeString('it-IT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     
-    return date.toLocaleDateString('it-IT', {
+    if (diffDays === 1) return `Oggi alle ${time}`;
+    if (diffDays === 2) return `Ieri alle ${time}`;
+    if (diffDays <= 7) return `${diffDays} giorni fa alle ${time}`;
+    
+    const dateStr = date.toLocaleDateString('it-IT', {
       day: '2-digit',
       month: 'short',
       year: diffDays > 365 ? 'numeric' : undefined
     });
+    
+    return `${dateStr} alle ${time}`;
   };
 
   if (!isOpen || !contact) return null;
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-      
       {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 flex flex-col">
+      <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50 flex flex-col border-l border-gray-200">
         {/* Header */}
         <div className="p-6 border-b bg-gray-50">
           <div className="flex items-center justify-between mb-4">
@@ -290,11 +292,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     </SelectContent>
                   </Select>
 
-                  <Input
-                    placeholder="Titolo activity..."
-                    value={newActivity.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewActivity(prev => ({ ...prev, title: e.target.value }))}
-                  />
+                  {/* Il titolo viene generato automaticamente dal server */}
 
                   {newActivity.type === 'call' && (
                     <Select 
@@ -365,13 +363,16 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <h5 className="font-medium text-sm">{activity.title}</h5>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {formatDate(activity.createdAt)}
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                              <Clock className="h-4 w-4" />
+                              {formatDateTime(activity.createdAt)}
                             </span>
+                            <Badge variant="outline" className="text-xs">
+                              {activity.type}
+                            </Badge>
                           </div>
+                          <h5 className="text-sm text-gray-700 mb-1">{activity.title}</h5>
                           
                           {activity.description && (
                             <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
@@ -391,13 +392,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             </div>
                           )}
                           
-                          <div className="flex items-center justify-between mt-2">
+                          <div className="mt-2">
                             <span className="text-xs text-gray-500">
-                              {activity.createdBy.firstName} {activity.createdBy.lastName}
+                              di {activity.createdBy.firstName} {activity.createdBy.lastName}
                             </span>
-                            <Badge variant="outline" className="text-xs">
-                              {activity.type}
-                            </Badge>
                           </div>
                         </div>
                       </div>

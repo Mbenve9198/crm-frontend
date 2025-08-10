@@ -1,6 +1,6 @@
 import { User } from './contact';
 
-export type ActivityType = 'email' | 'call' | 'whatsapp' | 'instagram_dm';
+export type ActivityType = 'email' | 'call' | 'whatsapp' | 'instagram_dm' | 'status_change';
 
 export type CallOutcome = 'success' | 'no_answer' | 'busy' | 'voicemail' | 'callback_requested';
 export type ActivityStatus = 'completed' | 'pending' | 'failed';
@@ -16,6 +16,13 @@ export interface ActivityData {
   
   // Per le email
   emailSubject?: string;
+  
+  // Per i cambi di stato
+  statusChange?: {
+    oldStatus: string;
+    newStatus: string;
+    mrr?: number;
+  };
   
   // Allegati comuni
   attachments?: Array<{

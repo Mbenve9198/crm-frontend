@@ -1,4 +1,4 @@
-import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse } from '@/types/contact';
+import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
 
 // Tipi per statistiche e paginazione
@@ -631,6 +631,16 @@ class ApiClient {
   // Ottiene le statistiche delle activities di un contatto
   async getContactActivityStats(contactId: string): Promise<ActivityStatsResponse> {
     return this.request(`/contacts/${contactId}/activities/stats`) as Promise<ActivityStatsResponse>;
+  }
+
+  // === METODI PER STATUS PIPELINE ===
+
+  // Aggiorna lo status di un contatto
+  async updateContactStatus(contactId: string, updates: UpdateStatusRequest): Promise<StatusUpdateResponse> {
+    return this.request(`/contacts/${contactId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }) as Promise<StatusUpdateResponse>;
   }
 }
 

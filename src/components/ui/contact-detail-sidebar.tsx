@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Edit, Save, Plus, Mail, Phone, MessageCircle, Instagram, Clock, User as UserIcon } from "lucide-react";
+import { X, Edit, Save, Plus, Mail, Phone, MessageCircle, Instagram, Clock, User as UserIcon, ArrowRight } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Badge } from "./badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { Contact, User } from "@/types/contact";
+import { Contact, User, ContactStatus } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
+import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
 
 interface ContactDetailSidebarProps {
   contact: Contact | null;
@@ -28,6 +29,9 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [pendingMRR, setPendingMRR] = useState<number | undefined>();
+  const [showMRRInput, setShowMRRInput] = useState(false);
 
   // Stato per nuova activity
   const [newActivity, setNewActivity] = useState<CreateActivityRequest>({
@@ -99,6 +103,58 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     setEditedContact(contact ? { ...contact } : null);
   };
 
+  const handleStatusChange = async (newStatus: ContactStatus, mrr?: number) => {
+    if (!contact) return;
+
+    try {
+      setIsUpdatingStatus(true);
+
+      const response = await apiClient.updateContactStatus(contact._id, {
+        status: newStatus,
+        mrr
+      });
+
+      if (response.success && response.data) {
+        // Aggiorna il contatto locale
+        setEditedContact(response.data);
+        onContactUpdate(response.data);
+        
+        // Ricarica le activities per mostrare quella nuova
+        loadActivities();
+        
+        // Reset stati temporanei
+        setShowMRRInput(false);
+        setPendingMRR(undefined);
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento status:', error);
+      alert('Errore durante l\'aggiornamento dello status');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
+  const onStatusSelectChange = (newStatus: ContactStatus) => {
+    if (!contact || newStatus === contact.status) return;
+
+    // Se il nuovo status richiede MRR e non ce l'abbiamo
+    if (isPipelineStatus(newStatus) && !contact.mrr && !pendingMRR) {
+      setShowMRRInput(true);
+      setPendingMRR(0);
+      return;
+    }
+
+    // Altrimenti procedi direttamente
+    handleStatusChange(newStatus, contact.mrr || pendingMRR);
+  };
+
+  const onMRRConfirm = () => {
+    if (!contact || pendingMRR === undefined) return;
+    
+    const newStatus = contact.status; // In questo caso stiamo solo aggiornando MRR
+    handleStatusChange(newStatus, pendingMRR);
+  };
+
   const handleAddActivity = async () => {
     if (!contact) return;
 
@@ -124,7 +180,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       email: Mail,
       call: Phone,
       whatsapp: MessageCircle,
-      instagram_dm: Instagram
+      instagram_dm: Instagram,
+      status_change: ArrowRight
     };
     return iconMap[type] || Mail;
   };
@@ -134,7 +191,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       email: 'bg-blue-100 text-blue-800',
       call: 'bg-green-100 text-green-800',
       whatsapp: 'bg-emerald-100 text-emerald-800',
-      instagram_dm: 'bg-purple-100 text-purple-800'
+      instagram_dm: 'bg-purple-100 text-purple-800',
+      status_change: 'bg-orange-100 text-orange-800'
     };
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };
@@ -173,7 +231,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       }`}>
         {/* Header */}
         <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <UserIcon className="h-5 w-5 text-white" />
@@ -186,6 +244,71 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
+          </div>
+          
+          {/* Status Select */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Status:</span>
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
+                <Select 
+                  value={contact.status} 
+                  onValueChange={onStatusSelectChange}
+                  disabled={isUpdatingStatus}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAllStatuses().map((status) => (
+                      <SelectItem key={status} value={status}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${getStatusColor(status)}`} />
+                          {getStatusLabel(status)}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {/* MRR Display/Edit */}
+            {(isPipelineStatus(contact.status) || showMRRInput) && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">MRR:</span>
+                {showMRRInput ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="€"
+                      value={pendingMRR || ''}
+                      onChange={(e) => setPendingMRR(Number(e.target.value))}
+                      className="w-20 h-8"
+                      min="0"
+                    />
+                    <Button size="sm" onClick={onMRRConfirm} disabled={isUpdatingStatus}>
+                      ✓
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        setShowMRRInput(false);
+                        setPendingMRR(undefined);
+                      }}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-sm font-semibold text-green-600">
+                    €{contact.mrr || 0}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

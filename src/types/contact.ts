@@ -1,3 +1,5 @@
+export type ContactStatus = 'da contattare' | 'contattato' | 'da richiamare' | 'interessato' | 'qr code inviato' | 'free trial iniziato' | 'won' | 'lost';
+
 export type Contact = {
   _id: string;
   name: string;
@@ -5,6 +7,8 @@ export type Contact = {
   phone?: string;
   lists: string[];
   properties: Record<string, string | number | boolean>;
+  status: ContactStatus;
+  mrr?: number;
   owner: {
     _id: string;
     firstName: string;
@@ -89,4 +93,15 @@ export type ApiResponse<T = unknown> = {
   data?: T;
   error?: string;
   token?: string; // Il token può essere al livello principale per il login
-}; 
+};
+
+export interface UpdateStatusRequest {
+  status: ContactStatus;
+  mrr?: number;
+}
+
+export interface StatusUpdateResponse {
+  success: boolean;
+  data: Contact;
+  message?: string;
+} 

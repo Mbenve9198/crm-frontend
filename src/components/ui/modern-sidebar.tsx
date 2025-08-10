@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { User, LogOut, Upload, Users, Settings, Home, Menu, List, ChevronDown, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { User, LogOut, Upload, Users, Settings, Home, Menu, List, ChevronDown, ChevronRight, BarChart3 } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -37,6 +38,12 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       label: "Tutti i Contatti",
       active: selectedList === null,
       onClick: () => onListSelect?.(null),
+    },
+    {
+      icon: BarChart3,
+      label: "Pipeline",
+      active: false,
+      href: "/pipeline",
     },
     {
       icon: Settings,
@@ -102,23 +109,34 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
           <ul className="space-y-1 px-3">
             {menuItems.map((item, index) => {
               const IconComponent = item.icon;
+              const content = (
+                <>
+                  <IconComponent className={`h-5 w-5 ${item.active ? "text-blue-700" : "text-gray-500"}`} />
+                  {isExpanded && (
+                    <span className="ml-3 text-sm font-medium transition-opacity duration-200">
+                      {item.label}
+                    </span>
+                  )}
+                </>
+              );
+              
+              const className = `w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                item.active
+                  ? "bg-blue-50 text-blue-700 border border-blue-200"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+              }`;
+
               return (
                 <li key={index}>
-                  <button
-                    onClick={item.onClick}
-                    className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
-                      item.active
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
-                  >
-                    <IconComponent className={`h-5 w-5 ${item.active ? "text-blue-700" : "text-gray-500"}`} />
-                    {isExpanded && (
-                      <span className="ml-3 text-sm font-medium transition-opacity duration-200">
-                        {item.label}
-                      </span>
-                    )}
-                  </button>
+                  {item.href ? (
+                    <Link href={item.href} className={className}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <button onClick={item.onClick} className={className}>
+                      {content}
+                    </button>
+                  )}
                 </li>
               );
             })}

@@ -50,6 +50,7 @@ import { Contact, User } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
+import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 
 // Colonne fisse base
 const baseColumns = [
@@ -549,6 +550,11 @@ function ContactsTable({
               );
             })}
             {visibleColumns.includes("Actions") && <TableHead className="w-[100px]">Azioni</TableHead>}
+            
+            {/* Colonna Status sempre visibile e fissa a destra */}
+            <TableHead className="sticky right-0 bg-white border-l shadow-lg w-[140px]">
+              Status
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -744,11 +750,19 @@ function ContactsTable({
                     </DropdownMenu>
                   </TableCell>
                 )}
+                
+                {/* Colonna Status sempre visibile e fissa a destra */}
+                <TableCell className="sticky right-0 bg-white border-l shadow-lg min-w-[140px]">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
+                    <span className="text-sm font-medium">{getStatusLabel(contact.status)}</span>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={visibleColumns.length + 1} className="text-center py-8">
+              <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8">
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">

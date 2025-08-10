@@ -37,6 +37,7 @@ function Dashboard() {
   });
   const [currentLimit, setCurrentLimit] = useState(10);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [selectedList, setSelectedList] = useState<string | null>(null);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -62,15 +63,16 @@ function Dashboard() {
   }, []); // Carica solo una volta al montaggio
 
   // Carica i contatti dal database
-  const loadContacts = async (page: number = 1, limit: number = 10) => {
+  const loadContacts = async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}`);
+      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}, lista ${listFilter || 'tutte'}`);
       const response = await apiClient.getContacts({
         page,
-        limit
+        limit,
+        list: listFilter || undefined
       });
       
       if (response.success && response.data) {
@@ -91,19 +93,26 @@ function Dashboard() {
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
-      loadContacts(pagination.currentPage, currentLimit);
+      loadContacts(pagination.currentPage, currentLimit, selectedList);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit]);
+  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList]);
 
   // Gestione cambio pagina
   const handlePageChange = (newPage: number) => {
-    loadContacts(newPage, currentLimit);
+    loadContacts(newPage, currentLimit, selectedList);
   };
 
   // Gestione cambio limite per pagina
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
-    loadContacts(1, newLimit); // Torna alla prima pagina con il nuovo limite
+    loadContacts(1, newLimit, selectedList); // Torna alla prima pagina con il nuovo limite
+  };
+
+  // Gestione selezione lista dalla sidebar
+  const handleListSelect = (listName: string | null) => {
+    setSelectedList(listName);
+    // Reset alla prima pagina quando si cambia lista
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
   const handleEditContact = (contact: Contact) => {
@@ -137,7 +146,11 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar moderna */}
-      <ModernSidebar onImportComplete={handleImportComplete} />
+      <ModernSidebar 
+        onImportComplete={handleImportComplete}
+        onListSelect={handleListSelect}
+        selectedList={selectedList}
+      />
 
       {/* Main content con padding-left per la sidebar */}
       <main className="pl-16 transition-all duration-300">

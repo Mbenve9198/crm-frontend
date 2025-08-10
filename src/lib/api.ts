@@ -270,9 +270,25 @@ class ApiClient {
   }
 
   // Metodi per la gestione liste
+  async getContactLists(): Promise<ApiResponse<Array<{ name: string; count: number }>>> {
+    return this.request('/contacts/lists');
+  }
+
   async addContactToList(contactId: string, listName: string): Promise<ApiResponse<Contact>> {
     return this.request(`/contacts/lists/${listName}/contacts/${contactId}`, {
       method: 'POST',
+    });
+  }
+
+  async addContactsToListBulk(contactIds: string[], listName: string): Promise<ApiResponse<{
+    addedCount: number;
+    alreadyInList: number;
+    totalProcessed: number;
+    totalRequested: number;
+  }>> {
+    return this.request(`/contacts/lists/${listName}/bulk-add`, {
+      method: 'POST',
+      body: JSON.stringify({ contactIds }),
     });
   }
 

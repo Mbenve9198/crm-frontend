@@ -1,29 +1,42 @@
 "use client";
 
-import { useState } from "react";
-import { User, LogOut, Upload, Users, Settings, Home, Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, LogOut, Upload, Users, Settings, Home, Menu, X, List, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
+import { apiClient } from "@/lib/api";
 
 interface ModernSidebarProps {
   onImportComplete?: () => void;
+  onListSelect?: (listName: string | null) => void;
+  selectedList?: string | null;
 }
 
-export function ModernSidebar({ onImportComplete }: ModernSidebarProps) {
+type ContactList = {
+  name: string;
+  count: number;
+};
+
+export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: ModernSidebarProps) {
   const { user, logout } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lists, setLists] = useState<ContactList[]>([]);
+  const [isLoadingLists, setIsLoadingLists] = useState(false);
+  const [showLists, setShowLists] = useState(true);
 
   const menuItems = [
     {
       icon: Home,
       label: "Dashboard",
-      active: true,
+      active: selectedList === null,
+      onClick: () => onListSelect?.(null),
     },
     {
       icon: Users,
-      label: "Contatti",
-      active: false,
+      label: "Tutti i Contatti",
+      active: selectedList === null,
+      onClick: () => onListSelect?.(null),
     },
     {
       icon: Settings,
@@ -31,6 +44,33 @@ export function ModernSidebar({ onImportComplete }: ModernSidebarProps) {
       active: false,
     },
   ];
+
+  // Carica le liste quando la sidebar si espande o all'inizio
+  useEffect(() => {
+    loadLists();
+  }, []);
+
+  const loadLists = async () => {
+    try {
+      setIsLoadingLists(true);
+      const response = await apiClient.getContactLists();
+      
+      if (response.success && response.data) {
+        setLists(response.data);
+      }
+    } catch (error) {
+      console.error('❌ Errore caricamento liste sidebar:', error);
+    } finally {
+      setIsLoadingLists(false);
+    }
+  };
+
+  // Ricarica le liste quando viene completata un'operazione
+  useEffect(() => {
+    if (onImportComplete) {
+      loadLists();
+    }
+  }, [onImportComplete]);
 
   return (
     <>
@@ -58,13 +98,14 @@ export function ModernSidebar({ onImportComplete }: ModernSidebarProps) {
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 py-4">
+        <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="space-y-1 px-3">
             {menuItems.map((item, index) => {
               const IconComponent = item.icon;
               return (
                 <li key={index}>
                   <button
+                    onClick={item.onClick}
                     className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
                       item.active
                         ? "bg-blue-50 text-blue-700 border border-blue-200"
@@ -84,7 +125,7 @@ export function ModernSidebar({ onImportComplete }: ModernSidebarProps) {
             
             {/* Import CSV item */}
             <li>
-              <CsvImportDialog onImportComplete={onImportComplete}>
+              <CsvImportDialog onImportComplete={() => { onImportComplete?.(); loadLists(); }}>
                 <button
                   className="w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 >
@@ -97,6 +138,68 @@ export function ModernSidebar({ onImportComplete }: ModernSidebarProps) {
                 </button>
               </CsvImportDialog>
             </li>
+
+            {/* Sezione Liste */}
+            {isExpanded && (
+              <>
+                <li className="pt-4">
+                  <div className="px-3 pb-2">
+                    <div className="border-t border-gray-200"></div>
+                  </div>
+                </li>
+                
+                <li>
+                  <button
+                    onClick={() => setShowLists(!showLists)}
+                    className="w-full flex items-center px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700"
+                  >
+                    <List className="h-4 w-4 mr-2" />
+                    Liste
+                    {showLists ? (
+                      <ChevronDown className="h-3 w-3 ml-auto" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3 ml-auto" />
+                    )}
+                  </button>
+                </li>
+
+                {showLists && (
+                  <>
+                    {isLoadingLists ? (
+                      <li className="px-6 py-2 text-xs text-gray-500">
+                        Caricamento liste...
+                      </li>
+                    ) : lists.length > 0 ? (
+                      lists.map((list) => (
+                        <li key={list.name}>
+                          <button
+                            onClick={() => onListSelect?.(list.name)}
+                            className={`w-full flex items-center justify-between px-6 py-2 text-sm rounded-lg transition-all duration-200 ${
+                              selectedList === list.name
+                                ? "bg-blue-50 text-blue-700 border-l-2 border-blue-500"
+                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                            }`}
+                          >
+                            <span className="truncate">{list.name}</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              selectedList === list.name
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-gray-100 text-gray-500"
+                            }`}>
+                              {list.count}
+                            </span>
+                          </button>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-6 py-2 text-xs text-gray-500">
+                        Nessuna lista disponibile
+                      </li>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </ul>
         </nav>
 

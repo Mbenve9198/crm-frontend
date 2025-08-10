@@ -39,10 +39,12 @@ import {
   MoreHorizontal,
   Check,
   X,
-  Loader2
+  Loader2,
+  Tag
 } from "lucide-react";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
+import { ListManagementDialog } from "./list-management-dialog";
 
 // Colonne fisse base
 const baseColumns = [
@@ -121,6 +123,7 @@ function ContactsTable({
   // Stato per la selezione multipla
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showListDialog, setShowListDialog] = useState(false);
 
   // Carica le preferenze tabella dell'utente all'avvio
   useEffect(() => {
@@ -347,6 +350,15 @@ function ContactsTable({
       alert(`❌ Errore durante l'eliminazione: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`);
     } finally {
       setIsBulkDeleting(false);
+    }
+  };
+
+  // Gestione completamento dialog liste
+  const handleListManagementComplete = () => {
+    // Pulisce la selezione e ricarica i dati
+    clearSelection();
+    if (onRefresh) {
+      onRefresh();
     }
   };
 
@@ -755,6 +767,16 @@ function ContactsTable({
               </Button>
               
               <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowListDialog(true)}
+                disabled={isBulkDeleting}
+              >
+                <Tag className="h-4 w-4 mr-1" />
+                Gestisci Liste
+              </Button>
+              
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
@@ -776,6 +798,15 @@ function ContactsTable({
           </div>
         </div>
       )}
+
+      {/* Dialog gestione liste */}
+      <ListManagementDialog
+        open={showListDialog}
+        onOpenChange={setShowListDialog}
+        selectedContacts={selectedContacts}
+        contactsCount={contacts.length}
+        onComplete={handleListManagementComplete}
+      />
     </div>
   );
 }

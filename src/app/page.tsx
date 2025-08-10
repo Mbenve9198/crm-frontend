@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
 import { CsvImportDialog } from "@/components/ui/csv-import";
+import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut, User, Upload } from "lucide-react";
 import { Contact } from "@/types/contact";
@@ -135,94 +136,65 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">MenuChatCRM</h1>
-              <p className="text-sm text-gray-600">Gestione Contatti</p>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              {/* Info utente */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg">
-                <User className="h-4 w-4 text-gray-600" />
-                <span className="text-sm font-medium">
-                  {user?.firstName} {user?.lastName}
-                </span>
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {user?.role}
-                </span>
+      {/* Sidebar moderna */}
+      <ModernSidebar onImportComplete={handleImportComplete} />
+
+      {/* Main content con padding-left per la sidebar */}
+      <main className="pl-16 transition-all duration-300">
+        <div className="container mx-auto py-8 px-6">
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                  Gestione Contatti
+                </h2>
+                <p className="text-gray-600">
+                  Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
+                </p>
               </div>
               
-              {/* Logout */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="flex items-center gap-2"
+              {/* Pulsante Importa CSV per desktop */}
+              <div className="hidden lg:block">
+                <CsvImportDialog onImportComplete={handleImportComplete}>
+                  <Button className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Importa CSV
+                  </Button>
+                </CsvImportDialog>
+              </div>
+            </div>
+          </div>
+          
+          {/* Errore caricamento contatti */}
+          {contactsError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-800">
+                <span className="font-medium">Errore caricamento contatti:</span>
+                <span>{contactsError}</span>
+              </div>
+              <button 
+                onClick={() => loadContacts(pagination.currentPage, currentLimit)}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
               >
-                <LogOut className="h-4 w-4" />
-                Esci
-              </Button>
+                Riprova
+              </button>
             </div>
-          </div>
+          )}
+          
+          <ContactsTable
+            key={refreshKey}
+            contacts={contacts}
+            isLoading={isLoadingContacts}
+            pagination={pagination}
+            currentLimit={currentLimit}
+            onEditContact={handleEditContact}
+            onDeleteContact={handleDeleteContact}
+            onViewContact={handleViewContact}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
+            onRefresh={() => setRefreshKey(prev => prev + 1)}
+          />
         </div>
-      </header>
-
-      {/* Main content */}
-      <main className="container mx-auto py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Gestione Contatti
-              </h2>
-              <p className="text-gray-600">
-                Sistema completo per la gestione dei contatti con ownership e proprietà dinamiche
-              </p>
-            </div>
-            
-            {/* Pulsante Importa CSV */}
-            <CsvImportDialog onImportComplete={handleImportComplete}>
-              <Button className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                Importa CSV
-              </Button>
-            </CsvImportDialog>
-          </div>
-        </div>
-        
-        {/* Errore caricamento contatti */}
-        {contactsError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center gap-2 text-red-800">
-              <span className="font-medium">Errore caricamento contatti:</span>
-              <span>{contactsError}</span>
-            </div>
-            <button 
-              onClick={() => loadContacts(pagination.currentPage, currentLimit)}
-              className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
-            >
-              Riprova
-            </button>
-          </div>
-        )}
-        
-        <ContactsTable
-          key={refreshKey}
-          contacts={contacts}
-          isLoading={isLoadingContacts}
-          pagination={pagination}
-          currentLimit={currentLimit}
-          onEditContact={handleEditContact}
-          onDeleteContact={handleDeleteContact}
-          onViewContact={handleViewContact}
-          onPageChange={handlePageChange}
-          onLimitChange={handleLimitChange}
-          onRefresh={() => setRefreshKey(prev => prev + 1)}
-        />
       </main>
     </div>
   );

@@ -35,48 +35,68 @@ function ContactCard({
 }) {
   return (
     <Card 
-      className="cursor-pointer bg-white hover:shadow-lg transition-all duration-200 border-2 border-transparent hover:border-blue-200 group active:scale-95"
+      className="cursor-pointer bg-gradient-to-br from-white to-gray-50 hover:from-white hover:to-blue-50 
+                 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 
+                 hover:border-blue-300 group active:scale-95 transform hover:scale-[1.02] 
+                 backdrop-blur-sm hover:rotate-1 active:rotate-0 relative overflow-hidden"
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('contact-id', contact._id);
         e.dataTransfer.effectAllowed = 'move';
-        e.currentTarget.style.opacity = '0.6';
-        e.currentTarget.style.transform = 'rotate(2deg)';
+        e.currentTarget.style.opacity = '0.8';
+        e.currentTarget.style.transform = 'rotate(5deg) scale(1.05)';
+        e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
       }}
       onDragEnd={(e) => {
         e.currentTarget.style.opacity = '1';
-        e.currentTarget.style.transform = 'rotate(0deg)';
+        e.currentTarget.style.transform = 'rotate(0deg) scale(1)';
+        e.currentTarget.style.boxShadow = '';
       }}
       onClick={() => onClick(contact)}
     >
-      <CardContent className="p-3">
-        <div className="flex items-start justify-between mb-2">
-          <h4 className="font-medium text-sm text-gray-900 truncate flex-1 pr-2">{contact.name}</h4>
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(contact.status)}`} />
+      {/* Effetto glow */}
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
+      
+      {/* Border glow */}
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+      
+      <CardContent className="relative z-10 p-4">
+        <div className="flex items-start justify-between mb-3">
+          <h4 className="font-bold text-base text-gray-900 truncate flex-1 pr-2 group-hover:text-blue-900 transition-colors">
+            {contact.name}
+          </h4>
+          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getStatusColor(contact.status)} shadow-lg animate-pulse`} />
         </div>
         
-        <p className="text-xs text-gray-600 mb-2 truncate">{contact.email}</p>
+        <p className="text-sm text-gray-600 mb-3 truncate font-medium">{contact.email}</p>
         
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-sm font-semibold text-green-600">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             {formatMRR(contact.mrr)}
           </div>
-          <div className="text-xs text-gray-500 truncate max-w-[60px]">
+          <div className="text-sm text-gray-600 truncate max-w-[80px] font-medium">
             {contact.owner.firstName}
           </div>
         </div>
         
-        <div className="text-xs text-gray-400">
+        <div className="text-sm text-gray-500 mb-3 font-medium">
           {new Date(contact.updatedAt).toLocaleDateString('it-IT')}
         </div>
 
-        {/* Indicatore drag */}
-        <div className="mt-2 text-center">
-          <div className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-            <span className="text-blue-500">⋮⋮</span>
-            <span>Trascina per spostare</span>
+        {/* Indicatore drag moderno */}
+        <div className="mt-3 text-center">
+          <div className="text-sm text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 bg-gray-100/80 rounded-full py-2 px-3 backdrop-blur-sm">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-1 h-1 bg-pink-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+            </div>
+            <span className="font-medium">Trascina per spostare</span>
           </div>
         </div>
+
+        {/* Effetto shimmer */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700 ease-in-out"></div>
       </CardContent>
     </Card>
   );
@@ -212,7 +232,7 @@ function PipelinePage() {
       <main className={`pl-16 transition-all duration-300 ${
         isContactSidebarOpen ? 'blur-sm' : ''
       }`}>
-        <div className="container mx-auto py-8 px-6">
+        <div className="container mx-auto py-8 px-6 pipeline-container">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Pipeline Vendite</h1>
             
@@ -274,23 +294,57 @@ function PipelinePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-5 gap-6">
-            {getPipelineStatuses().map((status) => {
+          <div className="grid grid-cols-5 gap-8">
+            {getPipelineStatuses().map((status, index) => {
               const statusContacts = contactsByStatus[status] || [];
               const stats = getColumnStats(status);
               
+              // Gradients dinamici per ogni fase
+              const gradientMap = {
+                'interessato': 'from-purple-500 via-purple-600 to-indigo-600',
+                'contattato': 'from-blue-500 via-blue-600 to-cyan-600', 
+                'in_trattativa': 'from-amber-500 via-orange-500 to-red-500',
+                'da_contattare': 'from-emerald-500 via-teal-600 to-green-600',
+                'chiuso_vinto': 'from-green-500 via-emerald-500 to-teal-600',
+                'chiuso_perso': 'from-gray-500 via-slate-600 to-gray-700'
+              };
+              
+              const gradient = gradientMap[status as keyof typeof gradientMap] || 'from-slate-500 to-slate-600';
+              
               return (
-                <div key={status}>
-                  <div className="p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
-                    <h3 className="font-semibold">{getStatusLabel(status)}</h3>
-                    <p className="text-sm">{stats.count} • {formatMRR(stats.totalMRR)}</p>
+                <div 
+                  key={status}
+                  className="group"
+                  style={{ 
+                    animationDelay: `${index * 100}ms`,
+                    animation: 'slideInUp 0.6s ease-out forwards'
+                  }}
+                >
+                  {/* Header della colonna con gradiente e ombra 3D */}
+                  <div className={`relative p-6 bg-gradient-to-br ${gradient} text-white rounded-t-2xl shadow-2xl transform transition-all duration-300 hover:scale-[1.02] hover:shadow-3xl overflow-hidden`}>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-t-2xl"></div>
+                    <div className="relative z-10">
+                      <h3 className="font-bold text-lg mb-2 tracking-wide">{getStatusLabel(status)}</h3>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium bg-white/20 px-3 py-1 rounded-full backdrop-blur-sm">
+                          {stats.count} contatti
+                        </span>
+                        <span className="text-sm font-bold">
+                          {formatMRR(stats.totalMRR)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Effetto shine */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-1000 ease-in-out"></div>
                   </div>
 
+                  {/* Area drop con design moderno */}
                   <div 
-                    className={`min-h-[400px] p-3 space-y-3 rounded-b-lg transition-all duration-200 ${
+                    className={`min-h-[500px] p-4 space-y-4 rounded-b-2xl shadow-xl transition-all duration-300 transform ${
                       dragOverColumn === status 
-                        ? 'bg-blue-50 border-2 border-dashed border-blue-300' 
-                        : 'bg-gray-100'
+                        ? 'bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-dashed border-blue-400 scale-[1.02] shadow-2xl' 
+                        : 'bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:shadow-lg'
                     }`}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -321,17 +375,30 @@ function PipelinePage() {
                     ))}
                     
                     {statusContacts.length === 0 && (
-                      <div className={`text-center py-8 transition-all duration-200 ${
+                      <div className={`text-center py-16 transition-all duration-300 transform ${
                         dragOverColumn === status 
-                          ? 'text-blue-600 font-medium' 
-                          : 'text-gray-500'
+                          ? 'scale-105 text-blue-600 font-bold' 
+                          : 'text-gray-400'
                       }`}>
-                        <p className="text-sm">
-                          {dragOverColumn === status 
-                            ? '📎 Rilascia qui il contatto' 
-                            : 'Nessuna opportunità'
-                          }
-                        </p>
+                        {dragOverColumn === status ? (
+                          <div className="space-y-4">
+                            <div className="text-4xl animate-bounce">📎</div>
+                            <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                              Rilascia qui il contatto
+                            </p>
+                            <div className="flex justify-center gap-2">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                              <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="text-3xl opacity-50">💼</div>
+                            <p className="text-base font-medium">Nessuna opportunità</p>
+                            <p className="text-sm opacity-75">Trascina qui i contatti per iniziare</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -353,6 +420,40 @@ function PipelinePage() {
       )}
     </div>
   );
+}
+
+// CSS Animations
+const pipelineStyles = `
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  
+  @keyframes glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(59, 130, 246, 0.8);
+    }
+  }
+  
+  .pipeline-container {
+    animation: slideInUp 0.6s ease-out;
+  }
+`;
+
+// Inietta gli stili
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = pipelineStyles;
+  document.head.appendChild(styleElement);
 }
 
 export default function Pipeline() {

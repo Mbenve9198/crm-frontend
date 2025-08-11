@@ -161,7 +161,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
                 <li>Ti chiameremo sul tuo telefono</li>
                 <li>Quando rispondi, ti collegheremo al contatto</li>
                 <li>Potrai parlare direttamente con {contact.name}</li>
-                <li>Quando hai finito, inserisci l'esito qui</li>
+                <li>Quando hai finito, inserisci l&apos;esito qui</li>
               </ol>
             </div>
 

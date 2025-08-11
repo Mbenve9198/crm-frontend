@@ -386,7 +386,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <div className="border-t pt-4">
                       <h4 className="font-medium text-gray-900 mb-3">Proprietà Aggiuntive</h4>
                       <div className="space-y-3">
-                        {Object.entries(contact.properties).map(([key, value]) => (
+                        {Object.entries(contact.properties).map(([key]) => (
                           <div key={key}>
                             <label className="text-sm font-medium text-gray-700 block mb-1 capitalize">
                               {key.replace(/_/g, ' ')}

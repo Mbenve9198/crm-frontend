@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import LoginForm from "@/components/ui/login-form";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
@@ -106,11 +106,7 @@ function PipelinePage() {
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<ContactStatus | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [selectedOwner]); // loadData è stabile, non serve come dipendenza
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       
@@ -140,7 +136,11 @@ function PipelinePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedOwner, users.length]); // Aggiungo loadData alle dipendenze
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]); // Aggiungo loadData alle dipendenze
 
   const contactsByStatus = getPipelineStatuses().reduce((acc, status) => {
     acc[status] = contacts.filter(contact => contact.status === status);

@@ -78,7 +78,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiClient.getMyCalls({ limit: 1 });
-        if (response.success && response.data.data.length > 0) {
+        if (response.success && response.data && response.data.data.length > 0) {
           const latestCall = response.data.data[0];
           if (latestCall.twilioCallSid === currentCall.twilioCallSid) {
             setCurrentCall(latestCall);
@@ -103,7 +103,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   const loadRecentCalls = async () => {
     try {
       const response = await apiClient.getCallsByContact(contact._id, { limit: 5 });
-      if (response.success) {
+      if (response.success && response.data) {
         setRecentCalls(response.data.data);
       }
     } catch (error) {
@@ -158,7 +158,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       if (outcome) request.outcome = outcome as CallOutcome;
 
       const response = await apiClient.updateCall(currentCall._id, request);
-      if (response.success) {
+      if (response.success && response.data) {
         setCurrentCall(response.data);
         toast.success('Chiamata aggiornata con successo');
         setNotes('');

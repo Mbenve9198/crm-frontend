@@ -44,12 +44,14 @@ import {
   Check,
   X,
   Loader2,
-  Tag
+  Tag,
+  Upload
 } from "lucide-react";
 import { Contact, User } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
+import { CsvImportDialog } from "./csv-import";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 
 // Colonne fisse base
@@ -83,6 +85,7 @@ type ContactsTableProps = {
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
   onRefresh?: () => void;
+  onImportComplete?: () => void;
   currentLimit?: number;
 };
 
@@ -115,6 +118,7 @@ function ContactsTable({
   onPageChange,
   onLimitChange,
   onRefresh,
+  onImportComplete,
   currentLimit = 10
 }: ContactsTableProps) {
   // Stato per le proprietà dinamiche caricate dal server
@@ -498,6 +502,15 @@ function ContactsTable({
         </div>
 
         <div className="flex gap-2">
+          {/* Pulsante Importa CSV */}
+          <CsvImportDialog onImportComplete={onImportComplete}>
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Importa CSV
+            </Button>
+          </CsvImportDialog>
+          
+          {/* Pulsante Colonne */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">

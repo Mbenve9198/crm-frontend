@@ -4,11 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
-import { CsvImportDialog } from "@/components/ui/csv-import";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
-import { Button } from "@/components/ui/button";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 
@@ -210,19 +208,6 @@ function Dashboard() {
         isContactSidebarOpen ? 'blur-sm' : ''
       }`}>
         <div className="container mx-auto py-8 px-6">
-          <div className="mb-8">
-            <div className="flex items-center justify-end">
-              {/* Pulsante Importa CSV per desktop */}
-              <div className="hidden lg:block">
-                <CsvImportDialog onImportComplete={handleImportComplete}>
-                  <Button className="flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Importa CSV
-                  </Button>
-                </CsvImportDialog>
-              </div>
-            </div>
-          </div>
           
           {/* Errore caricamento contatti */}
           {contactsError && (
@@ -256,6 +241,7 @@ function Dashboard() {
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
+            onImportComplete={handleImportComplete}
           />
         </div>
       </main>

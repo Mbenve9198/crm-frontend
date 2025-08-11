@@ -78,7 +78,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiClient.getMyCalls({ limit: 1 });
-        if (response.success && response.data && response.data.data.length > 0) {
+        if (response.success && response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
           const latestCall = response.data.data[0];
           if (latestCall.twilioCallSid === currentCall.twilioCallSid) {
             setCurrentCall(latestCall);

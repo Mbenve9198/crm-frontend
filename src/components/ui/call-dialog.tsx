@@ -17,7 +17,7 @@ interface CallDialogProps {
   onCallComplete?: (call: Call) => void;
 }
 
-type CallState = 'idle' | 'initiating' | 'waiting' | 'finished' | 'error';
+type CallState = 'idle' | 'initiating' | 'calling-you' | 'connecting-contact' | 'in-conversation' | 'finished' | 'error';
 
 const outcomeLabels: Record<CallOutcome, string> = {
   'interested': 'Interessato',
@@ -39,15 +39,24 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   const [errorMessage, setErrorMessage] = useState('');
   const [waitingStartTime, setWaitingStartTime] = useState<number | null>(null);
 
-  // Timer per gestire il timeout della chiamata
+  // Timer per gestire il progresso della chiamata
   useEffect(() => {
-    if (callState === 'waiting' && waitingStartTime) {
-      const timeout = setTimeout(() => {
-        setCallState('finished');
-        toast.info('È passato del tempo. Hai completato la chiamata?');
-      }, 30000); // 30 secondi di attesa
+    if (callState === 'calling-you' && waitingStartTime) {
+      // Dopo 10 secondi, assumiamo che hai risposto e passiamo al collegamento
+      const timeout1 = setTimeout(() => {
+        setCallState('connecting-contact');
+      }, 10000);
 
-      return () => clearTimeout(timeout);
+      return () => clearTimeout(timeout1);
+    }
+    
+    if (callState === 'connecting-contact') {
+      // Dopo altri 15 secondi, assumiamo che il contatto abbia risposto
+      const timeout2 = setTimeout(() => {
+        setCallState('in-conversation');
+      }, 15000);
+
+      return () => clearTimeout(timeout2);
     }
   }, [callState, waitingStartTime]);
 
@@ -72,9 +81,9 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       
       if (response.success && response.data) {
         setCallResult(response.data.call);
-        setCallState('waiting');
+        setCallState('calling-you');
         setWaitingStartTime(Date.now());
-        toast.success('Chiamata avviata! Dovresti ricevere una chiamata sul tuo telefono.');
+        toast.success('Chiamata avviata! Ti stiamo chiamando...');
       } else {
         setErrorMessage(response.message || 'Errore nell\'avviare la chiamata');
         setCallState('error');
@@ -146,8 +155,14 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       case 'idle':
         return (
           <div className="space-y-4">
-            <div className="text-center text-sm text-gray-600">
-              Clicca per avviare la chiamata. Riceverai una chiamata sul tuo telefono che ti collegherà al contatto.
+            <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+              <strong>Come funziona:</strong>
+              <ol className="list-decimal list-inside mt-2 space-y-1">
+                <li>Ti chiameremo sul tuo telefono</li>
+                <li>Quando rispondi, ti collegheremo al contatto</li>
+                <li>Potrai parlare direttamente con {contact.name}</li>
+                <li>Quando hai finito, inserisci l'esito qui</li>
+              </ol>
             </div>
 
             <Button 
@@ -176,16 +191,89 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
           </div>
         );
 
-      case 'waiting':
+      case 'calling-you':
         return (
           <div className="space-y-4">
             <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+              <div className="animate-pulse w-8 h-8 bg-blue-600 rounded-full mx-auto mb-2"></div>
               <p className="text-sm text-blue-800 font-medium">
-                Chiamata avviata!
+                Ti stiamo chiamando...
               </p>
               <p className="text-xs text-blue-600 mt-1">
-                Dovresti ricevere una chiamata sul tuo telefono. Attendi...
+                Rispondi al telefono per iniziare la chiamata
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setCallState('connecting-contact')}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Ho risposto
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  setErrorMessage('Chiamata annullata dall\'utente');
+                  setCallState('error');
+                }}
+                className="flex-1"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Annulla
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'connecting-contact':
+        return (
+          <div className="space-y-4">
+            <div className="text-center p-3 bg-yellow-50 rounded-lg">
+              <div className="animate-spin w-6 h-6 border-2 border-yellow-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+              <p className="text-sm text-yellow-800 font-medium">
+                Collegamento al contatto...
+              </p>
+                             <p className="text-xs text-yellow-600 mt-1">
+                 Stiamo chiamando {contact.name}
+               </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setCallState('in-conversation')}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Il contatto ha risposto
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setCallState('finished')}
+                className="flex-1"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Non ha risposto
+              </Button>
+            </div>
+          </div>
+        );
+
+             case 'in-conversation':
+        return (
+          <div className="space-y-4">
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center justify-center w-8 h-8 bg-green-600 rounded-full mx-auto mb-2">
+                <Phone className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-sm text-green-800 font-medium">
+                Chiamata in corso con {contact.name}
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Stai parlando con il contatto. Quando hai finito, clicca qui sotto.
               </p>
             </div>
 
@@ -201,13 +289,13 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
               <Button 
                 variant="destructive"
                 onClick={() => {
-                  setErrorMessage('Chiamata annullata dall\'utente');
-                  setCallState('error');
+                  setErrorMessage('Chiamata interrotta');
+                  setCallState('finished');
                 }}
                 className="flex-1"
               >
                 <XCircle className="h-4 w-4 mr-2" />
-                Annulla
+                Riattacca
               </Button>
             </div>
           </div>

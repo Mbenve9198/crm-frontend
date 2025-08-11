@@ -239,7 +239,7 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Numero di Telefono</label>
+              <label className="block text-sm font-medium mb-2">Il tuo Numero di Telefono</label>
               <Input
                 type="tel"
                 placeholder="+393331234567"
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                 disabled={isEnabled}
               />
               <p className="text-xs text-gray-500 mt-1">
-                Formato internazionale richiesto (es. +393331234567)
+                Il tuo numero personale verificato con Twilio (formato internazionale)
               </p>
             </div>
           </div>

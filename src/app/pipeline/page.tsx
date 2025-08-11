@@ -360,9 +360,9 @@ function PipelinePage() {
                     }}
                   >
                     {statusContacts.map((contact) => (
-                                            <ContactCard
-                        key={contact._id}
-                        contact={contact}
+                      <ContactCard 
+                        key={contact._id} 
+                        contact={contact} 
                         onClick={handleContactClick}
                       />
                     ))}

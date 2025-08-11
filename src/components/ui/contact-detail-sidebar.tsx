@@ -200,25 +200,39 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Reset ore per confronto accurato dei giorni
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const activityDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
     const time = date.toLocaleTimeString('it-IT', {
       hour: '2-digit',
       minute: '2-digit'
     });
     
-    if (diffDays === 1) return `Oggi alle ${time}`;
-    if (diffDays === 2) return `Ieri alle ${time}`;
-    if (diffDays <= 7) return `${diffDays} giorni fa alle ${time}`;
-    
-    const dateStr = date.toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: 'short',
-      year: diffDays > 365 ? 'numeric' : undefined
-    });
-    
-    return `${dateStr} alle ${time}`;
+    if (activityDate.getTime() === today.getTime()) {
+      return `Oggi alle ${time}`;
+    } else if (activityDate.getTime() === yesterday.getTime()) {
+      return `Ieri alle ${time}`;
+    } else {
+      // Calcola i giorni di differenza per date più vecchie
+      const diffTime = today.getTime() - activityDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays <= 7 && diffDays > 1) {
+        return `${diffDays} giorni fa alle ${time}`;
+      }
+      
+      const dateStr = date.toLocaleDateString('it-IT', {
+        day: '2-digit',
+        month: 'short',
+        year: diffDays > 365 ? 'numeric' : undefined
+      });
+      
+      return `${dateStr} alle ${time}`;
+    }
   };
 
   if (!isOpen || !contact) return null;

@@ -7,6 +7,7 @@ import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, Chevron
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
+import { TwilioVoiceClient } from "./twilio-voice-client";
 import { apiClient } from "@/lib/api";
 
 interface ModernSidebarProps {
@@ -221,6 +222,16 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
             )}
           </ul>
         </nav>
+
+        {/* Twilio Voice Client Section */}
+        {isExpanded && (
+          <div className="border-t p-3">
+            <TwilioVoiceClient 
+              onCallStart={(call) => console.log('📞 Chiamata iniziata:', call.parameters.CallSid)}
+              onCallEnd={(call) => console.log('🔚 Chiamata terminata:', call.parameters.CallSid)}
+            />
+          </div>
+        )}
 
         {/* User Section */}
         <div className="border-t p-3">

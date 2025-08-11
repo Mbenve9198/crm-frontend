@@ -11,6 +11,7 @@ import { Contact, User, ContactStatus } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
+import { CallDialog } from "./call-dialog";
 
 interface ContactDetailSidebarProps {
   contact: Contact | null;
@@ -255,9 +256,23 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                 <p className="text-sm text-gray-600">{contact.email}</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {contact.phone && (
+                <CallDialog 
+                  contact={contact}
+                  trigger={
+                    <Button variant="outline" size="sm">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Chiama
+                    </Button>
+                  }
+                  onCallComplete={loadActivities}
+                />
+              )}
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           
           {/* Status Select */}

@@ -52,6 +52,7 @@ import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
 import { CsvImportDialog } from "./csv-import";
+import { CallDialog } from "./call-dialog";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 
 // Colonne fisse base
@@ -793,6 +794,21 @@ function ContactsTable({
                             <Edit className="h-4 w-4 mr-2" />
                             Modifica
                           </Button>
+                          {contact.phone && (
+                            <CallDialog 
+                              contact={contact}
+                              trigger={
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="justify-start w-full"
+                                >
+                                  <Phone className="h-4 w-4 mr-2" />
+                                  Chiama
+                                </Button>
+                              }
+                            />
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"

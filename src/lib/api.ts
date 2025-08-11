@@ -1,5 +1,21 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
+import { 
+  Call, 
+  InitiateCallRequest, 
+  InitiateCallResponse, 
+  UpdateCallRequest, 
+  CallsResponse, 
+  CallStats, 
+  RecordingResponse 
+} from '@/types/call';
+import {
+  TwilioSettings,
+  TwilioConfigureRequest,
+  TwilioVerifyResponse,
+  TwilioTestCallRequest,
+  TwilioTestCallResponse
+} from '@/types/twilio';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -641,6 +657,99 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(updates),
     }) as Promise<StatusUpdateResponse>;
+  }
+
+  // === METODI PER LE CHIAMATE ===
+
+  async initiateCall(request: InitiateCallRequest): Promise<ApiResponse<InitiateCallResponse>> {
+    return this.request<InitiateCallResponse>('/calls/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getMyCalls(params?: {
+    limit?: number;
+    page?: number;
+    status?: string;
+  }): Promise<ApiResponse<CallsResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.status) searchParams.append('status', params.status);
+
+    return this.request<CallsResponse>(`/calls/my-calls?${searchParams}`);
+  }
+
+  async getCallsByContact(contactId: string, params?: {
+    limit?: number;
+    status?: string;
+  }): Promise<ApiResponse<CallsResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+    if (params?.status) searchParams.append('status', params.status);
+
+    return this.request<CallsResponse>(`/calls/contact/${contactId}?${searchParams}`);
+  }
+
+  async updateCall(callId: string, request: UpdateCallRequest): Promise<ApiResponse<Call>> {
+    return this.request<Call>(`/calls/${callId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async getCallStats(params?: {
+    period?: string;
+    userId?: string;
+    contactId?: string;
+  }): Promise<ApiResponse<CallStats>> {
+    const searchParams = new URLSearchParams();
+    if (params?.period) searchParams.append('period', params.period);
+    if (params?.userId) searchParams.append('userId', params.userId);
+    if (params?.contactId) searchParams.append('contactId', params.contactId);
+
+    return this.request<CallStats>(`/calls/stats?${searchParams}`);
+  }
+
+  async getCallRecording(callId: string): Promise<ApiResponse<RecordingResponse>> {
+    return this.request<RecordingResponse>(`/calls/${callId}/recording`);
+  }
+
+  // === METODI PER LE IMPOSTAZIONI TWILIO ===
+
+  async getTwilioSettings(): Promise<ApiResponse<TwilioSettings>> {
+    return this.request<TwilioSettings>('/settings/twilio');
+  }
+
+  async configureTwilio(request: TwilioConfigureRequest): Promise<ApiResponse<TwilioSettings>> {
+    return this.request<TwilioSettings>('/settings/twilio/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async verifyTwilio(): Promise<ApiResponse<TwilioVerifyResponse>> {
+    return this.request<TwilioVerifyResponse>('/settings/twilio/verify', {
+      method: 'POST',
+    });
+  }
+
+  async disableTwilio(): Promise<ApiResponse<TwilioSettings>> {
+    return this.request<TwilioSettings>('/settings/twilio/disable', {
+      method: 'POST',
+    });
+  }
+
+  async testTwilioCall(request: TwilioTestCallRequest): Promise<ApiResponse<TwilioTestCallResponse>> {
+    return this.request<TwilioTestCallResponse>('/settings/twilio/test-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
   }
 }
 

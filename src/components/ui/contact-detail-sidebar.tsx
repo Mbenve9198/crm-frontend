@@ -29,7 +29,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pendingMRR, setPendingMRR] = useState<number | undefined>();
   const [showMRRInput, setShowMRRInput] = useState(false);
@@ -80,7 +79,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     if (!editedContact || !contact) return;
 
     try {
-      setIsSaving(true);
       const response = await apiClient.updateContact(editedContact._id, {
         name: editedContact.name,
         email: editedContact.email,
@@ -95,8 +93,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       }
     } catch (error) {
       console.error('Errore aggiornamento contatto:', error);
-    } finally {
-      setIsSaving(false);
     }
   };
 

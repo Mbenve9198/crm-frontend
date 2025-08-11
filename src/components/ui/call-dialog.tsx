@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Phone, PhoneCall, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { Button } from './button';
@@ -187,7 +187,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
                   Chiamata avviata! 
                 </p>
                 <p className="text-xs text-green-600 mt-1">
-                  Inserisci l'esito della conversazione qui sotto
+                  Inserisci l&apos;esito della conversazione qui sotto
                 </p>
               </div>
 

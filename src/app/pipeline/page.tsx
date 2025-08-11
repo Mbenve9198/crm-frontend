@@ -26,11 +26,9 @@ function LoadingSpinner() {
 // Componente Card Contatto con Drag & Drop
 function ContactCard({ 
   contact, 
-  onMove, 
   onClick 
 }: { 
   contact: Contact; 
-  onMove: (id: string, status: ContactStatus) => void; 
   onClick: (contact: Contact) => void;
 }) {
   return (
@@ -362,10 +360,9 @@ function PipelinePage() {
                     }}
                   >
                     {statusContacts.map((contact) => (
-                      <ContactCard 
-                        key={contact._id} 
-                        contact={contact} 
-                        onMove={handleContactMove}
+                                            <ContactCard
+                        key={contact._id}
+                        contact={contact}
                         onClick={handleContactClick}
                       />
                     ))}

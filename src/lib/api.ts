@@ -5,7 +5,6 @@ import {
   InitiateCallRequest, 
   InitiateCallResponse, 
   UpdateCallRequest, 
-  CallsResponse, 
   CallStats, 
   RecordingResponse 
 } from '@/types/call';

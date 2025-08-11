@@ -27,6 +27,7 @@ const outcomeLabels: Record<CallOutcome, string> = {
   'wrong-number': 'Numero sbagliato',
   'meeting-set': 'Appuntamento fissato',
   'sale-made': 'Vendita conclusa',
+  'no-answer': 'Nessuna risposta',
 };
 
 export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps) {

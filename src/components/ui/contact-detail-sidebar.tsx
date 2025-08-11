@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon } from "lucide-react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
@@ -32,6 +32,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pendingMRR, setPendingMRR] = useState<number | undefined>();
   const [showMRRInput, setShowMRRInput] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<string | null>(null);
+  const [editingData, setEditingData] = useState<{description?: string; callOutcome?: CallOutcome}>({});
 
   // Stato per nuova activity
   const [newActivity, setNewActivity] = useState<CreateActivityRequest>({
@@ -39,6 +41,44 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     description: '',
     data: {}
   });
+
+  // Funzioni per modificare ed eliminare attività
+  const handleEditActivity = (activity: Activity) => {
+    setEditingActivity(activity._id);
+    setEditingData({
+      description: activity.description || '',
+      callOutcome: activity.data?.callOutcome
+    });
+  };
+
+  const handleSaveActivity = async (activityId: string) => {
+    try {
+      await apiClient.updateActivity(activityId, editingData);
+      setEditingActivity(null);
+      setEditingData({});
+      await loadActivities(); // Ricarica le attività
+    } catch (error) {
+      console.error('Errore nel salvare l\'attività:', error);
+    }
+  };
+
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!confirm('Sei sicuro di voler eliminare questa attività?')) {
+      return;
+    }
+
+    try {
+      await apiClient.deleteActivity(activityId);
+      await loadActivities(); // Ricarica le attività
+    } catch (error) {
+      console.error('Errore nell\'eliminare l\'attività:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingActivity(null);
+    setEditingData({});
+  };
 
   const loadActivities = useCallback(async () => {
     if (!contact) return;
@@ -541,49 +581,126 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                               <Clock className="h-4 w-4" />
                               {formatDateTime(activity.createdAt)}
                             </span>
-                            <Badge variant="outline" className="text-xs">
-                              {activity.type}
-                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Badge variant="outline" className="text-xs">
+                                {activity.type}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => handleEditActivity(activity)}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                onClick={() => handleDeleteActivity(activity._id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                           <h5 className="text-sm text-gray-700 mb-1">{activity.title}</h5>
                           
-                          {activity.description && (
-                            <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                          )}
-                          
-                          {activity.data?.messageText && (
-                            <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                              &ldquo;{activity.data.messageText}&rdquo;
-                            </div>
-                          )}
-                          
-                          {activity.data?.callOutcome && (
-                            <div className="mt-2">
-                              <Badge variant="outline" className="text-xs">
-                                Esito: {activity.data.callOutcome}
-                              </Badge>
-                            </div>
-                          )}
-                          
-                          {activity.data?.recordingUrl && (
-                            <div className="mt-3">
-                              <p className="text-xs text-gray-500 mb-2">Registrazione chiamata:</p>
-                              <audio 
-                                controls 
-                                className="w-full h-8" 
-                                preload="metadata"
-                                style={{ maxWidth: '100%' }}
-                              >
-                                <source src={activity.data.recordingUrl} type="audio/wav" />
-                                <source src={activity.data.recordingUrl} type="audio/mp3" />
-                                Il tuo browser non supporta l&apos;elemento audio.
-                              </audio>
-                              {activity.data?.recordingDuration && (
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Durata: {Math.floor(activity.data.recordingDuration / 60)}:{(activity.data.recordingDuration % 60).toString().padStart(2, '0')}
-                                </p>
+                          {editingActivity === activity._id ? (
+                            <div className="space-y-3 mt-2">
+                              <div>
+                                <label className="text-xs text-gray-500">Descrizione:</label>
+                                <Textarea
+                                  value={editingData.description || ''}
+                                  onChange={(e) => setEditingData({...editingData, description: e.target.value})}
+                                  className="text-sm"
+                                  rows={2}
+                                />
+                              </div>
+                              
+                              {activity.type === 'call' && (
+                                <div>
+                                  <label className="text-xs text-gray-500">Esito chiamata:</label>
+                                  <Select 
+                                    value={editingData.callOutcome || ''} 
+                                    onValueChange={(value) => setEditingData({...editingData, callOutcome: value as CallOutcome})}
+                                  >
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Seleziona esito" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="interested">Interessato</SelectItem>
+                                      <SelectItem value="not-interested">Non interessato</SelectItem>
+                                      <SelectItem value="callback">Da richiamare</SelectItem>
+                                      <SelectItem value="voicemail">Segreteria</SelectItem>
+                                      <SelectItem value="wrong-number">Numero sbagliato</SelectItem>
+                                      <SelectItem value="meeting-set">Appuntamento fissato</SelectItem>
+                                      <SelectItem value="sale-made">Vendita conclusa</SelectItem>
+                                      <SelectItem value="no-answer">Nessuna risposta</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               )}
+                              
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSaveActivity(activity._id)}
+                                  className="flex-1"
+                                >
+                                  <Save className="h-3 w-3 mr-1" />
+                                  Salva
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEdit}
+                                  className="flex-1"
+                                >
+                                  <XCircle className="h-3 w-3 mr-1" />
+                                  Annulla
+                                </Button>
+                              </div>
                             </div>
+                          ) : (
+                            <>
+                              {activity.description && (
+                                <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                              )}
+                              
+                              {activity.data?.messageText && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                                  &ldquo;{activity.data.messageText}&rdquo;
+                                </div>
+                              )}
+                              
+                              {activity.data?.callOutcome && (
+                                <div className="mt-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    Esito: {activity.data.callOutcome}
+                                  </Badge>
+                                </div>
+                              )}
+                              
+                              {activity.data?.recordingSid && (
+                                <div className="mt-3">
+                                  <p className="text-xs text-gray-500 mb-2">Registrazione chiamata:</p>
+                                  <audio 
+                                    controls 
+                                    className="w-full h-8" 
+                                    preload="metadata"
+                                    style={{ maxWidth: '100%' }}
+                                  >
+                                    <source src={`${process.env.NEXT_PUBLIC_API_URL}/api/calls/recording/${activity.data.recordingSid}`} type="audio/wav" />
+                                    Il tuo browser non supporta l&apos;elemento audio.
+                                  </audio>
+                                  {activity.data?.recordingDuration && (
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      Durata: {Math.floor(activity.data.recordingDuration / 60)}:{(activity.data.recordingDuration % 60).toString().padStart(2, '0')}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </>
                           )}
                           
                           <div className="mt-2">

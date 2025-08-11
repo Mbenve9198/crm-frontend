@@ -51,7 +51,8 @@ export type CallOutcome =
   | 'voicemail' 
   | 'wrong-number' 
   | 'meeting-set' 
-  | 'sale-made';
+  | 'sale-made'
+  | 'no-answer';
 
 export interface InitiateCallRequest {
   contactId: string;

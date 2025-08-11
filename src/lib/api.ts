@@ -669,29 +669,7 @@ class ApiClient {
     });
   }
 
-  async getMyCalls(params?: {
-    limit?: number;
-    page?: number;
-    status?: string;
-  }): Promise<ApiResponse<CallsResponse>> {
-    const searchParams = new URLSearchParams();
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.status) searchParams.append('status', params.status);
-
-    return this.request<CallsResponse>(`/calls/my-calls?${searchParams}`);
-  }
-
-  async getCallsByContact(contactId: string, params?: {
-    limit?: number;
-    status?: string;
-  }): Promise<ApiResponse<CallsResponse>> {
-    const searchParams = new URLSearchParams();
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.status) searchParams.append('status', params.status);
-
-    return this.request<CallsResponse>(`/calls/contact/${contactId}?${searchParams}`);
-  }
+  // Metodi getMyCalls e getCallsByContact rimossi - non servono più con il nuovo sistema semplificato
 
   async updateCall(callId: string, request: UpdateCallRequest): Promise<ApiResponse<Call>> {
     return this.request<Call>(`/calls/${callId}`, {
@@ -701,12 +679,7 @@ class ApiClient {
     });
   }
 
-  async cancelCall(callId: string): Promise<ApiResponse<Call>> {
-    return this.request<Call>(`/calls/${callId}/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // cancelCall rimosso - non serve più con il nuovo sistema semplificato
 
   async cleanupStuckCalls(options?: { thresholdMinutes?: number; allUsers?: boolean }): Promise<ApiResponse<{
     cleanedCount: number;

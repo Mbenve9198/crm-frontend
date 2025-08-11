@@ -36,16 +36,16 @@ function ContactCard({
   return (
     <Card 
       className="cursor-pointer bg-gradient-to-br from-white to-gray-50 hover:from-white hover:to-blue-50 
-                 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-200 
-                 hover:border-blue-300 group active:scale-95 transform hover:scale-[1.02] 
-                 backdrop-blur-sm hover:rotate-1 active:rotate-0 relative overflow-hidden"
+                 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-200 
+                 hover:border-blue-300 group active:scale-95 transform hover:scale-[1.01] 
+                 backdrop-blur-sm relative overflow-hidden"
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData('contact-id', contact._id);
         e.dataTransfer.effectAllowed = 'move';
         e.currentTarget.style.opacity = '0.8';
-        e.currentTarget.style.transform = 'rotate(5deg) scale(1.05)';
-        e.currentTarget.style.boxShadow = '0 25px 50px -12px rgba(0, 0, 0, 0.5)';
+        e.currentTarget.style.transform = 'rotate(3deg) scale(1.02)';
+        e.currentTarget.style.boxShadow = '0 20px 40px -12px rgba(0, 0, 0, 0.4)';
       }}
       onDragEnd={(e) => {
         e.currentTarget.style.opacity = '1';
@@ -54,49 +54,46 @@ function ContactCard({
       }}
       onClick={() => onClick(contact)}
     >
-      {/* Effetto glow */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
+      {/* Effetto glow ridotto */}
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-pink-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-lg"></div>
       
-      {/* Border glow */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-      
-      <CardContent className="relative z-10 p-4">
-        <div className="flex items-start justify-between mb-3">
-          <h4 className="font-bold text-base text-gray-900 truncate flex-1 pr-2 group-hover:text-blue-900 transition-colors">
+      <CardContent className="relative z-10 p-3">
+        <div className="flex items-start justify-between mb-2">
+          <h4 className="font-semibold text-sm text-gray-900 truncate flex-1 pr-1 group-hover:text-blue-900 transition-colors">
             {contact.name}
           </h4>
-          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${getStatusColor(contact.status)} shadow-lg animate-pulse`} />
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getStatusColor(contact.status)} shadow-sm animate-pulse`} />
         </div>
         
-        <p className="text-sm text-gray-600 mb-3 truncate font-medium">{contact.email}</p>
+        <p className="text-xs text-gray-600 mb-2 truncate">{contact.email}</p>
         
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-lg font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
             {formatMRR(contact.mrr)}
           </div>
-          <div className="text-sm text-gray-600 truncate max-w-[80px] font-medium">
+          <div className="text-xs text-gray-600 truncate max-w-[60px]">
             {contact.owner.firstName}
           </div>
         </div>
         
-        <div className="text-sm text-gray-500 mb-3 font-medium">
+        <div className="text-xs text-gray-500">
           {new Date(contact.updatedAt).toLocaleDateString('it-IT')}
         </div>
 
-        {/* Indicatore drag moderno */}
-        <div className="mt-3 text-center">
-          <div className="text-sm text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-2 bg-gray-100/80 rounded-full py-2 px-3 backdrop-blur-sm">
-            <div className="flex gap-1">
-              <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-1 h-1 bg-pink-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+        {/* Indicatore drag compatto */}
+        <div className="mt-2 text-center">
+          <div className="text-xs text-gray-500 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-1 bg-gray-100/60 rounded-full py-1 px-2 backdrop-blur-sm">
+            <div className="flex gap-0.5">
+              <div className="w-0.5 h-0.5 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-0.5 h-0.5 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="w-0.5 h-0.5 bg-pink-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
             </div>
-            <span className="font-medium">Trascina per spostare</span>
+            <span className="text-xs">Trascina</span>
           </div>
         </div>
 
-        {/* Effetto shimmer */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-700 ease-in-out"></div>
+        {/* Effetto shimmer leggero */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-full group-hover:translate-x-[-200%] transition-transform duration-500 ease-in-out"></div>
       </CardContent>
     </Card>
   );
@@ -340,9 +337,9 @@ function PipelinePage() {
 
                   {/* Area drop con design moderno */}
                   <div 
-                    className={`min-h-[500px] p-4 space-y-4 rounded-b-2xl shadow-xl transition-all duration-300 transform ${
+                    className={`min-h-[600px] p-3 space-y-3 rounded-b-2xl shadow-xl transition-all duration-300 transform ${
                       dragOverColumn === status 
-                        ? 'bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-dashed border-blue-400 scale-[1.02] shadow-2xl' 
+                        ? 'bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-dashed border-blue-400 scale-[1.01] shadow-2xl' 
                         : 'bg-gradient-to-br from-gray-50 to-white border border-gray-200 hover:shadow-lg'
                     }`}
                     onDragOver={(e) => {
@@ -374,28 +371,28 @@ function PipelinePage() {
                     ))}
                     
                     {statusContacts.length === 0 && (
-                      <div className={`text-center py-16 transition-all duration-300 transform ${
+                      <div className={`text-center py-12 transition-all duration-300 transform ${
                         dragOverColumn === status 
                           ? 'scale-105 text-blue-600 font-bold' 
                           : 'text-gray-400'
                       }`}>
                         {dragOverColumn === status ? (
-                          <div className="space-y-4">
-                            <div className="text-4xl animate-bounce">📎</div>
-                            <p className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          <div className="space-y-3">
+                            <div className="text-3xl animate-bounce">📎</div>
+                            <p className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                               Rilascia qui il contatto
                             </p>
-                            <div className="flex justify-center gap-2">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                              <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                            <div className="flex justify-center gap-1">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                              <div className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
                             </div>
                           </div>
                         ) : (
-                          <div className="space-y-3">
-                            <div className="text-3xl opacity-50">💼</div>
-                            <p className="text-base font-medium">Nessuna opportunità</p>
-                            <p className="text-sm opacity-75">Trascina qui i contatti per iniziare</p>
+                          <div className="space-y-2">
+                            <div className="text-2xl opacity-50">💼</div>
+                            <p className="text-sm font-medium">Nessuna opportunità</p>
+                            <p className="text-xs opacity-75">Trascina qui i contatti</p>
                           </div>
                         )}
                       </div>

@@ -83,9 +83,9 @@ export function TwilioSetupGuide({ isVerified = false, phoneNumber }: TwilioSetu
             <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">2</span>
             <div>
               <p className="font-medium text-blue-900">Verifica il tuo numero</p>
-              <p className="text-sm text-blue-700 mb-2">
-                Vai nella sezione "Verified Caller IDs" e aggiungi il tuo numero personale
-              </p>
+                             <p className="text-sm text-blue-700 mb-2">
+                 Vai nella sezione &quot;Verified Caller IDs&quot; e aggiungi il tuo numero personale
+               </p>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -113,7 +113,7 @@ export function TwilioSetupGuide({ isVerified = false, phoneNumber }: TwilioSetu
             <div>
               <p className="font-medium text-blue-900">Ottieni le credenziali</p>
               <p className="text-sm text-blue-700">
-                Copia l'Account SID e Auth Token dal dashboard principale e inseriscili nel form qui sopra
+                Copia l&apos;Account SID e Auth Token dal dashboard principale e inseriscili nel form qui sopra
               </p>
             </div>
           </div>

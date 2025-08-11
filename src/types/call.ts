@@ -27,7 +27,7 @@ export interface Call {
   outcome?: CallOutcome;
   errorCode?: string;
   errorMessage?: string;
-  twilioData: Record<string, any>;
+  twilioData: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   calculatedDuration: number;

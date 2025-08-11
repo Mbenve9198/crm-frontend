@@ -10,7 +10,6 @@ import {
   Eye, 
   EyeOff,
   TestTube,
-  Info,
   AlertTriangle,
   Loader2
 } from 'lucide-react';
@@ -20,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
-import { TwilioSettings, TwilioConfigureRequest, TwilioTestCallRequest } from '@/types/twilio';
+import { TwilioSettings, TwilioConfigureRequest } from '@/types/twilio';
 import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
 
 export default function SettingsPage() {

@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneCall, Clock, User, Volume2, VolumeX, MessageCircle } from 'lucide-react';
+import { Phone, PhoneCall, Clock, User, Volume2, VolumeX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { Button } from './button';
-import { Input } from './input';
 import { Textarea } from './textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Badge } from './badge';
@@ -248,7 +247,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
                 <div className="space-y-3 pt-3 border-t">
                   <div>
                     <label className="text-sm font-medium">Outcome</label>
-                    <Select value={outcome} onValueChange={setOutcome}>
+                    <Select value={outcome} onValueChange={(value) => setOutcome(value as CallOutcome | '')}>
                       <SelectTrigger>
                         <SelectValue placeholder="Seleziona outcome..." />
                       </SelectTrigger>
@@ -331,7 +330,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
                 {recentCalls.map((call) => (
                   <div key={call._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                     <div className="flex items-center gap-2">
-                      <Badge className={statusColors[call.status]} size="sm">
+                      <Badge className={statusColors[call.status]}>
                         {statusLabels[call.status]}
                       </Badge>
                       {call.duration > 0 && (

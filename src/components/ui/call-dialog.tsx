@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Phone, PhoneCall, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Phone, PhoneCall, User, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { Button } from './button';
 import { Textarea } from './textarea';
@@ -17,6 +17,8 @@ interface CallDialogProps {
   onCallComplete?: (call: Call) => void;
 }
 
+type CallState = 'idle' | 'initiating' | 'waiting' | 'finished' | 'error';
+
 const outcomeLabels: Record<CallOutcome, string> = {
   'interested': 'Interessato',
   'not-interested': 'Non interessato',
@@ -29,19 +31,35 @@ const outcomeLabels: Record<CallOutcome, string> = {
 
 export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isInitiating, setIsInitiating] = useState(false);
+  const [callState, setCallState] = useState<CallState>('idle');
   const [callResult, setCallResult] = useState<Call | null>(null);
   const [notes, setNotes] = useState('');
   const [outcome, setOutcome] = useState<CallOutcome | ''>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [waitingStartTime, setWaitingStartTime] = useState<number | null>(null);
+
+  // Timer per gestire il timeout della chiamata
+  useEffect(() => {
+    if (callState === 'waiting' && waitingStartTime) {
+      const timeout = setTimeout(() => {
+        setCallState('finished');
+        toast.info('È passato del tempo. Hai completato la chiamata?');
+      }, 30000); // 30 secondi di attesa
+
+      return () => clearTimeout(timeout);
+    }
+  }, [callState, waitingStartTime]);
 
   const handleInitiateCall = async () => {
     if (!contact.phone) {
-      toast.error('Il contatto non ha un numero di telefono');
+      setErrorMessage('Il contatto non ha un numero di telefono');
+      setCallState('error');
       return;
     }
 
-    setIsInitiating(true);
+    setCallState('initiating');
+    setErrorMessage('');
     setCallResult(null);
     
     try {
@@ -53,9 +71,14 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       const response = await apiClient.initiateCall(request);
       
       if (response.success && response.data) {
-        toast.success('Chiamata avviata! Gestisci la conversazione dal tuo telefono.');
         setCallResult(response.data.call);
+        setCallState('waiting');
+        setWaitingStartTime(Date.now());
+        toast.success('Chiamata avviata! Dovresti ricevere una chiamata sul tuo telefono.');
       } else {
+        setErrorMessage(response.message || 'Errore nell\'avviare la chiamata');
+        setCallState('error');
+        
         if (response.message?.includes('Configurazione Twilio')) {
           toast.error('Twilio non configurato. Vai nelle Impostazioni per configurarlo.', {
             action: {
@@ -63,16 +86,17 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
               onClick: () => window.open('/settings', '_blank')
             }
           });
-        } else {
-          toast.error(response.message || 'Errore nell\'iniziare la chiamata');
         }
       }
     } catch (error) {
       console.error('Errore nell\'iniziare la chiamata:', error);
-      toast.error('Errore nell\'iniziare la chiamata');
-    } finally {
-      setIsInitiating(false);
+      setErrorMessage('Errore di connessione al server');
+      setCallState('error');
     }
+  };
+
+  const handleCallCompleted = () => {
+    setCallState('finished');
   };
 
   const handleSaveResult = async () => {
@@ -90,16 +114,12 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
 
       const response = await apiClient.updateCall(callResult._id, updateRequest);
       
-             if (response.success && response.data) {
-         toast.success('Esito chiamata salvato');
-         if (onCallComplete) {
-           onCallComplete(response.data);
-         }
-        
-        // Reset e chiudi
-        setCallResult(null);
-        setNotes('');
-        setOutcome('');
+      if (response.success && response.data) {
+        toast.success('Esito chiamata salvato');
+        if (onCallComplete) {
+          onCallComplete(response.data);
+        }
+        resetDialog();
         setIsOpen(false);
       } else {
         toast.error('Errore nel salvare l\'esito');
@@ -113,9 +133,178 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   };
 
   const resetDialog = () => {
+    setCallState('idle');
     setCallResult(null);
     setNotes('');
     setOutcome('');
+    setErrorMessage('');
+    setWaitingStartTime(null);
+  };
+
+  const renderContent = () => {
+    switch (callState) {
+      case 'idle':
+        return (
+          <div className="space-y-4">
+            <div className="text-center text-sm text-gray-600">
+              Clicca per avviare la chiamata. Riceverai una chiamata sul tuo telefono che ti collegherà al contatto.
+            </div>
+
+            <Button 
+              onClick={handleInitiateCall}
+              disabled={!contact.phone}
+              className="w-full"
+              size="lg"
+            >
+              <Phone className="h-4 w-4 mr-2" />
+              Inizia chiamata
+            </Button>
+
+            {!contact.phone && (
+              <p className="text-sm text-red-600 text-center">
+                Il contatto non ha un numero di telefono configurato
+              </p>
+            )}
+          </div>
+        );
+
+      case 'initiating':
+        return (
+          <div className="space-y-4 text-center">
+            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-sm text-gray-600">Avvio chiamata in corso...</p>
+          </div>
+        );
+
+      case 'waiting':
+        return (
+          <div className="space-y-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+              <p className="text-sm text-blue-800 font-medium">
+                Chiamata avviata!
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Dovresti ricevere una chiamata sul tuo telefono. Attendi...
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={handleCallCompleted}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Ho finito di parlare
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => {
+                  setErrorMessage('Chiamata annullata dall\'utente');
+                  setCallState('error');
+                }}
+                className="flex-1"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Annulla
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'finished':
+        return (
+          <div className="space-y-4">
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+              <p className="text-sm text-green-800 font-medium">
+                Chiamata completata!
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Inserisci l&apos;esito della conversazione qui sotto
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Esito chiamata *</label>
+              <Select value={outcome} onValueChange={(value) => setOutcome(value as CallOutcome)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Come è andata la chiamata?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(outcomeLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Note (opzionale)</label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Aggiungi note sulla conversazione..."
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={resetDialog}
+                className="flex-1"
+              >
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleSaveResult}
+                disabled={isSaving || !outcome}
+                className="flex-1"
+              >
+                {isSaving ? 'Salvataggio...' : 'Salva esito'}
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'error':
+        return (
+          <div className="space-y-4">
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
+              <p className="text-sm text-red-800 font-medium">
+                Errore nella chiamata
+              </p>
+              <p className="text-xs text-red-600 mt-1">
+                {errorMessage}
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={resetDialog}
+                className="flex-1"
+              >
+                Chiudi
+              </Button>
+              <Button 
+                onClick={handleInitiateCall}
+                className="flex-1"
+              >
+                Riprova
+              </Button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
@@ -150,91 +339,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
             </div>
           </div>
 
-          {!callResult ? (
-            /* Form per iniziare la chiamata */
-            <div className="space-y-4">
-              <div className="text-center text-sm text-gray-600">
-                Clicca per avviare la chiamata. Riceverai una chiamata sul tuo telefono che ti collegherà al contatto.
-              </div>
-
-              <Button 
-                onClick={handleInitiateCall}
-                disabled={isInitiating || !contact.phone}
-                className="w-full"
-                size="lg"
-              >
-                {isInitiating ? (
-                  'Avvio chiamata...'
-                ) : (
-                  <>
-                    <Phone className="h-4 w-4 mr-2" />
-                    Inizia chiamata
-                  </>
-                )}
-              </Button>
-
-              {!contact.phone && (
-                <p className="text-sm text-red-600 text-center">
-                  Il contatto non ha un numero di telefono configurato
-                </p>
-              )}
-            </div>
-          ) : (
-            /* Form per l'esito della chiamata */
-            <div className="space-y-4">
-              <div className="text-center p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-800 font-medium">
-                  Chiamata avviata! 
-                </p>
-                <p className="text-xs text-green-600 mt-1">
-                  Inserisci l&apos;esito della conversazione qui sotto
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Esito chiamata *</label>
-                <Select value={outcome} onValueChange={(value) => setOutcome(value as CallOutcome)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Come è andata la chiamata?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(outcomeLabels).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Note (opzionale)</label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Aggiungi note sulla conversazione..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline"
-                  onClick={resetDialog}
-                  className="flex-1"
-                >
-                  Annulla
-                </Button>
-                <Button 
-                  onClick={handleSaveResult}
-                  disabled={isSaving || !outcome}
-                  className="flex-1"
-                >
-                  {isSaving ? 'Salvataggio...' : 'Salva esito'}
-                </Button>
-              </div>
-            </div>
-          )}
+          {renderContent()}
         </div>
       </DialogContent>
     </Dialog>

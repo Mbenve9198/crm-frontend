@@ -265,7 +265,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-gray-700">Status:</span>
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full animate-pulse ${getStatusColor(contact.status)}`} />
+                <div className={`w-3 h-3 rounded-full ${getStatusColor(contact.status)}`} />
                 <Select 
                   value={contact.status} 
                   onValueChange={onStatusSelectChange}

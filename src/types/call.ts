@@ -34,6 +34,7 @@ export interface Call {
 }
 
 export type CallStatus = 
+  | 'initiated'
   | 'queued' 
   | 'ringing' 
   | 'in-progress' 

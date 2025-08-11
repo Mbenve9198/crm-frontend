@@ -33,6 +33,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       icon: Users,
       label: "Tutti i Contatti",
       active: pathname === "/" && selectedList === null,
+      href: "/",
       onClick: () => onListSelect?.(null),
     },
     {
@@ -125,7 +126,11 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
               return (
                 <li key={index}>
                   {item.href ? (
-                    <Link href={item.href} className={className}>
+                    <Link 
+                      href={item.href} 
+                      className={className}
+                      onClick={item.onClick}
+                    >
                       {content}
                     </Link>
                   ) : (

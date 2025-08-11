@@ -205,11 +205,7 @@ function PipelinePage() {
       <div className={`transition-all duration-300 ${
         isContactSidebarOpen ? 'blur-sm' : ''
       }`}>
-        <ModernSidebar 
-          onImportComplete={() => {}}
-          onListSelect={() => {}}
-          selectedList={null}
-        />
+        <ModernSidebar />
       </div>
 
       {/* Main content con padding-left per la sidebar */}

@@ -2,7 +2,7 @@ import { User } from './contact';
 
 export type ActivityType = 'email' | 'call' | 'whatsapp' | 'instagram_dm' | 'status_change';
 
-export type CallOutcome = 'success' | 'no_answer' | 'busy' | 'voicemail' | 'callback_requested';
+export type CallOutcome = 'interested' | 'not-interested' | 'callback' | 'voicemail' | 'wrong-number' | 'meeting-set' | 'sale-made' | 'no-answer' | 'busy';
 export type ActivityStatus = 'completed' | 'pending' | 'failed';
 export type ActivityPriority = 'low' | 'medium' | 'high';
 
@@ -10,6 +10,9 @@ export interface ActivityData {
   // Per le chiamate
   callOutcome?: CallOutcome;
   callDuration?: number; // in secondi
+  recordingUrl?: string;
+  recordingSid?: string;
+  recordingDuration?: number; // in secondi
   
   // Per WhatsApp e Instagram DM
   messageText?: string;

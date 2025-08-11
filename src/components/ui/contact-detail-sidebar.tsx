@@ -565,6 +565,27 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             </div>
                           )}
                           
+                          {activity.data?.recordingUrl && (
+                            <div className="mt-3">
+                              <p className="text-xs text-gray-500 mb-2">Registrazione chiamata:</p>
+                              <audio 
+                                controls 
+                                className="w-full h-8" 
+                                preload="metadata"
+                                style={{ maxWidth: '100%' }}
+                              >
+                                <source src={activity.data.recordingUrl} type="audio/wav" />
+                                <source src={activity.data.recordingUrl} type="audio/mp3" />
+                                Il tuo browser non supporta l&apos;elemento audio.
+                              </audio>
+                              {activity.data?.recordingDuration && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Durata: {Math.floor(activity.data.recordingDuration / 60)}:{(activity.data.recordingDuration % 60).toString().padStart(2, '0')}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          
                           <div className="mt-2">
                             <span className="text-xs text-gray-500">
                               di {activity.createdBy.firstName} {activity.createdBy.lastName}

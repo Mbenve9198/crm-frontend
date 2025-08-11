@@ -207,7 +207,7 @@ function Dashboard() {
       <main className={`pl-16 transition-all duration-300 ${
         isContactSidebarOpen ? 'blur-sm' : ''
       }`}>
-        <div className="container mx-auto py-8 px-6">
+        <div className="container mx-auto py-4 px-6">
           
           {/* Errore caricamento contatti */}
           {contactsError && (

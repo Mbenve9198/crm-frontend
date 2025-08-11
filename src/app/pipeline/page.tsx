@@ -299,14 +299,13 @@ function PipelinePage() {
               const statusContacts = contactsByStatus[status] || [];
               const stats = getColumnStats(status);
               
-              // Gradients dinamici per ogni fase
+              // Gradients dinamici per ogni fase - coerenti con la tabella
               const gradientMap = {
-                'interessato': 'from-purple-500 via-purple-600 to-indigo-600',
-                'contattato': 'from-blue-500 via-blue-600 to-cyan-600', 
-                'in_trattativa': 'from-amber-500 via-orange-500 to-red-500',
-                'da_contattare': 'from-emerald-500 via-teal-600 to-green-600',
-                'chiuso_vinto': 'from-green-500 via-emerald-500 to-teal-600',
-                'chiuso_perso': 'from-gray-500 via-slate-600 to-gray-700'
+                'interessato': 'from-blue-500 via-blue-600 to-blue-700',
+                'qr code inviato': 'from-purple-500 via-purple-600 to-purple-700', 
+                'free trial iniziato': 'from-emerald-500 via-emerald-600 to-emerald-700',
+                'won': 'from-green-600 via-green-700 to-green-800',
+                'lost': 'from-gray-500 via-gray-600 to-gray-700'
               };
               
               const gradient = gradientMap[status as keyof typeof gradientMap] || 'from-slate-500 to-slate-600';

@@ -133,7 +133,7 @@ function ContactsTable({
   
   // Stato per le preferenze tabella
   const [visibleColumns, setVisibleColumns] = useState<string[]>([...baseColumns]);
-  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   // Stati per ricerca
   const [ownerFilter, setOwnerFilter] = useState("all");

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Phone, PhoneCall, Clock, User, Volume2, VolumeX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { Button } from './button';
@@ -62,12 +62,25 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   const [outcome, setOutcome] = useState<CallOutcome | ''>('');
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const loadRecentCalls = useCallback(async () => {
+    try {
+      const response = await apiClient.getCallsByContact(contact._id, { limit: 5 });
+      // Backend ritorna { success: true, data: [calls], count: number }
+      // Quindi response.data è direttamente l'array di chiamate
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setRecentCalls(response.data);
+      }
+    } catch (error) {
+      console.error('Errore nel caricare le chiamate:', error);
+    }
+  }, [contact._id]);
+
   // Carica chiamate recenti quando si apre il dialog
   useEffect(() => {
     if (isOpen) {
       loadRecentCalls();
     }
-  }, [isOpen, contact._id]);
+  }, [isOpen, loadRecentCalls]);
 
   // Polling per aggiornare lo stato della chiamata corrente
   useEffect(() => {
@@ -113,20 +126,7 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
     }, 3000); // Controlla ogni 3 secondi
 
     return () => clearInterval(pollInterval);
-  }, [currentCall]);
-
-  const loadRecentCalls = async () => {
-    try {
-      const response = await apiClient.getCallsByContact(contact._id, { limit: 5 });
-      // Backend ritorna { success: true, data: [calls], count: number }
-      // Quindi response.data è direttamente l'array di chiamate
-      if (response.success && response.data && Array.isArray(response.data)) {
-        setRecentCalls(response.data);
-      }
-    } catch (error) {
-      console.error('Errore nel caricare le chiamate:', error);
-    }
-  };
+  }, [currentCall, loadRecentCalls, onCallComplete]);
 
   const handleInitiateCall = async () => {
     if (!contact.phone) {
@@ -160,7 +160,8 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
               label: 'Mostra chiamata attiva',
               onClick: () => {
                 // Carica la chiamata attiva
-                if ((response as any).activeCall) {
+                const errorResponse = response as { activeCall?: { twilioCallSid: string; status: string; createdAt: string } };
+                if (errorResponse.activeCall) {
                   loadRecentCalls();
                 }
               }
@@ -174,7 +175,8 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       console.error('Errore nell\'iniziare la chiamata:', error);
       
       // Se è un errore 409 (conflitto), significa chiamata già in corso
-      if ((error as any)?.message?.includes('409')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('409')) {
         toast.error('Hai già una chiamata in corso. Termina quella prima di iniziarne una nuova.');
       } else {
         toast.error('Errore nell\'iniziare la chiamata');

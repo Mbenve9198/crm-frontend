@@ -110,7 +110,7 @@ function PipelinePage() {
 
   useEffect(() => {
     loadData();
-  }, [selectedOwner]);
+  }, [selectedOwner]); // loadData è stabile, non serve come dipendenza
 
   const loadData = async () => {
     try {

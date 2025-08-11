@@ -708,6 +708,23 @@ class ApiClient {
     });
   }
 
+  async cleanupStuckCalls(options?: { thresholdMinutes?: number; allUsers?: boolean }): Promise<ApiResponse<{
+    cleanedCount: number;
+    thresholdMinutes: number;
+    cleanedCalls: Array<{
+      twilioCallSid: string;
+      status: string;
+      user: string;
+      createdAt: string;
+    }>;
+  }>> {
+    return this.request(`/calls/cleanup-stuck`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(options || {}),
+    });
+  }
+
   async getCallStats(params?: {
     period?: string;
     userId?: string;

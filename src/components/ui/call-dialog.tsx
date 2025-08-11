@@ -78,8 +78,10 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
     const pollInterval = setInterval(async () => {
       try {
         const response = await apiClient.getMyCalls({ limit: 1 });
-        if (response.success && response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-          const latestCall = response.data.data[0];
+        // Backend ritorna { success: true, data: [calls], pagination: {...} }
+        // Quindi response.data è direttamente l'array di chiamate
+        if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const latestCall = response.data[0];
           if (latestCall.twilioCallSid === currentCall.twilioCallSid) {
             setCurrentCall(latestCall);
             
@@ -103,8 +105,10 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   const loadRecentCalls = async () => {
     try {
       const response = await apiClient.getCallsByContact(contact._id, { limit: 5 });
-      if (response.success && response.data) {
-        setRecentCalls(response.data.data);
+      // Backend ritorna { success: true, data: [calls], count: number }
+      // Quindi response.data è direttamente l'array di chiamate
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setRecentCalls(response.data);
       }
     } catch (error) {
       console.error('Errore nel caricare le chiamate:', error);

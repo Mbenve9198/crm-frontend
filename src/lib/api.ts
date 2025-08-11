@@ -701,6 +701,13 @@ class ApiClient {
     });
   }
 
+  async cancelCall(callId: string): Promise<ApiResponse<Call>> {
+    return this.request<Call>(`/calls/${callId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   async getCallStats(params?: {
     period?: string;
     userId?: string;

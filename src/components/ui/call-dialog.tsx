@@ -75,7 +75,20 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
       return;
     }
 
+    let pollCount = 0;
+    const maxPolls = 20; // Massimo 60 secondi di polling (20 * 3 secondi)
+
     const pollInterval = setInterval(async () => {
+      pollCount++;
+      
+      // Se abbiamo superato il limite, ferma il polling e considera la chiamata fallita
+      if (pollCount >= maxPolls) {
+        console.warn('Timeout polling chiamata, considerata fallita');
+        setCurrentCall(prev => prev ? { ...prev, status: 'failed' as CallStatus } : null);
+        clearInterval(pollInterval);
+        return;
+      }
+
       try {
         const response = await apiClient.getMyCalls({ limit: 1 });
         // Backend ritorna { success: true, data: [calls], pagination: {...} }
@@ -140,13 +153,32 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
               onClick: () => window.open('/settings', '_blank')
             }
           });
+        } else if (response.message?.includes('chiamata in corso')) {
+          // Gestisce l'errore di chiamata già in corso
+          toast.error(response.message, {
+            action: {
+              label: 'Mostra chiamata attiva',
+              onClick: () => {
+                // Carica la chiamata attiva
+                if ((response as any).activeCall) {
+                  loadRecentCalls();
+                }
+              }
+            }
+          });
         } else {
           toast.error(response.message || 'Errore nell\'iniziare la chiamata');
         }
       }
     } catch (error) {
       console.error('Errore nell\'iniziare la chiamata:', error);
-      toast.error('Errore nell\'iniziare la chiamata');
+      
+      // Se è un errore 409 (conflitto), significa chiamata già in corso
+      if ((error as any)?.message?.includes('409')) {
+        toast.error('Hai già una chiamata in corso. Termina quella prima di iniziarne una nuova.');
+      } else {
+        toast.error('Errore nell\'iniziare la chiamata');
+      }
     } finally {
       setIsInitiating(false);
     }
@@ -242,6 +274,36 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
                   >
                     <Volume2 className="h-4 w-4 mr-2" />
                     Ascolta
+                  </Button>
+                </div>
+              )}
+
+              {/* Pulsante per annullare chiamata in corso */}
+              {['queued', 'ringing'].includes(currentCall.status) && (
+                <div className="pt-3 border-t">
+                  <Button 
+                    variant="destructive"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const response = await apiClient.cancelCall(currentCall._id);
+                        if (response.success) {
+                          setCurrentCall(prev => prev ? { ...prev, status: 'canceled' as CallStatus } : null);
+                          toast.success('Chiamata annullata con successo');
+                          loadRecentCalls();
+                        } else {
+                          toast.error('Errore nell\'annullare la chiamata');
+                        }
+                      } catch (error) {
+                        console.error('Errore nell\'annullare la chiamata:', error);
+                        // Fallback: aggiorna solo localmente
+                        setCurrentCall(prev => prev ? { ...prev, status: 'canceled' as CallStatus } : null);
+                        toast.info('Chiamata annullata localmente');
+                      }
+                    }}
+                    className="w-full"
+                  >
+                    Annulla chiamata
                   </Button>
                 </div>
               )}

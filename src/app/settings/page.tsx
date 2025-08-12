@@ -224,7 +224,7 @@ function SettingsContent() {
   };
 
   const insertVariable = (variable: string) => {
-    const placeholder = \`{\${variable}}\`;
+    const placeholder = `{${variable}}`;
     setTemplateMessage(prev => prev + placeholder);
   };
 

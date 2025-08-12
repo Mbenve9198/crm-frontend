@@ -365,16 +365,33 @@ function ContactsTable({
   };
 
   const selectAllContacts = () => {
-    const allContactIds = filteredContacts.map(contact => contact._id);
+    // Seleziona TUTTI i contatti filtrati, non solo quelli della pagina corrente
+    const allContactIds = allFilteredContacts.map(contact => contact._id);
     setSelectedContacts(new Set(allContactIds));
+  };
+
+  const selectPageContacts = () => {
+    // Seleziona solo i contatti della pagina corrente
+    const pageContactIds = filteredContacts.map(contact => contact._id);
+    setSelectedContacts(prev => {
+      const newSelection = new Set(prev);
+      pageContactIds.forEach(id => newSelection.add(id));
+      return newSelection;
+    });
   };
 
   const clearSelection = () => {
     setSelectedContacts(new Set());
   };
 
-  const isAllSelected = filteredContacts.length > 0 && filteredContacts.every(contact => selectedContacts.has(contact._id));
+  // Controlla se tutti i contatti filtrati sono selezionati
+  const isAllFilteredSelected = allFilteredContacts.length > 0 && allFilteredContacts.every(contact => selectedContacts.has(contact._id));
+  // Controlla se tutti i contatti della pagina corrente sono selezionati
+  const isCurrentPageSelected = filteredContacts.length > 0 && filteredContacts.every(contact => selectedContacts.has(contact._id));
   const isSomeSelected = selectedContacts.size > 0;
+  
+  // Conta quanti contatti sono selezionati nella pagina corrente
+  const selectedInCurrentPage = filteredContacts.filter(contact => selectedContacts.has(contact._id)).length;
 
   // Gestione eliminazione bulk
   const handleBulkDelete = async () => {
@@ -618,18 +635,39 @@ function ContactsTable({
           <TableRow>
             {/* Checkbox per selezionare tutti */}
             <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[50px] border-b-2 border-gray-200 backdrop-blur-sm">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    selectAllContacts();
-                  } else {
-                    clearSelection();
-                  }
-                }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <input
+                      type="checkbox"
+                      checked={isCurrentPageSelected}
+                      ref={(input) => {
+                        if (input) {
+                          input.indeterminate = selectedInCurrentPage > 0 && !isCurrentPageSelected;
+                        }
+                      }}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          selectPageContacts();
+                        } else {
+                          clearSelection();
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {isCurrentPageSelected 
+                        ? "Deseleziona tutti i contatti" 
+                        : selectedInCurrentPage > 0 
+                          ? "Seleziona tutti i contatti in questa pagina"
+                          : "Seleziona tutti i contatti in questa pagina"
+                      }
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </TableHead>
             {visibleColumns.includes("Contact") && (
               <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
@@ -1080,6 +1118,25 @@ function ContactsTable({
         </div>
       )}
 
+      {/* Banner selezione tutti i risultati */}
+      {isSomeSelected && !isAllFilteredSelected && selectedInCurrentPage === filteredContacts.length && calculatedPagination.totalPages > 1 && (
+        <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+            <span className="text-sm text-blue-700">
+              {selectedContacts.size} contatti selezionati in questa pagina.
+            </span>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={selectAllContacts}
+              className="text-blue-600 hover:text-blue-800 p-0 h-auto"
+            >
+              Seleziona tutti i {calculatedPagination.totalContacts} contatti filtrati
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Banner azioni bulk */}
       {isSomeSelected && (
         <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
@@ -1088,6 +1145,9 @@ function ContactsTable({
               <Check className="h-5 w-5 text-blue-600" />
               <span className="font-medium">
                 {selectedContacts.size} contatto{selectedContacts.size !== 1 ? 'i' : ''} selezionato{selectedContacts.size !== 1 ? 'i' : ''}
+                {isAllFilteredSelected && calculatedPagination.totalContacts > filteredContacts.length && (
+                  <span className="text-blue-600"> (tutti i risultati filtrati)</span>
+                )}
               </span>
             </div>
             

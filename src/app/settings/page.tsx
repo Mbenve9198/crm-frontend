@@ -26,8 +26,21 @@ import { apiClient } from '@/lib/api';
 import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate } from '@/types/twilio';
 import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
 import { ModernSidebar } from '@/components/ui/modern-sidebar';
+import { useAuth } from '@/context/AuthContext';
+import LoginForm from '@/components/ui/login-form';
 
-export default function SettingsPage() {
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+        <p className="text-gray-600">Caricamento Impostazioni...</p>
+      </div>
+    </div>
+  );
+}
+
+function SettingsContent() {
   const [twilioSettings, setTwilioSettings] = useState<TwilioSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -211,11 +224,9 @@ export default function SettingsPage() {
   };
 
   const insertVariable = (variable: string) => {
-    const placeholder = `{${variable}}`;
+    const placeholder = \`{\${variable}}\`;
     setTemplateMessage(prev => prev + placeholder);
   };
-
-
 
   if (isLoading) {
     return (
@@ -232,10 +243,12 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar moderna */}
-      <ModernSidebar />
+      <div className="transition-all duration-300">
+        <ModernSidebar />
+      </div>
 
       {/* Main content con padding-left per la sidebar */}
-      <main className="pl-16">
+      <main className="pl-16 transition-all duration-300">
         <div className="container mx-auto py-4 px-6 max-w-4xl">
           <div className="mb-8">
             <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -247,365 +260,167 @@ export default function SettingsPage() {
             </p>
           </div>
 
-      {/* Configurazione Twilio */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Phone className="h-6 w-6" />
-            Configurazione Twilio
-            {isEnabled && (
-              <Badge variant="default" className="bg-green-100 text-green-800">
-                <CheckCircle className="h-3 w-3 mr-1" />
-                Attivo
-              </Badge>
-            )}
-            {isConfigured && !isVerified && (
-              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Da verificare
-              </Badge>
-            )}
-            {!isConfigured && (
-              <Badge variant="outline">
-                <XCircle className="h-3 w-3 mr-1" />
-                Non configurato
-              </Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            Configura il tuo account Twilio per effettuare chiamate direttamente dal CRM
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Guida setup */}
-          <TwilioSetupGuide 
-            isVerified={isEnabled} 
-            phoneNumber={twilioSettings?.phoneNumber} 
-          />
-
-          {/* Form di configurazione */}
-          <div className="grid gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Account SID</label>
-              <Input
-                type="text"
-                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                value={formData.accountSid}
-                onChange={(e) => setFormData(prev => ({ ...prev, accountSid: e.target.value }))}
-                disabled={isEnabled}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Auth Token</label>
-              <div className="relative">
-                <Input
-                  type={showAuthToken ? "text" : "password"}
-                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  value={formData.authToken}
-                  onChange={(e) => setFormData(prev => ({ ...prev, authToken: e.target.value }))}
-                  disabled={isEnabled}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                  onClick={() => setShowAuthToken(!showAuthToken)}
-                  disabled={isEnabled}
-                >
-                  {showAuthToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Il tuo Numero di Telefono</label>
-              <Input
-                type="tel"
-                placeholder="+393331234567"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                disabled={isEnabled}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Il tuo numero personale verificato con Twilio (formato internazionale)
-              </p>
-            </div>
-          </div>
-
-          {/* Azioni */}
-          <div className="flex gap-3 pt-4 border-t">
-            {!isEnabled && (
-              <>
-                <Button
-                  onClick={handleConfigure}
-                  disabled={isConfiguring}
-                  className="flex-1"
-                >
-                  {isConfiguring ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <Settings className="h-4 w-4 mr-2" />
-                      Salva Configurazione
-                    </>
-                  )}
-                </Button>
-
-                {isConfigured && !isVerified && (
-                  <Button
-                    onClick={handleVerify}
-                    disabled={isVerifying}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {isVerifying ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Verificando...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Verifica Configurazione
-                      </>
-                    )}
-                  </Button>
-                )}
-              </>
-            )}
-
-            {isEnabled && (
-              <Button
-                onClick={handleDisable}
-                variant="destructive"
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Disabilita Twilio
-              </Button>
-            )}
-          </div>
-
-          {/* Test chiamata */}
-          {isEnabled && (
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <TestTube className="h-4 w-4" />
-                Test Chiamata
-              </h4>
-              <div className="flex gap-3">
-                <Input
-                  type="tel"
-                  placeholder="+393331234567"
-                  value={testNumber}
-                  onChange={(e) => setTestNumber(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleTestCall}
-                  disabled={isTesting}
-                  variant="outline"
-                >
-                  {isTesting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Chiamando...
-                    </>
-                  ) : (
-                    <>
-                      <Phone className="h-4 w-4 mr-2" />
-                      Test
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Inserisci un numero per testare la configurazione
-              </p>
-            </div>
-          )}
-
-          {/* Stato corrente */}
-          {twilioSettings && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h4 className="font-medium mb-2">Stato Configurazione</h4>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600">Account SID:</span>
-                  <p className="font-mono">{twilioSettings.accountSid || 'Non configurato'}</p>
+          {/* Configurazione Template WhatsApp */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-6 w-6" />
+                Template WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Configura il messaggio predefinito che verrà utilizzato quando invii un messaggio WhatsApp
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingTemplate ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  Caricamento template...
                 </div>
-                <div>
-                  <span className="text-gray-600">Numero:</span>
-                  <p className="font-mono">{twilioSettings.phoneNumber || 'Non configurato'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Verificato:</span>
-                  <p>{twilioSettings.isVerified ? '✅ Sì' : '❌ No'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Abilitato:</span>
-                  <p>{twilioSettings.isEnabled ? '✅ Sì' : '❌ No'}</p>
-                </div>
-              </div>
-              {twilioSettings.lastVerified && (
-                <div className="mt-2 text-xs text-gray-500">
-                  Ultima verifica: {new Date(twilioSettings.lastVerified).toLocaleString('it-IT')}
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Configurazione Template WhatsApp */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageCircle className="h-6 w-6" />
-            Template WhatsApp
-          </CardTitle>
-          <CardDescription>
-            Configura il messaggio predefinito che verrà utilizzato quando invii un messaggio WhatsApp
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoadingTemplate ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              Caricamento template...
-            </div>
-          ) : (
-            <>
-              {/* Editor del template */}
-              <div>
-                <label className="block text-sm font-medium mb-2">Messaggio Template</label>
-                <Textarea
-                  placeholder="Ciao {nome}, sono {utente} di MenuChatCRM. Come posso aiutarti?"
-                  value={templateMessage}
-                  onChange={(e) => setTemplateMessage(e.target.value)}
-                  rows={4}
-                  maxLength={1000}
-                  className="resize-none"
-                />
-                <div className="flex justify-between items-center mt-1 text-xs text-gray-500">
-                  <span>Usa variabili come {"{nome}"} per personalizzare il messaggio</span>
-                  <span>{templateMessage.length}/1000</span>
-                </div>
-              </div>
-
-              {/* Variabili disponibili */}
-              {availableVariables && (
-                <div>
-                  <h4 className="font-medium mb-3 flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    Variabili Disponibili
-                  </h4>
-                  
-                  {/* Variabili fisse */}
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-600 mb-2">Variabili Fisse:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {availableVariables.fixed.map((variable) => (
-                        <Button
-                          key={variable.key}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertVariable(variable.key)}
-                          className="text-xs"
-                          title={variable.description}
-                        >
-                          {"{" + variable.key + "}"}
-                          <Copy className="h-3 w-3 ml-1" />
-                        </Button>
-                      ))}
+              ) : (
+                <>
+                  {/* Editor del template */}
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Messaggio Template</label>
+                    <Textarea
+                      placeholder="Ciao {nome}, sono {utente} di MenuChatCRM. Come posso aiutarti?"
+                      value={templateMessage}
+                      onChange={(e) => setTemplateMessage(e.target.value)}
+                      rows={4}
+                      maxLength={1000}
+                      className="resize-none"
+                    />
+                    <div className="flex justify-between items-center mt-1 text-xs text-gray-500">
+                      <span>Usa variabili come {"{nome}"} per personalizzare il messaggio</span>
+                      <span>{templateMessage.length}/1000</span>
                     </div>
                   </div>
 
-                  {/* Variabili dinamiche */}
-                  {availableVariables.dynamic.length > 0 && (
+                  {/* Variabili disponibili */}
+                  {availableVariables && (
                     <div>
-                      <p className="text-sm text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
-                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                        {availableVariables.dynamic.map((variable) => (
-                          <Button
-                            key={variable.key}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => insertVariable(variable.key)}
-                            className="text-xs"
-                            title={variable.description}
-                          >
-                            {"{" + variable.key + "}"}
-                            <Copy className="h-3 w-3 ml-1" />
-                          </Button>
-                        ))}
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Variabili Disponibili
+                      </h4>
+                      
+                      {/* Variabili fisse */}
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 mb-2">Variabili Fisse:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {availableVariables.fixed.map((variable) => (
+                            <Button
+                              key={variable.key}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => insertVariable(variable.key)}
+                              className="text-xs"
+                              title={variable.description}
+                            >
+                              {"{" + variable.key + "}"}
+                              <Copy className="h-3 w-3 ml-1" />
+                            </Button>
+                          ))}
+                        </div>
                       </div>
+
+                      {/* Variabili dinamiche */}
+                      {availableVariables.dynamic.length > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
+                          <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                            {availableVariables.dynamic.map((variable) => (
+                              <Button
+                                key={variable.key}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => insertVariable(variable.key)}
+                                className="text-xs"
+                                title={variable.description}
+                              >
+                                {"{" + variable.key + "}"}
+                                <Copy className="h-3 w-3 ml-1" />
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* Azione salvataggio */}
-              <div className="border-t pt-4">
-                <Button
-                  onClick={handleSaveTemplate}
-                  disabled={isSavingTemplate || !templateMessage.trim()}
-                  className="w-full"
-                >
-                  {isSavingTemplate ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Salva Template
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Stato corrente template */}
-              {whatsappTemplate && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium mb-2">Template Corrente</h4>
-                  <div className="text-sm space-y-2">
-                    <div>
-                      <span className="text-gray-600">Messaggio:</span>
-                      <p className="font-mono text-xs bg-white p-2 rounded border mt-1">
-                        {whatsappTemplate.message}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Variabili rilevate:</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {whatsappTemplate.variables.map((variable) => (
-                          <Badge key={variable} variant="secondary" className="text-xs">
-                            {"{" + variable + "}"}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    {whatsappTemplate.updatedAt && (
-                      <div className="text-xs text-gray-500">
-                        Ultimo aggiornamento: {new Date(whatsappTemplate.updatedAt).toLocaleString('it-IT')}
-                      </div>
-                    )}
+                  {/* Azione salvataggio */}
+                  <div className="border-t pt-4">
+                    <Button
+                      onClick={handleSaveTemplate}
+                      disabled={isSavingTemplate || !templateMessage.trim()}
+                      className="w-full"
+                    >
+                      {isSavingTemplate ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Salva Template
+                        </>
+                      )}
+                    </Button>
                   </div>
-                </div>
+
+                  {/* Stato corrente template */}
+                  {whatsappTemplate && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h4 className="font-medium mb-2">Template Corrente</h4>
+                      <div className="text-sm space-y-2">
+                        <div>
+                          <span className="text-gray-600">Messaggio:</span>
+                          <p className="font-mono text-xs bg-white p-2 rounded border mt-1">
+                            {whatsappTemplate.message}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Variabili rilevate:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {whatsappTemplate.variables.map((variable) => (
+                              <Badge key={variable} variant="secondary" className="text-xs">
+                                {"{" + variable + "}"}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        {whatsappTemplate.updatedAt && (
+                          <div className="text-xs text-gray-500">
+                            Ultimo aggiornamento: {new Date(whatsappTemplate.updatedAt).toLocaleString('it-IT')}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
   );
-} 
+}
+
+export default function SettingsPage() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Mostra loading durante la verifica dell'autenticazione
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  // Se non autenticato, mostra il form di login
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  // Se autenticato, mostra le impostazioni
+  return <SettingsContent />;
+}

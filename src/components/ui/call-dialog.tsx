@@ -1,15 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneCall, User, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Phone, PhoneCall, Clock, User, Volume2, VolumeX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './dialog';
 import { Button } from './button';
 import { Textarea } from './textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
+import { Badge } from './badge';
 import { toast } from 'sonner';
 import { Contact } from '@/types/contact';
-import { Call, CallOutcome, InitiateCallRequest } from '@/types/call';
+import { Call, CallStatus, CallOutcome, InitiateCallRequest, UpdateCallRequest } from '@/types/call';
 import { apiClient } from '@/lib/api';
+import { formatDistanceToNow } from 'date-fns';
+import { it } from 'date-fns/locale';
 
 interface CallDialogProps {
   contact: Contact;
@@ -17,7 +20,27 @@ interface CallDialogProps {
   onCallComplete?: (call: Call) => void;
 }
 
-type CallState = 'idle' | 'initiating' | 'calling-you' | 'connecting-contact' | 'in-conversation' | 'finished' | 'error';
+const statusColors: Record<CallStatus, string> = {
+  'queued': 'bg-yellow-100 text-yellow-800',
+  'ringing': 'bg-blue-100 text-blue-800',
+  'in-progress': 'bg-green-100 text-green-800',
+  'completed': 'bg-gray-100 text-gray-800',
+  'busy': 'bg-red-100 text-red-800',
+  'no-answer': 'bg-orange-100 text-orange-800',
+  'failed': 'bg-red-100 text-red-800',
+  'canceled': 'bg-gray-100 text-gray-800',
+};
+
+const statusLabels: Record<CallStatus, string> = {
+  'queued': 'In coda',
+  'ringing': 'Squilla',
+  'in-progress': 'In corso',
+  'completed': 'Completata',
+  'busy': 'Occupato',
+  'no-answer': 'Nessuna risposta',
+  'failed': 'Fallita',
+  'canceled': 'Annullata',
+};
 
 const outcomeLabels: Record<CallOutcome, string> = {
   'interested': 'Interessato',
@@ -27,68 +50,85 @@ const outcomeLabels: Record<CallOutcome, string> = {
   'wrong-number': 'Numero sbagliato',
   'meeting-set': 'Appuntamento fissato',
   'sale-made': 'Vendita conclusa',
-  'no-answer': 'Nessuna risposta',
 };
 
 export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [callState, setCallState] = useState<CallState>('idle');
-  const [callResult, setCallResult] = useState<Call | null>(null);
+  const [isInitiating, setIsInitiating] = useState(false);
+  const [currentCall, setCurrentCall] = useState<Call | null>(null);
+  const [recentCalls, setRecentCalls] = useState<Call[]>([]);
+  const [recordCall, setRecordCall] = useState(true);
   const [notes, setNotes] = useState('');
   const [outcome, setOutcome] = useState<CallOutcome | ''>('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [waitingStartTime, setWaitingStartTime] = useState<number | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  // Timer per gestire il progresso della chiamata
+  // Carica chiamate recenti quando si apre il dialog
   useEffect(() => {
-    if (callState === 'calling-you' && waitingStartTime) {
-      // Dopo 10 secondi, assumiamo che hai risposto e passiamo al collegamento
-      const timeout1 = setTimeout(() => {
-        setCallState('connecting-contact');
-      }, 10000);
-
-      return () => clearTimeout(timeout1);
+    if (isOpen) {
+      loadRecentCalls();
     }
-    
-    if (callState === 'connecting-contact') {
-      // Dopo altri 15 secondi, assumiamo che il contatto abbia risposto
-      const timeout2 = setTimeout(() => {
-        setCallState('in-conversation');
-      }, 15000);
+  }, [isOpen, contact._id]);
 
-      return () => clearTimeout(timeout2);
-    }
-  }, [callState, waitingStartTime]);
-
-  const handleInitiateCall = async () => {
-    if (!contact.phone) {
-      setErrorMessage('Il contatto non ha un numero di telefono');
-      setCallState('error');
+  // Polling per aggiornare lo stato della chiamata corrente
+  useEffect(() => {
+    if (!currentCall || ['completed', 'busy', 'no-answer', 'failed', 'canceled'].includes(currentCall.status)) {
       return;
     }
 
-    setCallState('initiating');
-    setErrorMessage('');
-    setCallResult(null);
-    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await apiClient.getMyCalls({ limit: 1 });
+        if (response.success && response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+          const latestCall = response.data.data[0];
+          if (latestCall.twilioCallSid === currentCall.twilioCallSid) {
+            setCurrentCall(latestCall);
+            
+            // Se la chiamata è terminata, aggiorna la lista
+            if (['completed', 'busy', 'no-answer', 'failed', 'canceled'].includes(latestCall.status)) {
+              loadRecentCalls();
+              if (onCallComplete) {
+                onCallComplete(latestCall);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Errore nel polling stato chiamata:', error);
+      }
+    }, 3000); // Controlla ogni 3 secondi
+
+    return () => clearInterval(pollInterval);
+  }, [currentCall]);
+
+  const loadRecentCalls = async () => {
+    try {
+      const response = await apiClient.getCallsByContact(contact._id, { limit: 5 });
+      if (response.success && response.data) {
+        setRecentCalls(response.data.data);
+      }
+    } catch (error) {
+      console.error('Errore nel caricare le chiamate:', error);
+    }
+  };
+
+  const handleInitiateCall = async () => {
+    if (!contact.phone) {
+      toast.error('Il contatto non ha un numero di telefono');
+      return;
+    }
+
+    setIsInitiating(true);
     try {
       const request: InitiateCallRequest = {
         contactId: contact._id,
-        recordCall: true,
+        recordCall,
       };
 
       const response = await apiClient.initiateCall(request);
-      
       if (response.success && response.data) {
-        setCallResult(response.data.call);
-        setCallState('calling-you');
-        setWaitingStartTime(Date.now());
-        toast.success('Chiamata avviata! Ti stiamo chiamando...');
+        setCurrentCall(response.data.call);
+        toast.success('Chiamata iniziata con successo!');
       } else {
-        setErrorMessage(response.message || 'Errore nell\'avviare la chiamata');
-        setCallState('error');
-        
         if (response.message?.includes('Configurazione Twilio')) {
           toast.error('Twilio non configurato. Vai nelle Impostazioni per configurarlo.', {
             action: {
@@ -96,311 +136,55 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
               onClick: () => window.open('/settings', '_blank')
             }
           });
+        } else {
+          toast.error(response.message || 'Errore nell\'iniziare la chiamata');
         }
       }
     } catch (error) {
       console.error('Errore nell\'iniziare la chiamata:', error);
-      setErrorMessage('Errore di connessione al server');
-      setCallState('error');
+      toast.error('Errore nell\'iniziare la chiamata');
+    } finally {
+      setIsInitiating(false);
     }
   };
 
-  const handleCallCompleted = () => {
-    setCallState('finished');
-  };
+  const handleUpdateCall = async () => {
+    if (!currentCall) return;
 
-  const handleSaveResult = async () => {
-    if (!callResult || !outcome) {
-      toast.error('Seleziona un esito per la chiamata');
-      return;
-    }
-
-    setIsSaving(true);
+    setIsUpdating(true);
     try {
-      const updateRequest = {
-        outcome: outcome as CallOutcome,
-        ...(notes.trim() && { notes: notes.trim() })
-      };
+      const request: UpdateCallRequest = {};
+      if (notes.trim()) request.notes = notes.trim();
+      if (outcome) request.outcome = outcome as CallOutcome;
 
-      const response = await apiClient.updateCall(callResult._id, updateRequest);
-      
+      const response = await apiClient.updateCall(currentCall._id, request);
       if (response.success && response.data) {
-        toast.success('Esito chiamata salvato');
-        if (onCallComplete) {
-          onCallComplete(response.data);
-        }
-        resetDialog();
-        setIsOpen(false);
+        setCurrentCall(response.data);
+        toast.success('Chiamata aggiornata con successo');
+        setNotes('');
+        setOutcome('');
+        loadRecentCalls();
       } else {
-        toast.error('Errore nel salvare l\'esito');
+        toast.error(response.message || 'Errore nell\'aggiornare la chiamata');
       }
     } catch (error) {
-      console.error('Errore nel salvare l\'esito:', error);
-      toast.error('Errore nel salvare l\'esito');
+      console.error('Errore nell\'aggiornare la chiamata:', error);
+      toast.error('Errore nell\'aggiornare la chiamata');
     } finally {
-      setIsSaving(false);
+      setIsUpdating(false);
     }
   };
 
-  const resetDialog = () => {
-    setCallState('idle');
-    setCallResult(null);
-    setNotes('');
-    setOutcome('');
-    setErrorMessage('');
-    setWaitingStartTime(null);
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const renderContent = () => {
-    switch (callState) {
-      case 'idle':
-        return (
-          <div className="space-y-4">
-            <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-              <strong>Come funziona:</strong>
-              <ol className="list-decimal list-inside mt-2 space-y-1">
-                <li>Ti chiameremo sul tuo telefono</li>
-                <li>Quando rispondi, ti collegheremo al contatto</li>
-                <li>Potrai parlare direttamente con {contact.name}</li>
-                <li>Quando hai finito, inserisci l&apos;esito qui</li>
-              </ol>
-            </div>
-
-            <Button 
-              onClick={handleInitiateCall}
-              disabled={!contact.phone}
-              className="w-full"
-              size="lg"
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              Inizia chiamata
-            </Button>
-
-            {!contact.phone && (
-              <p className="text-sm text-red-600 text-center">
-                Il contatto non ha un numero di telefono configurato
-              </p>
-            )}
-          </div>
-        );
-
-      case 'initiating':
-        return (
-          <div className="space-y-4 text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-sm text-gray-600">Avvio chiamata in corso...</p>
-          </div>
-        );
-
-      case 'calling-you':
-        return (
-          <div className="space-y-4">
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <div className="animate-pulse w-8 h-8 bg-blue-600 rounded-full mx-auto mb-2"></div>
-              <p className="text-sm text-blue-800 font-medium">
-                Ti stiamo chiamando...
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                Rispondi al telefono per iniziare la chiamata
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setCallState('connecting-contact')}
-                className="flex-1"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Ho risposto
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={() => {
-                  setErrorMessage('Chiamata annullata dall\'utente');
-                  setCallState('error');
-                }}
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Annulla
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'connecting-contact':
-        return (
-          <div className="space-y-4">
-            <div className="text-center p-3 bg-yellow-50 rounded-lg">
-              <div className="animate-spin w-6 h-6 border-2 border-yellow-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p className="text-sm text-yellow-800 font-medium">
-                Collegamento al contatto...
-              </p>
-                             <p className="text-xs text-yellow-600 mt-1">
-                 Stiamo chiamando {contact.name}
-               </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setCallState('in-conversation')}
-                className="flex-1"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Il contatto ha risposto
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setCallState('finished')}
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Non ha risposto
-              </Button>
-            </div>
-          </div>
-        );
-
-             case 'in-conversation':
-        return (
-          <div className="space-y-4">
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="flex items-center justify-center w-8 h-8 bg-green-600 rounded-full mx-auto mb-2">
-                <Phone className="w-4 h-4 text-white" />
-              </div>
-              <p className="text-sm text-green-800 font-medium">
-                Chiamata in corso con {contact.name}
-              </p>
-              <p className="text-xs text-green-600 mt-1">
-                Stai parlando con il contatto. Quando hai finito, clicca qui sotto.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={handleCallCompleted}
-                className="flex-1"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Ho finito di parlare
-              </Button>
-              <Button 
-                variant="destructive"
-                onClick={() => {
-                  setErrorMessage('Chiamata interrotta');
-                  setCallState('finished');
-                }}
-                className="flex-1"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Riattacca
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'finished':
-        return (
-          <div className="space-y-4">
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
-              <p className="text-sm text-green-800 font-medium">
-                Chiamata completata!
-              </p>
-              <p className="text-xs text-green-600 mt-1">
-                Inserisci l&apos;esito della conversazione qui sotto
-              </p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Esito chiamata *</label>
-              <Select value={outcome} onValueChange={(value) => setOutcome(value as CallOutcome)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Come è andata la chiamata?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(outcomeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Note (opzionale)</label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Aggiungi note sulla conversazione..."
-                rows={3}
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={resetDialog}
-                className="flex-1"
-              >
-                Annulla
-              </Button>
-              <Button 
-                onClick={handleSaveResult}
-                disabled={isSaving || !outcome}
-                className="flex-1"
-              >
-                {isSaving ? 'Salvataggio...' : 'Salva esito'}
-              </Button>
-            </div>
-          </div>
-        );
-
-      case 'error':
-        return (
-          <div className="space-y-4">
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
-              <p className="text-sm text-red-800 font-medium">
-                Errore nella chiamata
-              </p>
-              <p className="text-xs text-red-600 mt-1">
-                {errorMessage}
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={resetDialog}
-                className="flex-1"
-              >
-                Chiudi
-              </Button>
-              <Button 
-                onClick={handleInitiateCall}
-                className="flex-1"
-              >
-                Riprova
-              </Button>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
-    }
-  };
+  const canUpdate = currentCall && ['completed', 'busy', 'no-answer', 'failed'].includes(currentCall.status);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      setIsOpen(open);
-      if (!open) resetDialog();
-    }}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
@@ -409,7 +193,6 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
           </Button>
         )}
       </DialogTrigger>
-      
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -428,7 +211,145 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
             </div>
           </div>
 
-          {renderContent()}
+          {/* Chiamata corrente */}
+          {currentCall ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Stato chiamata:</span>
+                <Badge className={statusColors[currentCall.status]}>
+                  {statusLabels[currentCall.status]}
+                </Badge>
+              </div>
+
+              {currentCall.duration > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Durata:</span>
+                  <span className="text-sm font-mono">{formatDuration(currentCall.duration)}</span>
+                </div>
+              )}
+
+              {currentCall.recordingUrl && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Registrazione:</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open(currentCall.recordingUrl, '_blank')}
+                  >
+                    <Volume2 className="h-4 w-4 mr-2" />
+                    Ascolta
+                  </Button>
+                </div>
+              )}
+
+              {/* Form per aggiornare la chiamata */}
+              {canUpdate && (
+                <div className="space-y-3 pt-3 border-t">
+                  <div>
+                    <label className="text-sm font-medium">Outcome</label>
+                    <Select value={outcome} onValueChange={(value) => setOutcome(value as CallOutcome | '')}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona outcome..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(outcomeLabels).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Note</label>
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Aggiungi note sulla chiamata..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <Button 
+                    onClick={handleUpdateCall}
+                    disabled={isUpdating}
+                    className="w-full"
+                  >
+                    {isUpdating ? 'Aggiornamento...' : 'Salva aggiornamenti'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Form per iniziare una nuova chiamata */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Registra chiamata:</span>
+                <Button
+                  variant={recordCall ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setRecordCall(!recordCall)}
+                >
+                  {recordCall ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <Button 
+                onClick={handleInitiateCall}
+                disabled={isInitiating || !contact.phone}
+                className="w-full"
+                size="lg"
+              >
+                {isInitiating ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Iniziando chiamata...
+                  </>
+                ) : (
+                  <>
+                    <Phone className="h-4 w-4 mr-2" />
+                    Inizia chiamata
+                  </>
+                )}
+              </Button>
+
+              {!contact.phone && (
+                <p className="text-sm text-red-600 text-center">
+                  Il contatto non ha un numero di telefono configurato
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Chiamate recenti */}
+          {recentCalls.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-gray-700">Chiamate recenti</h4>
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {recentCalls.map((call) => (
+                  <div key={call._id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div className="flex items-center gap-2">
+                      <Badge className={statusColors[call.status]}>
+                        {statusLabels[call.status]}
+                      </Badge>
+                      {call.duration > 0 && (
+                        <span className="text-xs text-gray-600">
+                          {formatDuration(call.duration)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {formatDistanceToNow(new Date(call.createdAt), { 
+                        addSuffix: true, 
+                        locale: it 
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

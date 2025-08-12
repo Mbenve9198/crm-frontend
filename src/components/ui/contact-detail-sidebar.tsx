@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Contact, ContactStatus } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
-import { useAuth } from "@/context/AuthContext";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
 import { CallDialog } from "./call-dialog";
 
@@ -26,7 +25,6 @@ interface ContactDetailSidebarProps {
 }
 
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
-  const { user } = useAuth();
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
@@ -80,13 +78,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const handleCancelEdit = () => {
     setEditingActivity(null);
     setEditingData({});
-  };
-
-  // Funzione per ottenere l'URL della registrazione con token
-  const getRecordingUrl = (recordingSid: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) return '';
-    return `https://crm-backend-8gwn.onrender.com/api/calls/recording/${recordingSid}?token=${encodeURIComponent(token)}`;
   };
 
   const loadActivities = useCallback(async () => {
@@ -699,7 +690,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                     preload="metadata"
                                     style={{ maxWidth: '100%' }}
                                   >
-                                    <source src={getRecordingUrl(activity.data.recordingSid)} type="audio/wav" />
+                                    <source src={`https://crm-backend-8gwn.onrender.com/api/calls/recording/${activity.data.recordingSid}`} type="audio/wav" />
                                     Il tuo browser non supporta l&apos;elemento audio.
                                   </audio>
                                   {activity.data?.recordingDuration && (

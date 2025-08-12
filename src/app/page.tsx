@@ -65,16 +65,16 @@ function Dashboard() {
     loadUserPreferences();
   }, []); // Carica solo una volta al montaggio
 
-  // Carica i contatti dal database
-  const loadContacts = useCallback(async (page: number = 1, limit: number = 10, listFilter: string | null = selectedList, searchQuery?: string) => {
+  // Carica TUTTI i contatti (senza paginazione per permettere filtri completi)
+  const loadContacts = useCallback(async (listFilter: string | null = selectedList, searchQuery?: string) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log(`🔄 Caricamento contatti: pagina ${page}, limite ${limit}, lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
+      console.log(`🔄 Caricamento TUTTI i contatti: lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
       const response = await apiClient.getContacts({
-        page,
-        limit,
+        page: 1,
+        limit: 10000, // Carica tutto per permettere filtri lato client
         list: listFilter || undefined,
         search: searchQuery || undefined
       });
@@ -82,7 +82,14 @@ function Dashboard() {
       if (response.success && response.data) {
         console.log('✅ Contatti caricati:', response.data.contacts.length);
         setContacts(response.data.contacts);
-        setPagination(response.data.pagination);
+        // Aggiorna la paginazione per riflettere i dati completi
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalContacts: response.data.contacts.length,
+          hasNext: false,
+          hasPrev: false
+        });
       } else {
         throw new Error('Errore nel caricamento contatti');
       }
@@ -97,26 +104,25 @@ function Dashboard() {
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
     if (preferencesLoaded) {
-      loadContacts(pagination.currentPage, currentLimit, selectedList, searchQuery);
+      loadContacts(selectedList, searchQuery);
     }
-  }, [refreshKey, preferencesLoaded, pagination.currentPage, currentLimit, selectedList, searchQuery, loadContacts]);
+  }, [refreshKey, preferencesLoaded, selectedList, searchQuery, loadContacts]);
 
   // Ricerca manuale su richiesta (Enter o click)
   const performSearch = (query: string) => {
     console.log(`🔍 Ricerca manuale attivata per: "${query}"`);
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-    loadContacts(1, currentLimit, selectedList, query);
+    loadContacts(selectedList, query);
   };
 
-  // Gestione cambio pagina
+  // Gestione cambio pagina - ora gestita lato client
   const handlePageChange = (newPage: number) => {
-    loadContacts(newPage, currentLimit, selectedList, searchQuery);
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
   };
 
-  // Gestione cambio limite per pagina
+  // Gestione cambio limite per pagina - ora gestita lato client
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
-    loadContacts(1, newLimit, selectedList, searchQuery); // Torna alla prima pagina con il nuovo limite
+    setPagination(prev => ({ ...prev, currentPage: 1 })); // Torna alla prima pagina
   };
 
   // Gestione selezione lista dalla sidebar
@@ -217,7 +223,7 @@ function Dashboard() {
                 <span>{contactsError}</span>
               </div>
               <button 
-                onClick={() => loadContacts(pagination.currentPage, currentLimit)}
+                onClick={() => loadContacts(selectedList, searchQuery)}
                 className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
               >
                 Riprova

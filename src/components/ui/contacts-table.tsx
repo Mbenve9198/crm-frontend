@@ -264,10 +264,24 @@ function ContactsTable({
   }, [contacts, isLoading, isSearching]);
 
   // Filtraggio combinato: owner filter + filtri locali
-  const filteredContacts = localFilteredContacts.filter((contact) => {
+  const allFilteredContacts = localFilteredContacts.filter((contact) => {
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
     return matchesOwner;
   });
+
+  // Paginazione lato client sui dati filtrati
+  const startIndex = ((pagination?.currentPage || 1) - 1) * currentLimit;
+  const endIndex = startIndex + currentLimit;
+  const filteredContacts = allFilteredContacts.slice(startIndex, endIndex);
+
+  // Aggiorna la paginazione per riflettere i dati filtrati
+  const calculatedPagination = {
+    currentPage: pagination?.currentPage || 1,
+    totalPages: Math.ceil(allFilteredContacts.length / currentLimit),
+    totalContacts: allFilteredContacts.length,
+    hasNext: endIndex < allFilteredContacts.length,
+    hasPrev: (pagination?.currentPage || 1) > 1
+  };
 
   const toggleColumn = async (col: string) => {
     const newVisibleColumns = visibleColumns.includes(col)
@@ -993,11 +1007,21 @@ function ContactsTable({
                 <div className="flex flex-col items-center gap-2">
                   <UserIcon className="h-8 w-8 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery || (ownerFilter && ownerFilter !== "all")
+                    {searchQuery || (ownerFilter && ownerFilter !== "all") || activeFiltersCount > 0
                       ? "Nessun contatto trovato con i filtri applicati"
                       : "Nessun contatto presente"
                     }
                   </p>
+                  {activeFiltersCount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearAllFilters}
+                      className="mt-2"
+                    >
+                      Rimuovi tutti i filtri
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>
@@ -1007,33 +1031,33 @@ function ContactsTable({
       </div>
 
       {/* Controlli di paginazione */}
-      {pagination && (
+      {calculatedPagination && (
         <div className="flex items-center justify-between px-2 py-4">
           <div className="text-sm text-muted-foreground">
-            Pagina {pagination.currentPage} di {pagination.totalPages} 
-            ({pagination.totalContacts} contatti totali)
+            Pagina {calculatedPagination.currentPage} di {calculatedPagination.totalPages} 
+            ({calculatedPagination.totalContacts} contatti{activeFiltersCount > 0 || hasActiveSort ? ' filtrati' : ' totali'})
           </div>
           
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange?.(pagination.currentPage - 1)}
-              disabled={!pagination.hasPrev}
+              onClick={() => onPageChange?.(calculatedPagination.currentPage - 1)}
+              disabled={!calculatedPagination.hasPrev}
             >
               ← Precedente
             </Button>
             
             {/* Numeri di pagina */}
             <div className="flex gap-1">
-              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                const pageNum = Math.max(1, pagination.currentPage - 2) + i;
-                if (pageNum > pagination.totalPages) return null;
+              {Array.from({ length: Math.min(5, calculatedPagination.totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, calculatedPagination.currentPage - 2) + i;
+                if (pageNum > calculatedPagination.totalPages) return null;
                 
                 return (
                   <Button
                     key={pageNum}
-                    variant={pageNum === pagination.currentPage ? "default" : "outline"}
+                    variant={pageNum === calculatedPagination.currentPage ? "default" : "outline"}
                     size="sm"
                     onClick={() => onPageChange?.(pageNum)}
                     className="w-8 h-8 p-0"
@@ -1047,8 +1071,8 @@ function ContactsTable({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange?.(pagination.currentPage + 1)}
-              disabled={!pagination.hasNext}
+              onClick={() => onPageChange?.(calculatedPagination.currentPage + 1)}
+              disabled={!calculatedPagination.hasNext}
             >
               Successiva →
             </Button>

@@ -28,23 +28,13 @@ type ColumnFilterComponentProps = {
 
 const filterConditions: { value: FilterCondition; label: string; type: 'text' | 'number' | 'select' }[] = [
   { value: 'equals', label: 'È uguale a', type: 'text' },
-  { value: 'not_equals', label: 'È diverso da', type: 'text' },
   { value: 'contains', label: 'Contiene', type: 'text' },
-  { value: 'not_contains', label: 'Non contiene', type: 'text' },
   { value: 'starts_with', label: 'Inizia con', type: 'text' },
-  { value: 'ends_with', label: 'Finisce con', type: 'text' },
-  { value: 'greater_than', label: 'È maggiore di', type: 'number' },
-  { value: 'less_than', label: 'È minore di', type: 'number' },
-  { value: 'greater_equal', label: 'È maggiore o uguale a', type: 'number' },
-  { value: 'less_equal', label: 'È minore o uguale a', type: 'number' },
   { value: 'is_empty', label: 'È vuoto', type: 'text' },
   { value: 'is_not_empty', label: 'Non è vuoto', type: 'text' },
-  { value: 'in', label: 'È uno di', type: 'select' },
-  { value: 'not_in', label: 'Non è uno di', type: 'select' },
 ];
 
 export function ColumnFilterComponent({
-  column,
   columnDisplayName,
   values,
   filter,

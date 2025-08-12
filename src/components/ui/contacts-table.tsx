@@ -638,23 +638,23 @@ function ContactsTable({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <input
-                      type="checkbox"
+              <input
+                type="checkbox"
                       checked={isCurrentPageSelected}
                       ref={(input) => {
                         if (input) {
                           input.indeterminate = selectedInCurrentPage > 0 && !isCurrentPageSelected;
                         }
                       }}
-                      onChange={(e) => {
-                        if (e.target.checked) {
+                onChange={(e) => {
+                  if (e.target.checked) {
                           selectPageContacts();
-                        } else {
-                          clearSelection();
-                        }
-                      }}
-                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
+                  } else {
+                    clearSelection();
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
@@ -1204,13 +1204,14 @@ function ContactsTable({
       />
 
       {/* Dialog per azioni telefono */}
-      <PhoneActionDialog
-        open={showPhoneDialog}
-        onOpenChange={setShowPhoneDialog}
-        phoneNumber={selectedContactForPhone?.phone || ''}
-        contactName={selectedContactForPhone?.name || ''}
-        onAction={handlePhoneAction}
-      />
+      {selectedContactForPhone && (
+        <PhoneActionDialog
+          open={showPhoneDialog}
+          onOpenChange={setShowPhoneDialog}
+          contact={selectedContactForPhone}
+          onAction={handlePhoneAction}
+        />
+      )}
     </div>
   );
 }

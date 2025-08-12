@@ -28,10 +28,17 @@ interface CallDialogProps {
   contact: Contact;
   trigger: React.ReactNode;
   onCallComplete?: (call: Call) => void;
+  // Props opzionali per controllo esterno
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChange }: CallDialogProps) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  
+  // Usa il controllo esterno se fornito, altrimenti quello interno
+  const isOpen = open !== undefined ? open : internalIsOpen;
+  const setIsOpen = onOpenChange || setInternalIsOpen;
   const [callState, setCallState] = useState<CallState>('idle');
   const [callResult, setCallResult] = useState<Call | null>(null);
   const [notes, setNotes] = useState('');
@@ -381,22 +388,28 @@ export function CallDialog({ contact, trigger, onCallComplete }: CallDialogProps
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <div onClick={() => setIsOpen(true)}>
-        {trigger}
-      </div>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Phone className="h-5 w-5" />
-            Chiama {contact.name}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="py-4">
-          {renderContent()}
+    <>
+      {/* Trigger solo se non controllato dall'esterno */}
+      {open === undefined && (
+        <div onClick={() => setIsOpen(true)}>
+          {trigger}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+      
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5" />
+              Chiama {contact.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {renderContent()}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 } 

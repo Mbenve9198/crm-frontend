@@ -54,6 +54,8 @@ import { PhoneActionDialog } from "./phone-action-dialog";
 import { CsvImportDialog } from "./csv-import";
 import { CallDialog } from "./call-dialog";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
+import { ColumnFilterComponent } from "./column-filter";
+import { useTableFilters } from "@/hooks/useTableFilters";
 
 // Colonne fisse base
 const baseColumns = [
@@ -143,6 +145,22 @@ function ContactsTable({
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  // Hook per gestire filtri e ordinamento locali
+  const {
+    filteredContacts: localFilteredContacts,
+    columnValues,
+    columnFilters,
+    sorting,
+    activeFiltersCount,
+    hasActiveSort,
+    handleFilterChange,
+    handleSortChange,
+    clearAllFilters,
+  } = useTableFilters({ 
+    contacts: contacts, 
+    dynamicProperties 
+  });
 
   // Stato per la selezione multipla
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
@@ -245,8 +263,8 @@ function ContactsTable({
     }
   }, [contacts, isLoading, isSearching]);
 
-  // Filtraggio solo owner (search gestito completamente dal server)
-  const filteredContacts = contacts.filter((contact) => {
+  // Filtraggio combinato: owner filter + filtri locali
+  const filteredContacts = localFilteredContacts.filter((contact) => {
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
     return matchesOwner;
   });
@@ -503,6 +521,26 @@ function ContactsTable({
         </div>
 
         <div className="flex gap-2">
+          {/* Controlli filtri attivi */}
+          {(activeFiltersCount > 0 || hasActiveSort) && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-sm text-blue-700">
+                {activeFiltersCount > 0 && `${activeFiltersCount} filtri`}
+                {activeFiltersCount > 0 && hasActiveSort && ' • '}
+                {hasActiveSort && 'ordinamento attivo'}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearAllFilters}
+                className="h-6 px-2 text-blue-600 hover:text-blue-800"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Rimuovi
+              </Button>
+            </div>
+          )}
+
           {/* Pulsante Importa CSV */}
           <CsvImportDialog onImportComplete={onImportComplete}>
             <Button variant="outline" size="sm" className="flex items-center gap-2">
@@ -579,26 +617,142 @@ function ContactsTable({
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
             </TableHead>
-            {visibleColumns.includes("Contact") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Contatto</TableHead>}
-            {visibleColumns.includes("Email") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[250px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Email</TableHead>}
-            {visibleColumns.includes("Phone") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Telefono</TableHead>}
-            {visibleColumns.includes("Owner") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Proprietario</TableHead>}
-            {visibleColumns.includes("Lists") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Liste</TableHead>}
-            {visibleColumns.includes("Created") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[120px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Creato</TableHead>}
+            {visibleColumns.includes("Contact") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Contatto</span>
+                  <ColumnFilterComponent
+                    column="Contact"
+                    columnDisplayName="Contatto"
+                    values={columnValues['Contact'] || []}
+                    filter={columnFilters['Contact']}
+                    onFilterChange={(filter) => handleFilterChange('Contact', filter)}
+                    sortDirection={sorting?.column === 'Contact' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Contact', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
+            {visibleColumns.includes("Email") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[250px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Email</span>
+                  <ColumnFilterComponent
+                    column="Email"
+                    columnDisplayName="Email"
+                    values={columnValues['Email'] || []}
+                    filter={columnFilters['Email']}
+                    onFilterChange={(filter) => handleFilterChange('Email', filter)}
+                    sortDirection={sorting?.column === 'Email' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Email', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
+            {visibleColumns.includes("Phone") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Telefono</span>
+                  <ColumnFilterComponent
+                    column="Phone"
+                    columnDisplayName="Telefono"
+                    values={columnValues['Phone'] || []}
+                    filter={columnFilters['Phone']}
+                    onFilterChange={(filter) => handleFilterChange('Phone', filter)}
+                    sortDirection={sorting?.column === 'Phone' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Phone', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
+            {visibleColumns.includes("Owner") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Proprietario</span>
+                  <ColumnFilterComponent
+                    column="Owner"
+                    columnDisplayName="Proprietario"
+                    values={columnValues['Owner'] || []}
+                    filter={columnFilters['Owner']}
+                    onFilterChange={(filter) => handleFilterChange('Owner', filter)}
+                    sortDirection={sorting?.column === 'Owner' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Owner', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
+            {visibleColumns.includes("Lists") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Liste</span>
+                  <ColumnFilterComponent
+                    column="Lists"
+                    columnDisplayName="Liste"
+                    values={columnValues['Lists'] || []}
+                    filter={columnFilters['Lists']}
+                    onFilterChange={(filter) => handleFilterChange('Lists', filter)}
+                    sortDirection={sorting?.column === 'Lists' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Lists', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
+            {visibleColumns.includes("Created") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[120px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <div className="flex items-center justify-between">
+                  <span>Creato</span>
+                  <ColumnFilterComponent
+                    column="Created"
+                    columnDisplayName="Creato"
+                    values={columnValues['Created'] || []}
+                    filter={columnFilters['Created']}
+                    onFilterChange={(filter) => handleFilterChange('Created', filter)}
+                    sortDirection={sorting?.column === 'Created' ? sorting.direction : null}
+                    onSortChange={(direction) => handleSortChange('Created', direction)}
+                  />
+                </div>
+              </TableHead>
+            )}
             {/* Colonne dinamiche per proprietà */}
             {dynamicProperties.map((prop) => {
               const colKey = `prop_${prop}`;
               return visibleColumns.includes(colKey) && (
                 <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
-                  {getColumnDisplayName(colKey)}
+                  <div className="flex items-center justify-between">
+                    <span>{getColumnDisplayName(colKey)}</span>
+                    <ColumnFilterComponent
+                      column={colKey}
+                      columnDisplayName={getColumnDisplayName(colKey)}
+                      values={columnValues[colKey] || []}
+                      filter={columnFilters[colKey]}
+                      onFilterChange={(filter) => handleFilterChange(colKey, filter)}
+                      sortDirection={sorting?.column === colKey ? sorting.direction : null}
+                      onSortChange={(direction) => handleSortChange(colKey, direction)}
+                    />
+                  </div>
                 </TableHead>
               );
             })}
-            {visibleColumns.includes("Actions") && <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[100px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">Azioni</TableHead>}
+            {visibleColumns.includes("Actions") && (
+              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[100px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                Azioni
+              </TableHead>
+            )}
             
             {/* Colonna Status sempre visibile e fissa a destra */}
             <TableHead className="sticky top-0 right-0 bg-white border-l-2 border-gray-300 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),0_2px_8px_-2px_rgba(0,0,0,0.2),-8px_0_16px_-8px_rgba(0,0,0,0.15)] w-[140px] z-30 border-b-2 border-gray-200 backdrop-blur-sm">
-              <div className="font-bold text-gray-900 px-1">Status</div>
+              <div className="flex items-center justify-between px-1">
+                <span className="font-bold text-gray-900">Status</span>
+                <ColumnFilterComponent
+                  column="Status"
+                  columnDisplayName="Status"
+                  values={columnValues['Status'] || []}
+                  filter={columnFilters['Status']}
+                  onFilterChange={(filter) => handleFilterChange('Status', filter)}
+                  sortDirection={sorting?.column === 'Status' ? sorting.direction : null}
+                  onSortChange={(direction) => handleSortChange('Status', direction)}
+                />
+              </div>
             </TableHead>
           </TableRow>
         </TableHeader>

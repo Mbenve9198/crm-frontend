@@ -55,6 +55,9 @@ export type TablePreferences = {
   contacts: {
     visibleColumns: string[];
     pageSize: number;
+    // Aggiunge supporto per filtri e ordinamento salvati
+    columnFilters?: Record<string, ColumnFilter>;
+    sorting?: SortingState;
   };
 };
 
@@ -65,12 +68,50 @@ export type TablePreferencesResponse = {
   };
 };
 
+// Nuovi tipi per il sistema di filtri avanzato
+export type FilterCondition = 
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_equal'
+  | 'less_equal'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'in'
+  | 'not_in';
+
+export type ColumnFilter = {
+  type: 'value' | 'condition';
+  values?: string[]; // Per filtro per valore
+  condition?: {
+    type: FilterCondition;
+    value?: string | number;
+    values?: string[]; // Per condizioni IN/NOT_IN
+  };
+};
+
+export type SortDirection = 'asc' | 'desc';
+
+export type SortingState = {
+  column: string;
+  direction: SortDirection;
+};
+
 export type ContactFilters = {
   search?: string;
   list?: string;
   owner?: string;
   page?: number;
   limit?: number;
+  // Nuovi parametri per filtri avanzati e ordinamento
+  sort_by?: string;
+  sort_direction?: SortDirection;
+  column_filters?: Record<string, ColumnFilter>;
 };
 
 export type ContactsResponse = {

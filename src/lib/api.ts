@@ -238,6 +238,15 @@ class ApiClient {
     if (filters.owner) params.append('owner', filters.owner);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
+    
+    // Nuovi parametri per ordinamento
+    if (filters.sort_by) params.append('sort_by', filters.sort_by);
+    if (filters.sort_direction) params.append('sort_direction', filters.sort_direction);
+    
+    // Filtri per colonna - serializza come JSON
+    if (filters.column_filters && Object.keys(filters.column_filters).length > 0) {
+      params.append('column_filters', JSON.stringify(filters.column_filters));
+    }
 
     const queryString = params.toString();
     const endpoint = queryString ? `/contacts?${queryString}` : '/contacts';

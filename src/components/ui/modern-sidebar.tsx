@@ -45,7 +45,8 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
     {
       icon: Settings,
       label: "Impostazioni",
-      active: false,
+      active: pathname === "/settings",
+      href: "/settings",
     },
   ];
 

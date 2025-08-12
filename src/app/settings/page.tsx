@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate } from '@/types/twilio';
 import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
+import { ModernSidebar } from '@/components/ui/modern-sidebar';
 
 export default function SettingsPage() {
   const [twilioSettings, setTwilioSettings] = useState<TwilioSettings | null>(null);
@@ -229,16 +230,22 @@ export default function SettingsPage() {
   const isEnabled = twilioSettings?.isEnabled;
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Settings className="h-8 w-8" />
-          Impostazioni
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Configura le tue impostazioni personali e integrazione Twilio
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar moderna */}
+      <ModernSidebar />
+
+      {/* Main content con padding-left per la sidebar */}
+      <main className="pl-16">
+        <div className="container mx-auto py-4 px-6 max-w-4xl">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <Settings className="h-8 w-8" />
+              Impostazioni
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Configura le tue impostazioni personali e integrazione Twilio
+            </p>
+          </div>
 
       {/* Configurazione Twilio */}
       <Card className="mb-6">
@@ -597,6 +604,8 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 } 

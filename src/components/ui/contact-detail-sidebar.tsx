@@ -32,6 +32,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pendingMRR, setPendingMRR] = useState<number | undefined>();
   const [showMRRInput, setShowMRRInput] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{description?: string; callOutcome?: CallOutcome}>({});
 
@@ -162,6 +163,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
         // Reset stati temporanei
         setShowMRRInput(false);
         setPendingMRR(undefined);
+        setPendingStatus(null);
       }
     } catch (error) {
       console.error('Errore aggiornamento status:', error);
@@ -174,21 +176,25 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const onStatusSelectChange = (newStatus: ContactStatus) => {
     if (!contact || newStatus === contact.status) return;
 
-    // Se il nuovo status richiede MRR e non ce l'abbiamo
-    if (isPipelineStatus(newStatus) && !contact.mrr && !pendingMRR) {
-      setShowMRRInput(true);
-      setPendingMRR(0);
-      return;
+    // Se il nuovo status richiede MRR
+    if (isPipelineStatus(newStatus)) {
+      // Se non abbiamo MRR O se stiamo entrando in pipeline per la prima volta
+      if (!contact.mrr || !isPipelineStatus(contact.status)) {
+        setPendingStatus(newStatus); // Memorizza il nuovo status desiderato
+        setShowMRRInput(true);
+        setPendingMRR(contact.mrr || 0); // Usa l'MRR esistente o 0
+        return;
+      }
     }
 
-    // Altrimenti procedi direttamente
+    // Altrimenti procedi direttamente (ha già MRR o non serve)
     handleStatusChange(newStatus, contact.mrr || pendingMRR);
   };
 
   const onMRRConfirm = () => {
     if (!contact || pendingMRR === undefined) return;
     
-    const newStatus = contact.status; // In questo caso stiamo solo aggiornando MRR
+    const newStatus = pendingStatus || contact.status; // Usa il nuovo status desiderato o quello attuale
     handleStatusChange(newStatus, pendingMRR);
   };
 
@@ -361,14 +367,29 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       onClick={() => {
                         setShowMRRInput(false);
                         setPendingMRR(undefined);
+                        setPendingStatus(null);
                       }}
                     >
                       ✕
                     </Button>
                   </div>
                 ) : (
-                  <div className="text-sm font-semibold text-green-600">
-                    €{contact.mrr || 0}
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-semibold text-green-600">
+                      €{contact.mrr || 0}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setPendingMRR(contact.mrr || 0);
+                        setShowMRRInput(true);
+                      }}
+                      title="Modifica MRR"
+                    >
+                      ✏️
+                    </Button>
                   </div>
                 )}
               </div>

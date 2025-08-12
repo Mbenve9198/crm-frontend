@@ -778,7 +778,7 @@ class ApiClient {
     originalMessage: string;
     compiledMessage: string;
     variables: string[];
-    replacementData: Record<string, any>;
+    replacementData: Record<string, string | number | boolean>;
     missingVariables: string[];
   }>> {
     return this.request('/settings/whatsapp-template/compile', {

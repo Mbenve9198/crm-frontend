@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
-import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate, WhatsAppTemplateRequest } from '@/types/twilio';
+import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate } from '@/types/twilio';
 import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
 
 export default function SettingsPage() {
@@ -214,10 +214,7 @@ export default function SettingsPage() {
     setTemplateMessage(prev => prev + placeholder);
   };
 
-  const copyVariable = (variable: string) => {
-    navigator.clipboard.writeText(`{${variable}}`);
-    toast.success(`Variabile {${variable}} copiata!`);
-  };
+
 
   if (isLoading) {
     return (

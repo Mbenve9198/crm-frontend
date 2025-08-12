@@ -629,12 +629,12 @@ function ContactsTable({
       </div>
 
       {/* Container con scroll per la tabella */}
-      <div className="relative max-h-[70vh] overflow-y-auto overflow-x-auto border rounded-lg bg-white">
-        <Table className="w-full">
+      <div className="relative max-h-[75vh] overflow-y-auto overflow-x-auto border rounded-lg bg-white">
+        <Table className="w-full relative">
         <TableHeader>
           <TableRow>
             {/* Checkbox per selezionare tutti */}
-            <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[50px] border-b-2 border-gray-200 backdrop-blur-sm">
+            <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[50px] border-b-2 border-gray-300 backdrop-blur-sm">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -670,7 +670,7 @@ function ContactsTable({
               </TooltipProvider>
             </TableHead>
             {visibleColumns.includes("Contact") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[200px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Contatto</span>
                   <ColumnFilterComponent
@@ -686,7 +686,7 @@ function ContactsTable({
               </TableHead>
             )}
             {visibleColumns.includes("Email") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[250px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[250px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Email</span>
                   <ColumnFilterComponent
@@ -702,7 +702,7 @@ function ContactsTable({
               </TableHead>
             )}
             {visibleColumns.includes("Phone") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Telefono</span>
                   <ColumnFilterComponent
@@ -718,7 +718,7 @@ function ContactsTable({
               </TableHead>
             )}
             {visibleColumns.includes("Owner") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Proprietario</span>
                   <ColumnFilterComponent
@@ -734,7 +734,7 @@ function ContactsTable({
               </TableHead>
             )}
             {visibleColumns.includes("Lists") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Liste</span>
                   <ColumnFilterComponent
@@ -750,7 +750,7 @@ function ContactsTable({
               </TableHead>
             )}
             {visibleColumns.includes("Created") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[120px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[120px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 <div className="flex items-center justify-between">
                   <span>Creato</span>
                   <ColumnFilterComponent
@@ -769,7 +769,7 @@ function ContactsTable({
             {dynamicProperties.map((prop) => {
               const colKey = `prop_${prop}`;
               return visibleColumns.includes(colKey) && (
-                <TableHead key={colKey} className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+                <TableHead key={colKey} className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[150px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                   <div className="flex items-center justify-between">
                     <span>{getColumnDisplayName(colKey)}</span>
                     <ColumnFilterComponent
@@ -786,15 +786,15 @@ function ContactsTable({
               );
             })}
             {visibleColumns.includes("Actions") && (
-              <TableHead className="sticky top-0 bg-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[100px] border-b-2 border-gray-200 backdrop-blur-sm font-semibold">
+              <TableHead className="sticky top-0 bg-gray-100 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3),0_4px_16px_-4px_rgba(0,0,0,0.2),0_2px_8px_-2px_rgba(0,0,0,0.15)] z-20 w-[100px] border-b-2 border-gray-300 backdrop-blur-sm font-semibold">
                 Azioni
               </TableHead>
             )}
             
             {/* Colonna Status sempre visibile e fissa a destra */}
-            <TableHead className="sticky top-0 right-0 bg-white border-l-2 border-gray-300 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),0_2px_8px_-2px_rgba(0,0,0,0.2),-8px_0_16px_-8px_rgba(0,0,0,0.15)] w-[140px] z-30 border-b-2 border-gray-200 backdrop-blur-sm">
+            <TableHead className="sticky top-0 right-0 bg-gray-100 border-l-2 border-gray-400 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4),0_4px_16px_-4px_rgba(0,0,0,0.3),0_2px_8px_-2px_rgba(0,0,0,0.2),-8px_0_16px_-8px_rgba(0,0,0,0.15)] w-[140px] z-30 border-b-2 border-gray-300 backdrop-blur-sm">
               <div className="flex items-center justify-between px-1">
-                <span className="font-bold text-gray-900">Status</span>
+                <span className="font-bold text-gray-800">Status</span>
                 <ColumnFilterComponent
                   column="Status"
                   columnDisplayName="Status"

@@ -11,15 +11,19 @@ import {
   EyeOff,
   TestTube,
   AlertTriangle,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Copy,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
-import { TwilioSettings, TwilioConfigureRequest } from '@/types/twilio';
+import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate, WhatsAppTemplateRequest } from '@/types/twilio';
 import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
 
 export default function SettingsPage() {
@@ -29,6 +33,15 @@ export default function SettingsPage() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   
+  // Stato per template WhatsApp
+  const [whatsappTemplate, setWhatsappTemplate] = useState<WhatsAppTemplate | null>(null);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [availableVariables, setAvailableVariables] = useState<{
+    fixed: Array<{ key: string; description: string }>;
+    dynamic: Array<{ key: string; description: string }>;
+  } | null>(null);
+  
   // Form state
   const [showAuthToken, setShowAuthToken] = useState(false);
   const [formData, setFormData] = useState<TwilioConfigureRequest>({
@@ -37,9 +50,14 @@ export default function SettingsPage() {
     phoneNumber: ''
   });
   const [testNumber, setTestNumber] = useState('');
+  
+  // Form state per template WhatsApp
+  const [templateMessage, setTemplateMessage] = useState('');
 
   useEffect(() => {
     loadTwilioSettings();
+    loadWhatsAppTemplate();
+    loadAvailableVariables();
   }, []);
 
   const loadTwilioSettings = async () => {
@@ -58,6 +76,32 @@ export default function SettingsPage() {
       toast.error('Errore nel caricare le impostazioni');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadWhatsAppTemplate = async () => {
+    try {
+      const response = await apiClient.getWhatsAppTemplate();
+      if (response.success && response.data) {
+        setWhatsappTemplate(response.data);
+        setTemplateMessage(response.data.message);
+      }
+    } catch (error) {
+      console.error('Errore nel caricare template WhatsApp:', error);
+      toast.error('Errore nel caricare il template WhatsApp');
+    } finally {
+      setIsLoadingTemplate(false);
+    }
+  };
+
+  const loadAvailableVariables = async () => {
+    try {
+      const response = await apiClient.getWhatsAppTemplateVariables();
+      if (response.success && response.data) {
+        setAvailableVariables(response.data);
+      }
+    } catch (error) {
+      console.error('Errore nel caricare variabili disponibili:', error);
     }
   };
 
@@ -140,6 +184,39 @@ export default function SettingsPage() {
       console.error('Errore nel disabilitare Twilio:', error);
       toast.error('Errore nel disabilitare Twilio');
     }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateMessage.trim()) {
+      toast.error('Il messaggio del template è obbligatorio');
+      return;
+    }
+
+    setIsSavingTemplate(true);
+    try {
+      const response = await apiClient.updateWhatsAppTemplate({ message: templateMessage });
+      if (response.success && response.data) {
+        setWhatsappTemplate(response.data);
+        toast.success('Template WhatsApp salvato con successo!');
+      } else {
+        toast.error(response.message || 'Errore nel salvare il template');
+      }
+    } catch (error) {
+      console.error('Errore nel salvare template:', error);
+      toast.error('Errore nel salvare il template');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const insertVariable = (variable: string) => {
+    const placeholder = `{${variable}}`;
+    setTemplateMessage(prev => prev + placeholder);
+  };
+
+  const copyVariable = (variable: string) => {
+    navigator.clipboard.writeText(`{${variable}}`);
+    toast.success(`Variabile {${variable}} copiata!`);
   };
 
   if (isLoading) {
@@ -377,6 +454,149 @@ export default function SettingsPage() {
                 </div>
               )}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Configurazione Template WhatsApp */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageCircle className="h-6 w-6" />
+            Template WhatsApp
+          </CardTitle>
+          <CardDescription>
+            Configura il messaggio predefinito che verrà utilizzato quando invii un messaggio WhatsApp
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isLoadingTemplate ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              Caricamento template...
+            </div>
+          ) : (
+            <>
+              {/* Editor del template */}
+              <div>
+                <label className="block text-sm font-medium mb-2">Messaggio Template</label>
+                <Textarea
+                  placeholder="Ciao {nome}, sono {utente} di MenuChatCRM. Come posso aiutarti?"
+                  value={templateMessage}
+                  onChange={(e) => setTemplateMessage(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  className="resize-none"
+                />
+                <div className="flex justify-between items-center mt-1 text-xs text-gray-500">
+                  <span>Usa variabili come {"{nome}"} per personalizzare il messaggio</span>
+                  <span>{templateMessage.length}/1000</span>
+                </div>
+              </div>
+
+              {/* Variabili disponibili */}
+              {availableVariables && (
+                <div>
+                  <h4 className="font-medium mb-3 flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    Variabili Disponibili
+                  </h4>
+                  
+                  {/* Variabili fisse */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-2">Variabili Fisse:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableVariables.fixed.map((variable) => (
+                        <Button
+                          key={variable.key}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => insertVariable(variable.key)}
+                          className="text-xs"
+                          title={variable.description}
+                        >
+                          {"{" + variable.key + "}"}
+                          <Copy className="h-3 w-3 ml-1" />
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Variabili dinamiche */}
+                  {availableVariables.dynamic.length > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
+                      <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                        {availableVariables.dynamic.map((variable) => (
+                          <Button
+                            key={variable.key}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => insertVariable(variable.key)}
+                            className="text-xs"
+                            title={variable.description}
+                          >
+                            {"{" + variable.key + "}"}
+                            <Copy className="h-3 w-3 ml-1" />
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Azione salvataggio */}
+              <div className="border-t pt-4">
+                <Button
+                  onClick={handleSaveTemplate}
+                  disabled={isSavingTemplate || !templateMessage.trim()}
+                  className="w-full"
+                >
+                  {isSavingTemplate ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Salva Template
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Stato corrente template */}
+              {whatsappTemplate && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Template Corrente</h4>
+                  <div className="text-sm space-y-2">
+                    <div>
+                      <span className="text-gray-600">Messaggio:</span>
+                      <p className="font-mono text-xs bg-white p-2 rounded border mt-1">
+                        {whatsappTemplate.message}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Variabili rilevate:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {whatsappTemplate.variables.map((variable) => (
+                          <Badge key={variable} variant="secondary" className="text-xs">
+                            {"{" + variable + "}"}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    {whatsappTemplate.updatedAt && (
+                      <div className="text-xs text-gray-500">
+                        Ultimo aggiornamento: {new Date(whatsappTemplate.updatedAt).toLocaleString('it-IT')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

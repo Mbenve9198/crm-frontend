@@ -13,7 +13,10 @@ import {
   TwilioConfigureRequest,
   TwilioVerifyResponse,
   TwilioTestCallRequest,
-  TwilioTestCallResponse
+  TwilioTestCallResponse,
+  WhatsAppTemplate,
+  WhatsAppTemplateRequest,
+  WhatsAppTemplateResponse
 } from '@/types/twilio';
 
 // Tipi per statistiche e paginazione
@@ -755,6 +758,41 @@ class ApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
+  }
+
+  // === METODI PER I TEMPLATE WHATSAPP ===
+
+  async getWhatsAppTemplate(): Promise<ApiResponse<WhatsAppTemplate>> {
+    return this.request<WhatsAppTemplate>('/settings/whatsapp-template');
+  }
+
+  async updateWhatsAppTemplate(request: WhatsAppTemplateRequest): Promise<WhatsAppTemplateResponse> {
+    return this.request<WhatsAppTemplate>('/settings/whatsapp-template', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    }) as Promise<WhatsAppTemplateResponse>;
+  }
+
+  async compileWhatsAppTemplate(contactId: string): Promise<ApiResponse<{
+    originalMessage: string;
+    compiledMessage: string;
+    variables: string[];
+    replacementData: Record<string, any>;
+    missingVariables: string[];
+  }>> {
+    return this.request('/settings/whatsapp-template/compile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contactId }),
+    });
+  }
+
+  async getWhatsAppTemplateVariables(): Promise<ApiResponse<{
+    fixed: Array<{ key: string; description: string }>;
+    dynamic: Array<{ key: string; description: string }>;
+  }>> {
+    return this.request('/settings/whatsapp-template/variables');
   }
 }
 

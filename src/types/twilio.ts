@@ -29,4 +29,22 @@ export interface TwilioTestCallResponse {
   status: string;
   to: string;
   from: string;
+}
+
+// Tipi per i template WhatsApp
+export interface WhatsAppTemplate {
+  message: string;
+  variables: string[]; // Array delle variabili trovate nel template (es. ['nome', 'email'])
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface WhatsAppTemplateRequest {
+  message: string;
+}
+
+export interface WhatsAppTemplateResponse {
+  success: boolean;
+  data?: WhatsAppTemplate;
+  message?: string;
 } 

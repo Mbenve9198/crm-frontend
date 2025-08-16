@@ -18,6 +18,25 @@ import {
   WhatsAppTemplateRequest,
   WhatsAppTemplateResponse
 } from '@/types/twilio';
+import {
+  WhatsappSession,
+  WhatsappCampaign,
+  CreateSessionRequest,
+  UpdateSessionRequest,
+  TestMessageRequest,
+  CreateCampaignRequest,
+  UpdateCampaignRequest,
+  PreviewCampaignRequest,
+  SessionsResponse,
+  SessionResponse,
+  QrCodeApiResponse,
+  SessionStatsApiResponse,
+  CampaignsResponse,
+  CampaignResponse,
+  CampaignPreviewResponse,
+  UploadAttachmentsResponse,
+  CampaignFilters
+} from '@/types/whatsapp';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -793,6 +812,155 @@ class ApiClient {
     dynamic: Array<{ key: string; description: string }>;
   }>> {
     return this.request('/settings/whatsapp-template/variables');
+  }
+
+  // === METODI PER LE SESSIONI WHATSAPP ===
+
+  async getWhatsAppSessions(): Promise<SessionsResponse> {
+    return this.request<{ sessions: WhatsappSession[] }>('/whatsapp-sessions');
+  }
+
+  async getWhatsAppSession(sessionId: string): Promise<SessionResponse> {
+    return this.request<WhatsappSession>(`/whatsapp-sessions/${sessionId}`);
+  }
+
+  async createWhatsAppSession(request: CreateSessionRequest): Promise<SessionResponse> {
+    return this.request<WhatsappSession>('/whatsapp-sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async updateWhatsAppSession(sessionId: string, request: UpdateSessionRequest): Promise<SessionResponse> {
+    return this.request<WhatsappSession>(`/whatsapp-sessions/${sessionId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async disconnectWhatsAppSession(sessionId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/whatsapp-sessions/${sessionId}/disconnect`, {
+      method: 'POST',
+    });
+  }
+
+  async reconnectWhatsAppSession(sessionId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/whatsapp-sessions/${sessionId}/reconnect`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteWhatsAppSession(sessionId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/whatsapp-sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getWhatsAppSessionQrCode(sessionId: string): Promise<QrCodeApiResponse> {
+    return this.request(`/whatsapp-sessions/${sessionId}/qr`);
+  }
+
+  async getWhatsAppSessionStats(sessionId: string): Promise<SessionStatsApiResponse> {
+    return this.request(`/whatsapp-sessions/${sessionId}/stats`);
+  }
+
+  async sendWhatsAppTestMessage(sessionId: string, request: TestMessageRequest): Promise<ApiResponse<{ messageId: string; sentAt: string }>> {
+    return this.request(`/whatsapp-sessions/${sessionId}/test-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  // === METODI PER LE CAMPAGNE WHATSAPP ===
+
+  async getWhatsAppCampaigns(filters?: CampaignFilters): Promise<CampaignsResponse> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    
+    const queryString = params.toString();
+    const url = queryString ? `/whatsapp-campaigns?${queryString}` : '/whatsapp-campaigns';
+    
+    return this.request(url);
+  }
+
+  async getWhatsAppCampaign(campaignId: string): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}`);
+  }
+
+  async createWhatsAppCampaign(request: CreateCampaignRequest): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>('/whatsapp-campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async updateWhatsAppCampaign(campaignId: string, request: UpdateCampaignRequest): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async previewWhatsAppCampaign(request: PreviewCampaignRequest): Promise<CampaignPreviewResponse> {
+    return this.request('/whatsapp-campaigns/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+  }
+
+  async uploadCampaignAttachments(campaignId: string, files: FileList, caption?: string): Promise<UploadAttachmentsResponse> {
+    const formData = new FormData();
+    
+    Array.from(files).forEach(file => {
+      formData.append('files', file);
+    });
+    
+    if (caption) {
+      formData.append('caption', caption);
+    }
+
+    return this.request(`/whatsapp-campaigns/${campaignId}/attachments`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async startWhatsAppCampaign(campaignId: string): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}/start`, {
+      method: 'POST',
+    });
+  }
+
+  async pauseWhatsAppCampaign(campaignId: string): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}/pause`, {
+      method: 'POST',
+    });
+  }
+
+  async resumeWhatsAppCampaign(campaignId: string): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}/resume`, {
+      method: 'POST',
+    });
+  }
+
+  async cancelWhatsAppCampaign(campaignId: string): Promise<CampaignResponse> {
+    return this.request<WhatsappCampaign>(`/whatsapp-campaigns/${campaignId}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  async deleteWhatsAppCampaign(campaignId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/whatsapp-campaigns/${campaignId}`, {
+      method: 'DELETE',
+    });
   }
 }
 

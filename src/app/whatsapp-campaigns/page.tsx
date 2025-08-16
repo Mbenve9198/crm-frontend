@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   MessageCircle, 
   Plus, 
@@ -15,7 +15,18 @@ import {
   XCircle,
   Clock,
   Loader2,
-  MoreHorizontal
+  MoreHorizontal,
+  QrCode,
+  Smartphone,
+  Activity,
+  AlertCircle,
+  RefreshCw,
+  Upload,
+  FileText,
+  Image,
+  Video,
+  Music,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,12 +35,24 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import { ModernSidebar } from '@/components/ui/modern-sidebar';
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/ui/login-form';
-import { WhatsappCampaign, CampaignStatus, CAMPAIGN_STATUSES } from '@/types/whatsapp';
+import { 
+  WhatsappCampaign, 
+  WhatsappSession, 
+  CampaignStatus, 
+  CAMPAIGN_STATUSES, 
+  SESSION_STATUSES,
+  CreateSessionRequest,
+  CreateCampaignRequest,
+  CampaignTiming
+} from '@/types/whatsapp';
 import Link from 'next/link';
 
 function LoadingSpinner() {
@@ -45,18 +68,42 @@ function LoadingSpinner() {
 
 function CampaignsContent() {
   const [campaigns, setCampaigns] = useState<WhatsappCampaign[]>([]);
+  const [sessions, setSessions] = useState<WhatsappSession[]>([]);
+  const [contactLists, setContactLists] = useState<Array<{ name: string; count: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<CampaignStatus | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isActioning, setIsActioning] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('campaigns');
 
-  useEffect(() => {
-    loadCampaigns();
-  }, [currentPage, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Stati per nuova sessione
+  const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
+  const [newSessionData, setNewSessionData] = useState<CreateSessionRequest>({
+    name: '',
+    sessionId: ''
+  });
 
-  const loadCampaigns = async () => {
+  // Stati per nuova campagna
+  const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
+  const [newCampaignData, setNewCampaignData] = useState<CreateCampaignRequest>({
+    name: '',
+    description: '',
+    whatsappSessionId: '',
+    targetList: '',
+    messageTemplate: '',
+    timing: {
+      intervalBetweenMessages: 30,
+      messagesPerHour: 60
+    }
+  });
+
+  // Stati per QR Code
+  const [selectedQrSession, setSelectedQrSession] = useState<string | null>(null);
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+
+  const loadCampaigns = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await apiClient.getWhatsAppCampaigns({
@@ -75,7 +122,39 @@ function CampaignsContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, statusFilter]);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const response = await apiClient.getWhatsAppSessions();
+      if (response.success && response.data) {
+        setSessions(response.data.sessions);
+      }
+    } catch (error) {
+      console.error('Errore caricamento sessioni:', error);
+      toast.error('Errore nel caricare le sessioni WhatsApp');
+    }
+  }, []);
+
+  const loadContactLists = useCallback(async () => {
+    try {
+      const response = await apiClient.getContactLists();
+      if (response.success && response.data) {
+        setContactLists(response.data);
+      }
+    } catch (error) {
+      console.error('Errore caricamento liste:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCampaigns();
+  }, [loadCampaigns]);
+
+  useEffect(() => {
+    loadSessions();
+    loadContactLists();
+  }, [loadSessions, loadContactLists]);
 
   const handleCampaignAction = async (campaignId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
     setIsActioning(campaignId);
@@ -97,192 +176,204 @@ function CampaignsContent() {
       }
 
       if (response.success) {
-        toast.success(`Campagna ${getActionLabel(action)} con successo`);
-        loadCampaigns();
-      } else {
-        toast.error(response.message || `Errore ${getActionLabel(action)} campagna`);
+        toast.success(`Campagna ${action === 'start' ? 'avviata' : action === 'pause' ? 'pausata' : action === 'resume' ? 'ripresa' : 'cancellata'} con successo`);
+        await loadCampaigns();
       }
     } catch (error) {
       console.error(`Errore ${action} campagna:`, error);
-      toast.error(`Errore ${getActionLabel(action)} campagna`);
+      toast.error(`Errore nel ${action === 'start' ? 'avviare' : action === 'pause' ? 'pausare' : action === 'resume' ? 'riprendere' : 'cancellare'} la campagna`);
     } finally {
       setIsActioning(null);
     }
   };
 
   const handleDeleteCampaign = async (campaignId: string) => {
-    if (!confirm('Sei sicuro di voler eliminare questa campagna?')) {
+    if (!confirm('Sei sicuro di voler eliminare questa campagna?')) return;
+
+    try {
+      await apiClient.deleteWhatsAppCampaign(campaignId);
+      toast.success('Campagna eliminata con successo');
+      await loadCampaigns();
+    } catch (error) {
+      console.error('Errore eliminazione campagna:', error);
+      toast.error('Errore nell\'eliminare la campagna');
+    }
+  };
+
+  const handleCreateSession = async () => {
+    if (!newSessionData.name || !newSessionData.sessionId) {
+      toast.error('Nome e Session ID sono obbligatori');
       return;
     }
 
-    setIsActioning(campaignId);
     try {
-      const response = await apiClient.deleteWhatsAppCampaign(campaignId);
+      const response = await apiClient.createWhatsAppSession(newSessionData);
       if (response.success) {
-        toast.success('Campagna eliminata con successo');
-        loadCampaigns();
-      } else {
-        toast.error(response.message || 'Errore nell\'eliminazione della campagna');
+        toast.success('Sessione WhatsApp creata con successo');
+        setShowNewSessionDialog(false);
+        setNewSessionData({ name: '', sessionId: '' });
+        await loadSessions();
       }
     } catch (error) {
-      console.error('Errore eliminazione campagna:', error);
-      toast.error('Errore nell\'eliminazione della campagna');
-    } finally {
-      setIsActioning(null);
+      console.error('Errore creazione sessione:', error);
+      toast.error('Errore nella creazione della sessione');
     }
   };
 
-  const getActionLabel = (action: string): string => {
-    const labels = {
-      start: 'avviata',
-      pause: 'pausata',
-      resume: 'ripresa',
-      cancel: 'cancellata'
-    };
-    return labels[action as keyof typeof labels] || action;
+  const handleCreateCampaign = async () => {
+    if (!newCampaignData.name || !newCampaignData.whatsappSessionId || !newCampaignData.targetList || !newCampaignData.messageTemplate) {
+      toast.error('Tutti i campi obbligatori devono essere compilati');
+      return;
+    }
+
+    try {
+      const response = await apiClient.createWhatsAppCampaign(newCampaignData);
+      if (response.success) {
+        toast.success('Campagna creata con successo');
+        setShowNewCampaignDialog(false);
+        setNewCampaignData({
+          name: '',
+          description: '',
+          whatsappSessionId: '',
+          targetList: '',
+          messageTemplate: '',
+          timing: {
+            intervalBetweenMessages: 30,
+            messagesPerHour: 60
+          }
+        });
+        await loadCampaigns();
+      }
+    } catch (error) {
+      console.error('Errore creazione campagna:', error);
+      toast.error('Errore nella creazione della campagna');
+    }
+  };
+
+  const handleShowQrCode = async (sessionId: string) => {
+    try {
+      const response = await apiClient.getWhatsAppSessionQrCode(sessionId);
+      if (response.success && response.data) {
+        setQrCodeData(response.data.qrCode);
+        setSelectedQrSession(sessionId);
+      }
+    } catch (error) {
+      console.error('Errore ottenimento QR:', error);
+      toast.error('Errore nel ottenere il QR code');
+    }
+  };
+
+  const handleSessionAction = async (sessionId: string, action: 'disconnect' | 'reconnect' | 'delete') => {
+    try {
+      switch (action) {
+        case 'disconnect':
+          await apiClient.disconnectWhatsAppSession(sessionId);
+          toast.success('Sessione disconnessa');
+          break;
+        case 'reconnect':
+          await apiClient.reconnectWhatsAppSession(sessionId);
+          toast.success('Riconnessione avviata');
+          break;
+        case 'delete':
+          if (!confirm('Sei sicuro di voler eliminare questa sessione?')) return;
+          await apiClient.deleteWhatsAppSession(sessionId);
+          toast.success('Sessione eliminata');
+          break;
+      }
+      await loadSessions();
+    } catch (error) {
+      console.error(`Errore ${action} sessione:`, error);
+      toast.error(`Errore nell'operazione sulla sessione`);
+    }
   };
 
   const getStatusBadge = (status: CampaignStatus) => {
-    const config = {
-      draft: { label: 'Bozza', variant: 'secondary' as const, icon: Edit },
-      scheduled: { label: 'Programmata', variant: 'default' as const, icon: Clock },
-      running: { label: 'In Esecuzione', variant: 'default' as const, icon: Play, className: 'bg-green-100 text-green-800' },
-      paused: { label: 'Pausata', variant: 'secondary' as const, icon: Pause },
-      completed: { label: 'Completata', variant: 'default' as const, icon: CheckCircle, className: 'bg-blue-100 text-blue-800' },
-      cancelled: { label: 'Cancellata', variant: 'destructive' as const, icon: XCircle }
+    const statusConfig = CAMPAIGN_STATUSES.find(s => s.value === status);
+    const colors = {
+      draft: 'bg-gray-100 text-gray-800',
+      scheduled: 'bg-blue-100 text-blue-800',
+      running: 'bg-green-100 text-green-800',
+      paused: 'bg-yellow-100 text-yellow-800',
+      completed: 'bg-purple-100 text-purple-800',
+      cancelled: 'bg-red-100 text-red-800'
     };
 
-    const { label, variant, icon: Icon, className } = config[status];
     return (
-      <Badge variant={variant} className={className}>
-        <Icon className="h-3 w-3 mr-1" />
-        {label}
+      <Badge variant="secondary" className={colors[status]}>
+        {statusConfig?.label || status}
       </Badge>
     );
   };
 
-  const getActionButtons = (campaign: WhatsappCampaign) => {
-    const actions = [];
+  const getSessionStatusBadge = (status: string) => {
+    const statusConfig = SESSION_STATUSES.find(s => s.value === status);
+    const colors = {
+      disconnected: 'bg-gray-100 text-gray-800',
+      connecting: 'bg-blue-100 text-blue-800',
+      qr_ready: 'bg-yellow-100 text-yellow-800',
+      authenticated: 'bg-green-100 text-green-800',
+      connected: 'bg-green-100 text-green-800',
+      error: 'bg-red-100 text-red-800'
+    };
 
-    if (campaign.status === 'draft' || campaign.status === 'scheduled') {
-      actions.push(
-        <Button
-          key="start"
-          size="sm"
-          onClick={() => handleCampaignAction(campaign._id, 'start')}
-          disabled={isActioning === campaign._id}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <Play className="h-4 w-4 mr-1" />
-          Avvia
-        </Button>
-      );
-    }
-
-    if (campaign.status === 'running') {
-      actions.push(
-        <Button
-          key="pause"
-          size="sm"
-          variant="outline"
-          onClick={() => handleCampaignAction(campaign._id, 'pause')}
-          disabled={isActioning === campaign._id}
-        >
-          <Pause className="h-4 w-4 mr-1" />
-          Pausa
-        </Button>
-      );
-    }
-
-    if (campaign.status === 'paused') {
-      actions.push(
-        <Button
-          key="resume"
-          size="sm"
-          onClick={() => handleCampaignAction(campaign._id, 'resume')}
-          disabled={isActioning === campaign._id}
-          className="bg-green-600 hover:bg-green-700"
-        >
-          <Play className="h-4 w-4 mr-1" />
-          Riprendi
-        </Button>
-      );
-    }
-
-    if (['running', 'paused', 'scheduled'].includes(campaign.status)) {
-      actions.push(
-        <Button
-          key="cancel"
-          size="sm"
-          variant="destructive"
-          onClick={() => handleCampaignAction(campaign._id, 'cancel')}
-          disabled={isActioning === campaign._id}
-        >
-          <Square className="h-4 w-4 mr-1" />
-          Cancella
-        </Button>
-      );
-    }
-
-    return actions;
+    return (
+      <Badge variant="secondary" className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+        {statusConfig?.label || status}
+      </Badge>
+    );
   };
 
-  const filteredCampaigns = campaigns.filter(campaign =>
+  const insertTemplateVariable = (variable: string) => {
+    const newTemplate = newCampaignData.messageTemplate + `{${variable}}`;
+    setNewCampaignData(prev => ({ ...prev, messageTemplate: newTemplate }));
+  };
+
+  const filteredCampaigns = campaigns.filter(campaign => 
     campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     campaign.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (isLoading) {
+  if (isLoading && campaigns.length === 0 && sessions.length === 0) {
     return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar moderna */}
       <div className="transition-all duration-300">
         <ModernSidebar />
       </div>
 
-      {/* Main content con padding-left per la sidebar */}
       <main className="pl-16 transition-all duration-300">
         <div className="container mx-auto py-4 px-6 max-w-7xl">
-          {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold flex items-center gap-2">
-                  <MessageCircle className="h-8 w-8 text-green-600" />
-                  Campagne WhatsApp
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  Gestisci le tue campagne di messaggistica WhatsApp outbound
-                </p>
-              </div>
-              <Link href="/whatsapp-campaigns/new">
-                <Button className="bg-green-600 hover:bg-green-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuova Campagna
-                </Button>
-              </Link>
-            </div>
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <MessageCircle className="h-8 w-8" />
+              Campagne WhatsApp
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Gestisci le tue campagne di messaggi WhatsApp e le sessioni connesse
+            </p>
           </div>
 
-          {/* Filtri e ricerca */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="campaigns">Campagne</TabsTrigger>
+              <TabsTrigger value="sessions">Sessioni WhatsApp</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="campaigns" className="space-y-6">
+              {/* Header Campagne */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
                   <Input
                     placeholder="Cerca campagne..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full"
+                    className="w-64"
                   />
-                </div>
-                <div className="flex gap-2">
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as CampaignStatus | 'all')}>
+                  <Select value={statusFilter} onValueChange={(value: CampaignStatus | 'all') => setStatusFilter(value)}>
                     <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Stato" />
+                      <SelectValue placeholder="Filtra per stato" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Tutti gli stati</SelectItem>
@@ -294,53 +385,154 @@ function CampaignsContent() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                <Dialog open={showNewCampaignDialog} onOpenChange={setShowNewCampaignDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuova Campagna
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Crea Nuova Campagna WhatsApp</DialogTitle>
+                      <DialogDescription>
+                        Configura una nuova campagna di messaggi WhatsApp
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium">Nome Campagna</label>
+                          <Input
+                            value={newCampaignData.name}
+                            onChange={(e) => setNewCampaignData(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Es. Promozione Primavera"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Sessione WhatsApp</label>
+                          <Select 
+                            value={newCampaignData.whatsappSessionId} 
+                            onValueChange={(value) => setNewCampaignData(prev => ({ ...prev, whatsappSessionId: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona sessione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {sessions.filter(s => s.status === 'connected').map(session => (
+                                <SelectItem key={session.sessionId} value={session.sessionId}>
+                                  {session.name} - {session.phoneNumber}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
 
-          {/* Tabella campagne */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Le tue campagne</CardTitle>
-              <CardDescription>
-                {filteredCampaigns.length} campagne trovate
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredCampaigns.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Nessuna campagna trovata
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    {campaigns.length === 0 
-                      ? "Inizia creando la tua prima campagna WhatsApp"
-                      : "Prova a modificare i filtri di ricerca"
-                    }
-                  </p>
-                  {campaigns.length === 0 && (
-                    <Link href="/whatsapp-campaigns/new">
-                      <Button className="bg-green-600 hover:bg-green-700">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Crea Prima Campagna
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
+                      <div>
+                        <label className="text-sm font-medium">Descrizione</label>
+                        <Input
+                          value={newCampaignData.description}
+                          onChange={(e) => setNewCampaignData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Descrizione della campagna"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Lista Contatti</label>
+                        <Select 
+                          value={newCampaignData.targetList} 
+                          onValueChange={(value) => setNewCampaignData(prev => ({ ...prev, targetList: value }))}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona lista" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tutti i contatti</SelectItem>
+                            {contactLists.map(list => (
+                              <SelectItem key={list.name} value={list.name}>
+                                {list.name} ({list.count} contatti)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium">Template Messaggio</label>
+                        <Textarea
+                          value={newCampaignData.messageTemplate}
+                          onChange={(e) => setNewCampaignData(prev => ({ ...prev, messageTemplate: e.target.value }))}
+                          placeholder="Ciao {nome}, sono {utente} di MenuChatCRM..."
+                          rows={4}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('nome')}>
+                            +nome
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('email')}>
+                            +email
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('telefono')}>
+                            +telefono
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium">Intervallo tra messaggi (secondi)</label>
+                          <Input
+                            type="number"
+                            min="5"
+                            max="3600"
+                            value={newCampaignData.timing.intervalBetweenMessages}
+                            onChange={(e) => setNewCampaignData(prev => ({ 
+                              ...prev, 
+                              timing: { ...prev.timing, intervalBetweenMessages: Number(e.target.value) }
+                            }))}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Messaggi per ora</label>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="200"
+                            value={newCampaignData.timing.messagesPerHour}
+                            onChange={(e) => setNewCampaignData(prev => ({ 
+                              ...prev, 
+                              timing: { ...prev.timing, messagesPerHour: Number(e.target.value) }
+                            }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setShowNewCampaignDialog(false)}>
+                          Annulla
+                        </Button>
+                        <Button onClick={handleCreateCampaign}>
+                          Crea Campagna
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+
+              {/* Tabella Campagne */}
+              <Card>
+                <CardContent className="p-0">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Stato</TableHead>
-                        <TableHead>Lista Target</TableHead>
-                        <TableHead>Contatti</TableHead>
-                        <TableHead>Inviati</TableHead>
-                        <TableHead>Risposte</TableHead>
                         <TableHead>Sessione</TableHead>
-                        <TableHead>Ultima Modifica</TableHead>
+                        <TableHead>Lista Target</TableHead>
+                        <TableHead>Messaggi</TableHead>
+                        <TableHead>Creata</TableHead>
                         <TableHead className="text-right">Azioni</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -351,128 +543,286 @@ function CampaignsContent() {
                             <div>
                               <div className="font-medium">{campaign.name}</div>
                               {campaign.description && (
-                                <div className="text-sm text-gray-500 truncate max-w-xs">
-                                  {campaign.description}
-                                </div>
+                                <div className="text-sm text-gray-500">{campaign.description}</div>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            {getStatusBadge(campaign.status)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              <Users className="h-3 w-3 mr-1" />
-                              {campaign.targetList}
-                            </Badge>
-                          </TableCell>
+                          <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                          <TableCell>{campaign.whatsappNumber}</TableCell>
+                          <TableCell>{campaign.targetList}</TableCell>
                           <TableCell>
                             <div className="text-sm">
-                              <div>{campaign.stats.totalContacts}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div className="font-medium">{campaign.stats.messagesSent}</div>
+                              <div>{campaign.stats.messagesSent}/{campaign.stats.totalContacts}</div>
                               <div className="text-gray-500">
-                                {campaign.stats.messagesDelivered} consegnati
+                                {campaign.stats.repliesReceived} risposte
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <span>{campaign.stats.repliesReceived}</span>
-                              {campaign.stats.repliesReceived > 0 && (
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div className="font-mono">{campaign.whatsappSessionId}</div>
-                              <div className="text-gray-500">{campaign.whatsappNumber}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-gray-500">
-                              {new Date(campaign.updatedAt).toLocaleDateString('it-IT')}
-                            </div>
+                            {new Date(campaign.createdAt).toLocaleDateString('it-IT')}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {/* Azioni rapide */}
-                              <div className="flex gap-1">
-                                {getActionButtons(campaign)}
-                              </div>
-                              
-                              {/* Menu azioni aggiuntive */}
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem asChild>
-                                    <Link href={`/whatsapp-campaigns/${campaign._id}`}>
-                                      <Eye className="h-4 w-4 mr-2" />
-                                      Visualizza
-                                    </Link>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => {}}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Dettagli
+                                </DropdownMenuItem>
+                                {campaign.status === 'draft' && (
+                                  <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'start')}>
+                                    <Play className="h-4 w-4 mr-2" />
+                                    Avvia
                                   </DropdownMenuItem>
-                                  {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
-                                    <DropdownMenuItem asChild>
-                                      <Link href={`/whatsapp-campaigns/${campaign._id}/edit`}>
-                                        <Edit className="h-4 w-4 mr-2" />
-                                        Modifica
-                                      </Link>
-                                    </DropdownMenuItem>
-                                  )}
-                                  {campaign.status !== 'running' && (
-                                    <DropdownMenuItem 
-                                      onClick={() => handleDeleteCampaign(campaign._id)}
-                                      className="text-red-600 focus:text-red-600"
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Elimina
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
+                                )}
+                                {campaign.status === 'running' && (
+                                  <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'pause')}>
+                                    <Pause className="h-4 w-4 mr-2" />
+                                    Pausa
+                                  </DropdownMenuItem>
+                                )}
+                                {campaign.status === 'paused' && (
+                                  <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'resume')}>
+                                    <Play className="h-4 w-4 mr-2" />
+                                    Riprendi
+                                  </DropdownMenuItem>
+                                )}
+                                {['running', 'paused'].includes(campaign.status) && (
+                                  <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'cancel')}>
+                                    <Square className="h-4 w-4 mr-2" />
+                                    Cancella
+                                  </DropdownMenuItem>
+                                )}
+                                {!['running'].includes(campaign.status) && (
+                                  <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign._id)} className="text-red-600">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Elimina
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                </CardContent>
+              </Card>
+
+              {/* Paginazione */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Precedente
+                  </Button>
+                  <span className="text-sm text-gray-600">
+                    Pagina {currentPage} di {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Successiva
+                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </TabsContent>
 
-          {/* Paginazione */}
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Precedente
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Pagina {currentPage} di {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  Successivo
-                </Button>
+            <TabsContent value="sessions" className="space-y-6">
+              {/* Header Sessioni */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold">Sessioni WhatsApp</h3>
+                  <p className="text-gray-600">Gestisci le connessioni ai tuoi numeri WhatsApp</p>
+                </div>
+                <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuova Sessione
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Crea Nuova Sessione WhatsApp</DialogTitle>
+                      <DialogDescription>
+                        Collega un nuovo numero WhatsApp per le campagne
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium">Nome Sessione</label>
+                        <Input
+                          value={newSessionData.name}
+                          onChange={(e) => setNewSessionData(prev => ({ ...prev, name: e.target.value }))}
+                          placeholder="Es. Marketing WhatsApp"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Session ID</label>
+                        <Input
+                          value={newSessionData.sessionId}
+                          onChange={(e) => setNewSessionData(prev => ({ ...prev, sessionId: e.target.value }))}
+                          placeholder="Es. marketing-wa"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          ID univoco per identificare questa sessione (solo lettere, numeri e trattini)
+                        </p>
+                      </div>
+                      <div className="flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setShowNewSessionDialog(false)}>
+                          Annulla
+                        </Button>
+                        <Button onClick={handleCreateSession}>
+                          Crea Sessione
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
-            </div>
-          )}
+
+              {/* Griglia Sessioni */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sessions.map((session) => (
+                  <Card key={session.sessionId} className="relative">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{session.name}</CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {session.status === 'qr_ready' && (
+                              <DropdownMenuItem onClick={() => handleShowQrCode(session.sessionId)}>
+                                <QrCode className="h-4 w-4 mr-2" />
+                                Mostra QR
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => handleSessionAction(session.sessionId, 'reconnect')}>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Riconnetti
+                            </DropdownMenuItem>
+                            {session.status !== 'disconnected' && (
+                              <DropdownMenuItem onClick={() => handleSessionAction(session.sessionId, 'disconnect')}>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Disconnetti
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => handleSessionAction(session.sessionId, 'delete')} className="text-red-600">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Elimina
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm text-gray-600">{session.phoneNumber}</span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Stato:</span>
+                          {getSessionStatusBadge(session.status)}
+                        </div>
+                        
+                        {session.connectionInfo?.connectedAt && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">Connesso:</span>
+                            <span className="text-sm">
+                              {new Date(session.connectionInfo.connectedAt).toLocaleDateString('it-IT')}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Messaggi inviati:</span>
+                          <span className="text-sm font-medium">{session.stats.messagesSent}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Campagne attive:</span>
+                          <span className="text-sm font-medium">{session.stats.activeCampaigns}</span>
+                        </div>
+
+                        {session.status === 'qr_ready' && (
+                          <Button 
+                            className="w-full mt-3" 
+                            variant="outline"
+                            onClick={() => handleShowQrCode(session.sessionId)}
+                          >
+                            <QrCode className="h-4 w-4 mr-2" />
+                            Mostra QR Code
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {sessions.length === 0 && (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <Smartphone className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna sessione WhatsApp</h3>
+                    <p className="text-gray-600 mb-4">
+                      Crea la tua prima sessione per iniziare a inviare campagne WhatsApp
+                    </p>
+                    <Button onClick={() => setShowNewSessionDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Crea Prima Sessione
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Dialog QR Code */}
+          <Dialog open={!!selectedQrSession} onOpenChange={() => {
+            setSelectedQrSession(null);
+            setQrCodeData(null);
+          }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Scansiona QR Code</DialogTitle>
+                <DialogDescription>
+                  Usa WhatsApp per scansionare questo QR code e connettere la sessione
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-center p-6">
+                {qrCodeData ? (
+                  <img 
+                    src={qrCodeData} 
+                    alt="QR Code WhatsApp" 
+                    className="w-64 h-64 border rounded-lg"
+                  />
+                ) : (
+                  <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 text-center">
+                Il QR code si aggiorna automaticamente ogni 30 secondi
+              </p>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
     </div>
@@ -482,16 +832,13 @@ function CampaignsContent() {
 export default function WhatsAppCampaignsPage() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Mostra loading durante la verifica dell'autenticazione
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  // Se non autenticato, mostra il form di login
   if (!isAuthenticated) {
     return <LoginForm />;
   }
 
-  // Se autenticato, mostra le campagne
   return <CampaignsContent />;
 } 

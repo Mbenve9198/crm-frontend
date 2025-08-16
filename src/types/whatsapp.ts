@@ -115,7 +115,7 @@ export interface CampaignTiming {
 
 export interface CampaignContactFilters {
   status?: string[];
-  properties?: Record<string, string | number | boolean>;
+  properties?: Record<string, unknown>;
 }
 
 export interface MessageQueueItem {
@@ -223,19 +223,27 @@ export interface CampaignPreview {
       name: string;
       phone: string;
       email?: string;
-      properties?: Record<string, string | number | boolean>;
+      properties?: Record<string, unknown>;
     };
     compiledMessage: string;
   }>;
 }
 
 // Responses API
-export type SessionsResponse = ApiResponse<{ sessions: WhatsappSession[] }>;
-export type SessionResponse = ApiResponse<WhatsappSession>;
-export type QrCodeApiResponse = ApiResponse<QrCodeResponse>;
-export type SessionStatsApiResponse = ApiResponse<SessionStatsResponse>;
+export interface SessionsResponse extends ApiResponse<{ sessions: WhatsappSession[] }> {
+  // Estende ApiResponse con sessions
+}
+export interface SessionResponse extends ApiResponse<WhatsappSession> {
+  // Estende ApiResponse con WhatsappSession
+}
+export interface QrCodeApiResponse extends ApiResponse<QrCodeResponse> {
+  // Estende ApiResponse con QrCodeResponse
+}
+export interface SessionStatsApiResponse extends ApiResponse<SessionStatsResponse> {
+  // Estende ApiResponse con SessionStatsResponse
+}
 
-export type CampaignsResponse = ApiResponse<{
+export interface CampaignsResponse extends ApiResponse<{
   campaigns: WhatsappCampaign[];
   pagination: {
     currentPage: number;
@@ -244,15 +252,23 @@ export type CampaignsResponse = ApiResponse<{
     hasNext: boolean;
     hasPrev: boolean;
   };
-}>;
+}> {
+  // Estende ApiResponse con campaigns e pagination
+}
 
-export type CampaignResponse = ApiResponse<WhatsappCampaign>;
-export type CampaignPreviewResponse = ApiResponse<CampaignPreview>;
+export interface CampaignResponse extends ApiResponse<WhatsappCampaign> {
+  // Estende ApiResponse con WhatsappCampaign
+}
+export interface CampaignPreviewResponse extends ApiResponse<CampaignPreview> {
+  // Estende ApiResponse con CampaignPreview
+}
 
-export type UploadAttachmentsResponse = ApiResponse<{
+export interface UploadAttachmentsResponse extends ApiResponse<{
   attachments: CampaignAttachment[];
   totalAttachments: number;
-}>;
+}> {
+  // Estende ApiResponse con attachments
+}
 
 // Filtri per le query
 export interface CampaignFilters {

@@ -55,8 +55,8 @@ function SettingsContent() {
   // Form state per template WhatsApp
   const [templateMessage, setTemplateMessage] = useState('');
   
-  // Variabili necessarie per evitare warning (ma non utilizzate in questa versione semplificata)
-  const _unusedVars = { formData, setFormData, testNumber, setTestNumber, twilioSettings, setTwilioSettings };
+  // Evita warning per variabili non utilizzate
+  void formData; void setFormData; void testNumber; void setTestNumber; void twilioSettings; void setTwilioSettings;
 
   useEffect(() => {
     loadTwilioSettings();

@@ -7,30 +7,18 @@ import {
   Play, 
   Pause, 
   Square, 
-  Edit, 
   Trash2, 
   Eye,
-  Users,
-  CheckCircle,
   XCircle,
-  Clock,
   Loader2,
   MoreHorizontal,
   QrCode,
   Smartphone,
-  Activity,
-  AlertCircle,
-  RefreshCw,
-  Upload,
-  FileText,
-  Image,
-  Video,
-  Music,
-  Settings
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -50,10 +38,8 @@ import {
   CAMPAIGN_STATUSES, 
   SESSION_STATUSES,
   CreateSessionRequest,
-  CreateCampaignRequest,
-  CampaignTiming
+  CreateCampaignRequest
 } from '@/types/whatsapp';
-import Link from 'next/link';
 
 function LoadingSpinner() {
   return (
@@ -76,6 +62,7 @@ function CampaignsContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isActioning, setIsActioning] = useState<string | null>(null);
+  void isActioning; // Evita warning unused var
   const [activeTab, setActiveTab] = useState('campaigns');
 
   // Stati per nuova sessione
@@ -807,11 +794,14 @@ function CampaignsContent() {
               </DialogHeader>
               <div className="flex justify-center p-6">
                 {qrCodeData ? (
-                  <img 
-                    src={qrCodeData} 
-                    alt="QR Code WhatsApp" 
-                    className="w-64 h-64 border rounded-lg"
-                  />
+                  <div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={qrCodeData} 
+                      alt="QR Code WhatsApp" 
+                      className="w-64 h-64 border rounded-lg"
+                    />
+                  </div>
                 ) : (
                   <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin" />

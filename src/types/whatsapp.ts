@@ -231,16 +231,16 @@ export interface CampaignPreview {
 
 // Responses API
 export interface SessionsResponse extends ApiResponse<{ sessions: WhatsappSession[] }> {
-  // Estende ApiResponse con sessions
+  sessions?: never; // Marker per evitare interface vuota
 }
 export interface SessionResponse extends ApiResponse<WhatsappSession> {
-  // Estende ApiResponse con WhatsappSession
+  session?: never; // Marker per evitare interface vuota
 }
 export interface QrCodeApiResponse extends ApiResponse<QrCodeResponse> {
-  // Estende ApiResponse con QrCodeResponse
+  qrCode?: never; // Marker per evitare interface vuota
 }
 export interface SessionStatsApiResponse extends ApiResponse<SessionStatsResponse> {
-  // Estende ApiResponse con SessionStatsResponse
+  stats?: never; // Marker per evitare interface vuota
 }
 
 export interface CampaignsResponse extends ApiResponse<{
@@ -253,21 +253,21 @@ export interface CampaignsResponse extends ApiResponse<{
     hasPrev: boolean;
   };
 }> {
-  // Estende ApiResponse con campaigns e pagination
+  campaigns?: never; // Marker per evitare interface vuota
 }
 
 export interface CampaignResponse extends ApiResponse<WhatsappCampaign> {
-  // Estende ApiResponse con WhatsappCampaign
+  campaign?: never; // Marker per evitare interface vuota
 }
 export interface CampaignPreviewResponse extends ApiResponse<CampaignPreview> {
-  // Estende ApiResponse con CampaignPreview
+  preview?: never; // Marker per evitare interface vuota
 }
 
 export interface UploadAttachmentsResponse extends ApiResponse<{
   attachments: CampaignAttachment[];
   totalAttachments: number;
 }> {
-  // Estende ApiResponse con attachments
+  attachments?: never; // Marker per evitare interface vuota
 }
 
 // Filtri per le query

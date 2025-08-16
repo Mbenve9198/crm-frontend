@@ -31,7 +31,7 @@ export interface WhatsappSession {
   };
   eventLogs: Array<{
     event: string;
-    data: any;
+    data: Record<string, unknown>;
     timestamp: string;
   }>;
   owner: {
@@ -115,7 +115,7 @@ export interface CampaignTiming {
 
 export interface CampaignContactFilters {
   status?: string[];
-  properties?: Record<string, any>;
+  properties?: Record<string, string | number | boolean>;
 }
 
 export interface MessageQueueItem {
@@ -223,19 +223,19 @@ export interface CampaignPreview {
       name: string;
       phone: string;
       email?: string;
-      properties?: Record<string, any>;
+      properties?: Record<string, string | number | boolean>;
     };
     compiledMessage: string;
   }>;
 }
 
 // Responses API
-export interface SessionsResponse extends ApiResponse<{ sessions: WhatsappSession[] }> {}
-export interface SessionResponse extends ApiResponse<WhatsappSession> {}
-export interface QrCodeApiResponse extends ApiResponse<QrCodeResponse> {}
-export interface SessionStatsApiResponse extends ApiResponse<SessionStatsResponse> {}
+export type SessionsResponse = ApiResponse<{ sessions: WhatsappSession[] }>;
+export type SessionResponse = ApiResponse<WhatsappSession>;
+export type QrCodeApiResponse = ApiResponse<QrCodeResponse>;
+export type SessionStatsApiResponse = ApiResponse<SessionStatsResponse>;
 
-export interface CampaignsResponse extends ApiResponse<{
+export type CampaignsResponse = ApiResponse<{
   campaigns: WhatsappCampaign[];
   pagination: {
     currentPage: number;
@@ -244,15 +244,15 @@ export interface CampaignsResponse extends ApiResponse<{
     hasNext: boolean;
     hasPrev: boolean;
   };
-}> {}
+}>;
 
-export interface CampaignResponse extends ApiResponse<WhatsappCampaign> {}
-export interface CampaignPreviewResponse extends ApiResponse<CampaignPreview> {}
+export type CampaignResponse = ApiResponse<WhatsappCampaign>;
+export type CampaignPreviewResponse = ApiResponse<CampaignPreview>;
 
-export interface UploadAttachmentsResponse extends ApiResponse<{
+export type UploadAttachmentsResponse = ApiResponse<{
   attachments: CampaignAttachment[];
   totalAttachments: number;
-}> {}
+}>;
 
 // Filtri per le query
 export interface CampaignFilters {

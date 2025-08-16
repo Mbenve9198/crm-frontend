@@ -7,7 +7,7 @@ import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Badge } from "./badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { Contact, ContactStatus, User, UpdateContactRequest } from "@/types/contact";
+import { Contact, ContactStatus, User } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";

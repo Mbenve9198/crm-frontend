@@ -2,29 +2,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Phone, 
   Settings, 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
-  Eye, 
-  EyeOff,
-  TestTube,
-  AlertTriangle,
   Loader2,
   MessageCircle,
   Copy,
   Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
 import { TwilioSettings, TwilioConfigureRequest, WhatsAppTemplate } from '@/types/twilio';
-import { TwilioSetupGuide } from '@/components/ui/twilio-setup-guide';
 import { ModernSidebar } from '@/components/ui/modern-sidebar';
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/ui/login-form';
@@ -43,9 +33,6 @@ function LoadingSpinner() {
 function SettingsContent() {
   const [twilioSettings, setTwilioSettings] = useState<TwilioSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isConfiguring, setIsConfiguring] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
   
   // Stato per template WhatsApp
   const [whatsappTemplate, setWhatsappTemplate] = useState<WhatsAppTemplate | null>(null);
@@ -57,13 +44,11 @@ function SettingsContent() {
   } | null>(null);
   
   // Form state
-  const [showAuthToken, setShowAuthToken] = useState(false);
   const [formData, setFormData] = useState<TwilioConfigureRequest>({
     accountSid: '',
     authToken: '',
     phoneNumber: ''
   });
-  const [testNumber, setTestNumber] = useState('');
   
   // Form state per template WhatsApp
   const [templateMessage, setTemplateMessage] = useState('');

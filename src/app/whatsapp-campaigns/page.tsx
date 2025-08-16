@@ -11,13 +11,10 @@ import {
   Trash2, 
   Eye,
   Users,
-  Send,
   CheckCircle,
   XCircle,
   Clock,
-  AlertTriangle,
   Loader2,
-  Filter,
   MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,7 +54,7 @@ function CampaignsContent() {
 
   useEffect(() => {
     loadCampaigns();
-  }, [currentPage, statusFilter]);
+  }, [currentPage, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadCampaigns = async () => {
     try {

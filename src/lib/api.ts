@@ -1,4 +1,4 @@
-import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse } from '@/types/contact';
+import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
 import { 
   Call, 
@@ -268,7 +268,7 @@ class ApiClient {
     });
   }
 
-  async updateContact(id: string, contact: Partial<Contact>): Promise<ApiResponse<Contact>> {
+  async updateContact(id: string, contact: UpdateContactRequest): Promise<ApiResponse<Contact>> {
     return this.request(`/contacts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(contact),

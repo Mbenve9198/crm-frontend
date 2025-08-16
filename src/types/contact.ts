@@ -32,6 +32,18 @@ export type Contact = {
   updatedAt: string;
 };
 
+// Tipo specifico per l'aggiornamento del contatto
+export type UpdateContactRequest = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  lists?: string[];
+  properties?: Record<string, string | number | boolean>;
+  status?: ContactStatus;
+  mrr?: number;
+  owner?: string; // Owner come ID stringa per l'aggiornamento
+};
+
 export type User = {
   _id: string;
   firstName: string;

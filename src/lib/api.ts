@@ -77,7 +77,39 @@ type CsvImportResult = {
   errors: string[];
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Configurazione URL backend
+const getRailwayBackendUrl = () => {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL;
+  
+  console.log('🔧 API URL Debug:');
+  console.log('  Raw backend URL:', backendUrl);
+  
+  if (backendUrl) {
+    let finalUrl = backendUrl;
+    
+    // Aggiungi https:// se manca il protocollo
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = `https://${finalUrl}`;
+      console.log('  Added https protocol:', finalUrl);
+    }
+    
+    // Se l'URL finisce già con /api, usalo così com'è
+    if (finalUrl.endsWith('/api')) {
+      console.log('  Final URL (already has /api):', finalUrl);
+      return finalUrl;
+    }
+    // Altrimenti aggiungi /api
+    finalUrl = `${finalUrl}/api`;
+    console.log('  Final URL (added /api):', finalUrl);
+    return finalUrl;
+  }
+  
+  // Fallback per sviluppo locale
+  console.log('  Using localhost fallback');
+  return 'http://localhost:3000/api';
+};
+
+const API_BASE_URL = getRailwayBackendUrl();
 
 class ApiClient {
   private baseURL: string;

@@ -198,6 +198,20 @@ function CampaignsContent() {
       if (response.success) {
         toast.success('Sessione WhatsApp creata con successo');
         setShowNewSessionDialog(false);
+        
+        // CRITICAL FIX: Mostra automaticamente il QR code dopo la creazione
+        toast.info('Generazione QR code in corso...', { duration: 2000 });
+        
+        // Aspetta un momento per permettere al backend di generare il QR
+        setTimeout(async () => {
+          try {
+            await handleShowQrCode(newSessionData.sessionId);
+          } catch (error) {
+            console.error('Errore recupero QR automatico:', error);
+            toast.warning('Sessione creata. Clicca su "Mostra QR" per collegare WhatsApp');
+          }
+        }, 3000);
+        
         setNewSessionData({ name: '', sessionId: '' });
         await loadSessions();
       }
@@ -315,7 +329,7 @@ function CampaignsContent() {
     setNewCampaignData(prev => ({ ...prev, messageTemplate: newTemplate }));
   };
 
-  const filteredCampaigns = campaigns.filter(campaign => 
+  const filteredCampaigns = campaigns.filter(campaign =>
     campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     campaign.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -333,11 +347,11 @@ function CampaignsContent() {
       <main className="pl-16 transition-all duration-300">
         <div className="container mx-auto py-4 px-6 max-w-7xl">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold flex items-center gap-2">
+                <h1 className="text-3xl font-bold flex items-center gap-2">
               <MessageCircle className="h-8 w-8" />
-              Campagne WhatsApp
-            </h1>
-            <p className="text-gray-600 mt-2">
+                  Campagne WhatsApp
+                </h1>
+                <p className="text-gray-600 mt-2">
               Gestisci le tue campagne di messaggi WhatsApp e le sessioni connesse
             </p>
           </div>
@@ -509,7 +523,7 @@ function CampaignsContent() {
               </div>
 
               {/* Tabella Campagne */}
-              <Card>
+          <Card>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader>
@@ -549,15 +563,15 @@ function CampaignsContent() {
                             {new Date(campaign.createdAt).toLocaleDateString('it-IT')}
                           </TableCell>
                           <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => {}}>
-                                  <Eye className="h-4 w-4 mr-2" />
+                                      <Eye className="h-4 w-4 mr-2" />
                                   Dettagli
                                 </DropdownMenuItem>
                                 {campaign.status === 'draft' && (
@@ -582,42 +596,42 @@ function CampaignsContent() {
                                   <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'cancel')}>
                                     <Square className="h-4 w-4 mr-2" />
                                     Cancella
-                                  </DropdownMenuItem>
-                                )}
+                                    </DropdownMenuItem>
+                                  )}
                                 {!['running'].includes(campaign.status) && (
                                   <DropdownMenuItem onClick={() => handleDeleteCampaign(campaign._id)} className="text-red-600">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Elimina
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Elimina
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
+            </CardContent>
+          </Card>
 
-              {/* Paginazione */}
-              {totalPages > 1 && (
+          {/* Paginazione */}
+          {totalPages > 1 && (
                 <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
+                <Button
+                  variant="outline"
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    Precedente
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    Pagina {currentPage} di {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
+                  disabled={currentPage === 1}
+                >
+                  Precedente
+                </Button>
+                <span className="text-sm text-gray-600">
+                  Pagina {currentPage} di {totalPages}
+                </span>
+                <Button
+                  variant="outline"
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
+                  disabled={currentPage === totalPages}
+                >
                     Successiva
                   </Button>
                 </div>
@@ -754,7 +768,7 @@ function CampaignsContent() {
                           >
                             <QrCode className="h-4 w-4 mr-2" />
                             Mostra QR Code
-                          </Button>
+                </Button>
                         )}
                       </div>
                     </CardContent>
@@ -805,8 +819,8 @@ function CampaignsContent() {
                 ) : (
                   <div className="w-64 h-64 bg-gray-100 rounded-lg flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin" />
-                  </div>
-                )}
+            </div>
+          )}
               </div>
               <p className="text-sm text-gray-600 text-center">
                 Il QR code si aggiorna automaticamente ogni 30 secondi

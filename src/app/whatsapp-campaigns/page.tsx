@@ -186,6 +186,18 @@ function CampaignsContent() {
     loadAvailableVariables();
   }, [loadSessions, loadContactLists, loadAvailableVariables]);
 
+  // ✅ AUTO-REFRESH: Ricarica campagne ogni 10 secondi per aggiornare statistiche
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isLoading) { // Solo se non è già in caricamento
+        console.log('🔄 Auto-refresh campagne per aggiornare statistiche...');
+        loadCampaigns();
+      }
+    }, 10000); // Ogni 10 secondi
+
+    return () => clearInterval(interval);
+  }, [loadCampaigns, isLoading]);
+
   const handleCampaignAction = async (campaignId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
     setIsActioning(campaignId);
     try {
@@ -608,6 +620,10 @@ function CampaignsContent() {
                 <h1 className="text-3xl font-bold flex items-center gap-2">
               <MessageCircle className="h-8 w-8" />
                   Campagne WhatsApp
+                  <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                    Auto-refresh
+                  </div>
                 </h1>
                 <p className="text-gray-600 mt-2">
               Gestisci le tue campagne di messaggi WhatsApp e le sessioni connesse

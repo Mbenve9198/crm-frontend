@@ -208,7 +208,7 @@ function CampaignsContent() {
     try {
       const response = await apiClient.getWhatsAppCampaigns({ page: 1, limit: 1000 });
       if (response.success && response.data) {
-        setAllCampaigns(response.data.campaigns.map((c: any) => ({ 
+        setAllCampaigns(response.data.campaigns.map((c: WhatsappCampaign) => ({ 
           _id: c._id, 
           name: c.name, 
           status: c.status 

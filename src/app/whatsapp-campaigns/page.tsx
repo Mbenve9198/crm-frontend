@@ -478,7 +478,70 @@ function CampaignsContent() {
         case 'reconnect':
           toast.info('🔄 Avvio riconnessione...');
           await apiClient.reconnectWhatsAppSession(sessionId);
-          toast.success('✅ Riconnessione avviata! La sessione verrà ricreata da zero. Controlla il QR code tra qualche secondo.');
+          toast.success('✅ Riconnessione avviata! Cercando QR code...');
+          
+          // ✅ STESSO POLLING DELLA CREAZIONE NUOVA
+          let retries = 0;
+          const maxRetries = 20; // 20 tentativi in 20 secondi
+          
+          const tryGetReconnectQrCode = async (): Promise<boolean> => {
+            try {
+              console.log(`🔍 Tentativo ${retries + 1}/${maxRetries} - Controllo stato sessione riconnessa:`, sessionId);
+              const sessionResponse = await apiClient.getWhatsAppSession(sessionId);
+              console.log('📊 Stato sessione riconnessa:', sessionResponse);
+              
+              if (sessionResponse.success && sessionResponse.data) {
+                const sessionStatus = sessionResponse.data.status;
+                console.log(`🔍 Stato attuale sessione riconnessa: ${sessionStatus}`);
+                
+                if (sessionStatus === 'qr_ready') {
+                  // QR code dovrebbe essere pronto, prova a recuperarlo
+                  const qrResponse = await apiClient.getWhatsAppSessionQrCode(sessionId);
+                  console.log('📱 Risposta QR code riconnessione:', qrResponse);
+                  
+                  if (qrResponse.success && qrResponse.data?.qrCode) {
+                    console.log('✅ QR code riconnessione recuperato con successo!');
+                    setQrCodeData(qrResponse.data.qrCode);
+                    setSelectedQrSession(sessionId);
+                    
+                    // Avvia monitoraggio attivo della riconnessione
+                    startQrMonitoring(sessionId);
+                    
+                    toast.success('QR code pronto! Scansiona con WhatsApp per riconnettere.');
+                    return true;
+                  }
+                } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
+                  // Sessione riconnessa! 
+                  console.log('🎉 Sessione riconnessa con successo!');
+                  toast.success('Sessione riconnessa automaticamente!');
+                  return true;
+                }
+              }
+              
+              return false;
+            } catch (error) {
+              console.error('Errore controllo QR riconnessione:', error);
+              return false;
+            }
+          };
+          
+          // Avvia il polling per il QR della riconnessione
+          const pollForReconnectQr = async () => {
+            if (await tryGetReconnectQrCode()) {
+              return; // QR trovato o sessione connessa
+            }
+            
+            retries++;
+            if (retries < maxRetries) {
+              setTimeout(pollForReconnectQr, 1000); // Riprova tra 1 secondo
+            } else {
+              console.warn('❌ Timeout: QR code riconnessione non disponibile dopo', maxRetries, 'tentativi');
+              toast.warning('QR code non ancora disponibile. Prova a cliccare "Mostra QR" tra qualche secondo.');
+            }
+          };
+          
+          // Inizia il polling dopo 2 secondi (il backend ha bisogno di tempo)
+          setTimeout(pollForReconnectQr, 2000);
           break;
         case 'delete':
           if (!confirm('Sei sicuro di voler eliminare questa sessione?')) return;

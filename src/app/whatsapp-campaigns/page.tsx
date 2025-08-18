@@ -38,7 +38,8 @@ import {
   CAMPAIGN_STATUSES, 
   SESSION_STATUSES,
   CreateSessionRequest,
-  CreateCampaignRequest
+  CreateCampaignRequest,
+  MessageSequence
 } from '@/types/whatsapp';
 
 function LoadingSpinner() {
@@ -80,6 +81,7 @@ function CampaignsContent() {
     whatsappSessionId: '',
     targetList: '',
     messageTemplate: '',
+    messageSequences: [],
     timing: {
       intervalBetweenMessages: 30,
       messagesPerHour: 60
@@ -337,6 +339,7 @@ function CampaignsContent() {
           whatsappSessionId: '',
           targetList: '',
           messageTemplate: '',
+          messageSequences: [],
           timing: {
             intervalBetweenMessages: 30,
             messagesPerHour: 60
@@ -436,6 +439,48 @@ function CampaignsContent() {
     setNewCampaignData(prev => ({ ...prev, messageTemplate: newTemplate }));
   };
 
+  const insertTemplateVariableInSequence = (sequenceId: string, variable: string) => {
+    setNewCampaignData(prev => ({
+      ...prev,
+      messageSequences: prev.messageSequences?.map(seq => 
+        seq.id === sequenceId 
+          ? { ...seq, messageTemplate: seq.messageTemplate + `{${variable}}` }
+          : seq
+      ) || []
+    }));
+  };
+
+  const addMessageSequence = () => {
+    const newSequence: MessageSequence = {
+      id: `seq_${Date.now()}`,
+      messageTemplate: '',
+      delayMinutes: 60,
+      condition: 'no_response',
+      isActive: true
+    };
+    
+    setNewCampaignData(prev => ({
+      ...prev,
+      messageSequences: [...(prev.messageSequences || []), newSequence]
+    }));
+  };
+
+  const removeMessageSequence = (sequenceId: string) => {
+    setNewCampaignData(prev => ({
+      ...prev,
+      messageSequences: prev.messageSequences?.filter(seq => seq.id !== sequenceId) || []
+    }));
+  };
+
+  const updateMessageSequence = (sequenceId: string, updates: Partial<MessageSequence>) => {
+    setNewCampaignData(prev => ({
+      ...prev,
+      messageSequences: prev.messageSequences?.map(seq => 
+        seq.id === sequenceId ? { ...seq, ...updates } : seq
+      ) || []
+    }));
+  };
+
   const filteredCampaigns = campaigns.filter(campaign =>
     campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     campaign.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -527,11 +572,16 @@ function CampaignsContent() {
                               <SelectValue placeholder="Seleziona sessione" />
                             </SelectTrigger>
                             <SelectContent>
-                              {sessions.filter(s => s.status === 'connected').map(session => (
+                              {sessions.filter(s => s.status === 'authenticated' || s.status === 'connected').map(session => (
                                 <SelectItem key={session.sessionId} value={session.sessionId}>
                                   {session.name} - {session.phoneNumber}
                                 </SelectItem>
                               ))}
+                              {sessions.filter(s => s.status === 'authenticated' || s.status === 'connected').length === 0 && (
+                                <SelectItem value="" disabled>
+                                  Nessuna sessione attiva. Crea e connetti una sessione prima.
+                                </SelectItem>
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
@@ -567,23 +617,164 @@ function CampaignsContent() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Template Messaggio</label>
+                        <label className="text-sm font-medium">Template Messaggio Principale</label>
                         <Textarea
                           value={newCampaignData.messageTemplate}
                           onChange={(e) => setNewCampaignData(prev => ({ ...prev, messageTemplate: e.target.value }))}
                           placeholder="Ciao {nome}, sono {utente} di MenuChatCRM..."
-                          rows={4}
+                          rows={6}
                         />
-                        <div className="flex gap-2 mt-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('nome')}>
-                            +nome
+                        
+                        {/* Variabili Fisse */}
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('nome')}>
+                              +nome
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('cognome')}>
+                              +cognome
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('email')}>
+                              +email
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('telefono')}>
+                              +telefono
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('azienda')}>
+                              +azienda
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('posizione')}>
+                              +posizione
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Variabili Dinamiche */}
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Dinamiche:</p>
+                          <div className="flex flex-wrap gap-2">
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_1')}>
+                              +proprietà_1
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_2')}>
+                              +proprietà_2
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_3')}>
+                              +proprietà_3
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('tag_1')}>
+                              +tag_1
+                            </Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('tag_2')}>
+                              +tag_2
+                            </Button>
+                          </div>
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-2">
+                          💡 Le variabili verranno sostituite automaticamente con i dati dei contatti
+                        </p>
+                      </div>
+
+                      {/* Sequenze di Follow-up */}
+                      <div>
+                        <div className="flex items-center justify-between mb-3">
+                          <label className="text-sm font-medium">Messaggi di Follow-up</label>
+                          <Button type="button" variant="outline" size="sm" onClick={addMessageSequence}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            Aggiungi Follow-up
                           </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('email')}>
-                            +email
-                          </Button>
-                          <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('telefono')}>
-                            +telefono
-                          </Button>
+                        </div>
+
+                        <div className="space-y-4">
+                          {newCampaignData.messageSequences?.map((sequence, index) => (
+                            <div key={sequence.id} className="border rounded-lg p-4 bg-gray-50">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-medium">Follow-up #{index + 1}</h4>
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => removeMessageSequence(sequence.id)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                  <label className="text-xs font-medium text-gray-600">Condizione</label>
+                                  <Select
+                                    value={sequence.condition}
+                                    onValueChange={(value: 'no_response' | 'always') => 
+                                      updateMessageSequence(sequence.id, { condition: value })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="no_response">Solo se nessuna risposta</SelectItem>
+                                      <SelectItem value="always">Invia sempre</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div>
+                                  <label className="text-xs font-medium text-gray-600">Attendi (minuti)</label>
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    value={sequence.delayMinutes}
+                                    onChange={(e) => 
+                                      updateMessageSequence(sequence.id, { delayMinutes: parseInt(e.target.value) || 60 })
+                                    }
+                                    className="h-8"
+                                  />
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="text-xs font-medium text-gray-600">Template Messaggio</label>
+                                <Textarea
+                                  value={sequence.messageTemplate}
+                                  onChange={(e) => 
+                                    updateMessageSequence(sequence.id, { messageTemplate: e.target.value })
+                                  }
+                                  placeholder="Messaggio di follow-up..."
+                                  rows={3}
+                                  className="mt-1"
+                                />
+                                
+                                {/* Variabili per questa sequenza */}
+                                <div className="mt-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6" 
+                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'nome')}>
+                                      +nome
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6"
+                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'azienda')}>
+                                      +azienda
+                                    </Button>
+                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6"
+                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'email')}>
+                                      +email
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          {(!newCampaignData.messageSequences || newCampaignData.messageSequences.length === 0) && (
+                            <div className="text-center py-4 text-gray-500 text-sm">
+                              Nessun follow-up configurato. I follow-up permettono di inviare messaggi automatici 
+                              dopo un certo tempo se il contatto non risponde.
+                            </div>
+                          )}
                         </div>
                       </div>
 

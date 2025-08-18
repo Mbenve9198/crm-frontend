@@ -185,13 +185,23 @@ export interface WhatsappCampaign {
   updatedAt: string;
 }
 
+// Tipi per sequenze di messaggi
+export interface MessageSequence {
+  id: string;
+  messageTemplate: string;
+  delayMinutes: number; // Minuti di attesa prima di inviare questo messaggio
+  condition: 'no_response' | 'always'; // Condizione per inviare il messaggio
+  isActive: boolean;
+}
+
 export interface CreateCampaignRequest {
   name: string;
   description?: string;
   whatsappSessionId: string;
   targetList: string;
   contactFilters?: CampaignContactFilters;
-  messageTemplate: string;
+  messageTemplate: string; // Primo messaggio
+  messageSequences?: MessageSequence[]; // Messaggi di follow-up
   timing: CampaignTiming;
   scheduledStartAt?: string;
 }

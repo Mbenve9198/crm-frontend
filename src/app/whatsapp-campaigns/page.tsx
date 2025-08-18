@@ -10,11 +10,15 @@ import {
   Trash2, 
   Eye,
   XCircle,
+  X,
   Loader2,
   MoreHorizontal,
   QrCode,
   Smartphone,
-  RefreshCw
+  RefreshCw,
+  UserX,
+  Ban,
+  Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -72,6 +76,10 @@ function CampaignsContent() {
     dynamic: Array<{ key: string; description: string }>;
   } | null>(null);
 
+  // Stati per filtri di esclusione
+  const [allContacts, setAllContacts] = useState<Array<{ _id: string; name: string; email?: string }>>([]);
+  const [allCampaigns, setAllCampaigns] = useState<Array<{ _id: string; name: string; status: string }>>([]);
+
   // Stati per nuova sessione
   const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
   const [newSessionData, setNewSessionData] = useState<CreateSessionRequest>({
@@ -88,6 +96,11 @@ function CampaignsContent() {
     targetList: '',
     messageTemplate: '',
     messageSequences: [],
+    contactFilters: {
+      excludeContacts: [],
+      excludeFromCampaigns: [],
+      excludeContactedWithinDays: undefined
+    },
     timing: {
       intervalBetweenMessages: 30,
       schedule: {
@@ -176,6 +189,36 @@ function CampaignsContent() {
     }
   }, []);
 
+  const loadAllContacts = useCallback(async () => {
+    try {
+      const response = await apiClient.getContacts({ page: 1, limit: 1000 });
+      if (response.success && response.data) {
+        setAllContacts(response.data.contacts.map(c => ({ 
+          _id: c._id, 
+          name: c.name, 
+          email: c.email 
+        })));
+      }
+    } catch (error) {
+      console.error('Errore caricamento contatti:', error);
+    }
+  }, []);
+
+  const loadAllCampaigns = useCallback(async () => {
+    try {
+      const response = await apiClient.getWhatsAppCampaigns({ page: 1, limit: 1000 });
+      if (response.success && response.data) {
+        setAllCampaigns(response.data.campaigns.map((c: any) => ({ 
+          _id: c._id, 
+          name: c.name, 
+          status: c.status 
+        })));
+      }
+    } catch (error) {
+      console.error('Errore caricamento campagne:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadCampaigns();
   }, [loadCampaigns]);
@@ -184,7 +227,9 @@ function CampaignsContent() {
     loadSessions();
     loadContactLists();
     loadAvailableVariables();
-  }, [loadSessions, loadContactLists, loadAvailableVariables]);
+    loadAllContacts();
+    loadAllCampaigns();
+  }, [loadSessions, loadContactLists, loadAvailableVariables, loadAllContacts, loadAllCampaigns]);
 
   // ✅ AUTO-REFRESH: Ricarica campagne ogni 10 secondi per aggiornare statistiche
   useEffect(() => {
@@ -380,6 +425,11 @@ function CampaignsContent() {
           targetList: '',
           messageTemplate: '',
           messageSequences: [],
+          contactFilters: {
+            excludeContacts: [],
+            excludeFromCampaigns: [],
+            excludeContactedWithinDays: undefined
+          },
           timing: {
             intervalBetweenMessages: 30,
             schedule: {
@@ -426,8 +476,9 @@ function CampaignsContent() {
           toast.success('Sessione disconnessa');
           break;
         case 'reconnect':
+          toast.info('🔄 Avvio riconnessione...');
           await apiClient.reconnectWhatsAppSession(sessionId);
-          toast.success('Riconnessione avviata');
+          toast.success('✅ Riconnessione avviata! La sessione verrà ricreata da zero. Controlla il QR code tra qualche secondo.');
           break;
         case 'delete':
           if (!confirm('Sei sicuro di voler eliminare questa sessione?')) return;
@@ -736,6 +787,168 @@ function CampaignsContent() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      {/* ✅ NUOVI FILTRI DI ESCLUSIONE */}
+                      <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+                        <h4 className="text-sm font-medium flex items-center gap-2">
+                          <Ban className="h-4 w-4" />
+                          Filtri di Esclusione
+                        </h4>
+                        
+                        {/* Escludi contatti specifici */}
+                        <div>
+                          <label className="text-xs font-medium flex items-center gap-1">
+                            <UserX className="h-3 w-3" />
+                            Escludi contatti specifici
+                          </label>
+                          <Select 
+                            value=""
+                            onValueChange={(contactId) => {
+                              if (contactId && !newCampaignData.contactFilters?.excludeContacts?.includes(contactId)) {
+                                setNewCampaignData(prev => ({
+                                  ...prev,
+                                  contactFilters: {
+                                    ...prev.contactFilters,
+                                    excludeContacts: [...(prev.contactFilters?.excludeContacts || []), contactId]
+                                  }
+                                }));
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Aggiungi contatto da escludere" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allContacts.filter(c => !newCampaignData.contactFilters?.excludeContacts?.includes(c._id)).map(contact => (
+                                <SelectItem key={contact._id} value={contact._id}>
+                                  {contact.name} {contact.email && `(${contact.email})`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {newCampaignData.contactFilters?.excludeContacts && newCampaignData.contactFilters.excludeContacts.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {newCampaignData.contactFilters.excludeContacts.map(contactId => {
+                                const contact = allContacts.find(c => c._id === contactId);
+                                return contact ? (
+                                  <Badge key={contactId} variant="destructive" className="text-xs">
+                                    {contact.name}
+                                    <X 
+                                      className="h-3 w-3 ml-1 cursor-pointer"
+                                      onClick={() => setNewCampaignData(prev => ({
+                                        ...prev,
+                                        contactFilters: {
+                                          ...prev.contactFilters,
+                                          excludeContacts: prev.contactFilters?.excludeContacts?.filter(id => id !== contactId) || []
+                                        }
+                                      }))}
+                                    />
+                                  </Badge>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Escludi da altre campagne */}
+                        <div>
+                          <label className="text-xs font-medium flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" />
+                            Escludi contatti presenti in altre campagne
+                          </label>
+                          <Select 
+                            value=""
+                            onValueChange={(campaignId) => {
+                              if (campaignId && !newCampaignData.contactFilters?.excludeFromCampaigns?.includes(campaignId)) {
+                                setNewCampaignData(prev => ({
+                                  ...prev,
+                                  contactFilters: {
+                                    ...prev.contactFilters,
+                                    excludeFromCampaigns: [...(prev.contactFilters?.excludeFromCampaigns || []), campaignId]
+                                  }
+                                }));
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Aggiungi campagna da cui escludere contatti" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allCampaigns.filter(c => !newCampaignData.contactFilters?.excludeFromCampaigns?.includes(c._id)).map(campaign => (
+                                <SelectItem key={campaign._id} value={campaign._id}>
+                                  {campaign.name} ({campaign.status})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {newCampaignData.contactFilters?.excludeFromCampaigns && newCampaignData.contactFilters.excludeFromCampaigns.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {newCampaignData.contactFilters.excludeFromCampaigns.map(campaignId => {
+                                const campaign = allCampaigns.find(c => c._id === campaignId);
+                                return campaign ? (
+                                  <Badge key={campaignId} variant="secondary" className="text-xs">
+                                    {campaign.name}
+                                    <X 
+                                      className="h-3 w-3 ml-1 cursor-pointer"
+                                      onClick={() => setNewCampaignData(prev => ({
+                                        ...prev,
+                                        contactFilters: {
+                                          ...prev.contactFilters,
+                                          excludeFromCampaigns: prev.contactFilters?.excludeFromCampaigns?.filter(id => id !== campaignId) || []
+                                        }
+                                      }))}
+                                    />
+                                  </Badge>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Escludi contattati di recente */}
+                        <div>
+                          <label className="text-xs font-medium flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Escludi contatti contattati negli ultimi X giorni
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="365"
+                              value={newCampaignData.contactFilters?.excludeContactedWithinDays || ''}
+                              onChange={(e) => setNewCampaignData(prev => ({
+                                ...prev,
+                                contactFilters: {
+                                  ...prev.contactFilters,
+                                  excludeContactedWithinDays: e.target.value ? parseInt(e.target.value) : undefined
+                                }
+                              }))}
+                              placeholder="0"
+                              className="h-8 w-20 text-xs"
+                            />
+                            <span className="text-xs text-gray-600">giorni</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs"
+                              onClick={() => setNewCampaignData(prev => ({
+                                ...prev,
+                                contactFilters: {
+                                  ...prev.contactFilters,
+                                  excludeContactedWithinDays: undefined
+                                }
+                              }))}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Esclude contatti che hanno ricevuto messaggi WhatsApp negli ultimi X giorni
+                          </p>
+                        </div>
                       </div>
 
                       <div>
@@ -1228,7 +1441,7 @@ function CampaignsContent() {
                           <span className="text-sm font-medium">{session.stats.activeCampaigns}</span>
                         </div>
 
-                        {session.status === 'qr_ready' && (
+                                                {session.status === 'qr_ready' && (
                           <Button 
                             className="w-full mt-3" 
                             variant="outline"
@@ -1236,7 +1449,27 @@ function CampaignsContent() {
                           >
                             <QrCode className="h-4 w-4 mr-2" />
                             Mostra QR Code
-                </Button>
+                          </Button>
+                        )}
+
+                        {/* ✅ NUOVO: Bottone Riconnetti prominente per sessioni disconnesse */}
+                        {(session.status === 'disconnected' || session.status === 'error') && (
+                          <Button 
+                            className="w-full mt-3" 
+                            variant="default"
+                            onClick={() => handleSessionAction(session.sessionId, 'reconnect')}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            🔄 Riconnetti Sessione
+                          </Button>
+                        )}
+
+                        {session.status === 'connecting' && (
+                          <div className="w-full mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                            <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                            <p className="text-sm text-blue-600">Riconnessione in corso...</p>
+                            <p className="text-xs text-blue-500">Controlla il QR code tra qualche secondo</p>
+                          </div>
                         )}
                       </div>
                     </CardContent>

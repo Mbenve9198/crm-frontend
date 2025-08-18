@@ -115,6 +115,11 @@ export interface CampaignTiming {
 export interface CampaignContactFilters {
   status?: string[];
   properties?: Record<string, unknown>;
+  
+  // Nuovi filtri di esclusione
+  excludeContacts?: string[]; // ID dei contatti da escludere
+  excludeFromCampaigns?: string[]; // ID delle campagne da cui escludere contatti
+  excludeContactedWithinDays?: number; // Giorni - escludi contatti contattati negli ultimi X giorni via WhatsApp
 }
 
 export interface MessageQueueItem {

@@ -1765,7 +1765,7 @@ function CampaignsContent() {
                           <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
                             <div className="flex items-center gap-2">
                               <span>Contatto {message.contactId.slice(-4)}</span>
-                              {message.sequenceIndex > 0 && (
+                              {message.sequenceIndex && message.sequenceIndex > 0 && (
                                 <Badge variant="secondary" className="text-xs">
                                   Follow-up #{message.sequenceIndex}
                                 </Badge>

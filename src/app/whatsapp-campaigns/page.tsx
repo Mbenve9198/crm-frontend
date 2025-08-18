@@ -323,7 +323,7 @@ function CampaignsContent() {
   };
 
   const handleCreateCampaign = async () => {
-    if (!newCampaignData.name || !newCampaignData.whatsappSessionId || !newCampaignData.targetList || !newCampaignData.messageTemplate) {
+    if (!newCampaignData.name || !newCampaignData.whatsappSessionId || newCampaignData.whatsappSessionId === 'no-sessions' || !newCampaignData.targetList || !newCampaignData.messageTemplate) {
       toast.error('Tutti i campi obbligatori devono essere compilati');
       return;
     }
@@ -578,7 +578,7 @@ function CampaignsContent() {
                                 </SelectItem>
                               ))}
                               {sessions.filter(s => s.status === 'authenticated' || s.status === 'connected').length === 0 && (
-                                <SelectItem value="" disabled>
+                                <SelectItem value="no-sessions" disabled>
                                   Nessuna sessione attiva. Crea e connetti una sessione prima.
                                 </SelectItem>
                               )}

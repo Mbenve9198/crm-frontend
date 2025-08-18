@@ -153,6 +153,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
+    const timeoutMs = 30000; // Timeout di 30 secondi per le richieste (specialmente per la creazione sessioni WhatsApp)
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -169,11 +170,20 @@ class ApiClient {
     }
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      console.log(`🕐 Avvio richiesta con timeout ${timeoutMs}ms: ${url}`);
+
       const response = await fetch(url, {
         ...options,
         headers,
         credentials: 'include', // Include i cookies per JWT
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
+      console.log(`✅ Risposta ricevuta per: ${url}`);
 
       const data = await response.json();
 
@@ -184,6 +194,16 @@ class ApiClient {
       return data;
     } catch (error) {
       console.error('API request failed:', error);
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error(`⏰ Timeout della richiesta (${timeoutMs}ms): ${url}`);
+          throw new Error(`Timeout della richiesta dopo ${timeoutMs/1000} secondi`);
+        }
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+      }
+      
       throw error;
     }
   }

@@ -398,6 +398,33 @@ function CampaignsContent() {
     }
   };
 
+  const handleRefreshSessions = async () => {
+    try {
+      console.log('🔄 Aggiornamento manuale sessioni...');
+      toast.info('Controllo stato sessioni in corso...');
+      
+      // Chiama l'API per controllare tutte le sessioni
+      const response = await fetch('/api/session-monitor/check-all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Sessioni aggiornate con successo');
+        // Ricarica le sessioni per mostrare i dati aggiornati
+        await loadSessions();
+      } else {
+        throw new Error('Errore nel controllo sessioni');
+      }
+    } catch (error) {
+      console.error('❌ Errore aggiornamento sessioni:', error);
+      toast.error('Errore durante l\'aggiornamento delle sessioni');
+    }
+  };
+
   const getStatusBadge = (status: CampaignStatus) => {
     const statusConfig = CAMPAIGN_STATUSES.find(s => s.value === status);
     const colors = {
@@ -943,13 +970,22 @@ function CampaignsContent() {
                   <h3 className="text-xl font-semibold">Sessioni WhatsApp</h3>
                   <p className="text-gray-600">Gestisci le connessioni ai tuoi numeri WhatsApp</p>
                 </div>
-                <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuova Sessione
-                    </Button>
-                  </DialogTrigger>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefreshSessions}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Aggiorna Sessioni
+                  </Button>
+                  <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuova Sessione
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Crea Nuova Sessione WhatsApp</DialogTitle>
@@ -988,6 +1024,7 @@ function CampaignsContent() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                </div>
               </div>
 
               {/* Griglia Sessioni */}

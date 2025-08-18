@@ -912,7 +912,7 @@ function CampaignsContent() {
                               timing: { ...prev.timing, intervalBetweenMessages: Number(e.target.value) }
                             }))}
                           />
-                          <p className="text-xs text-gray-500 mt-1">Tempo di attesa tra un messaggio e l'altro</p>
+                          <p className="text-xs text-gray-500 mt-1">Tempo di attesa tra un messaggio e l&apos;altro</p>
                         </div>
 
                         <div>

@@ -104,12 +104,11 @@ export interface CampaignAttachment {
 
 export interface CampaignTiming {
   intervalBetweenMessages: number; // secondi
-  messagesPerHour: number;
-  schedule?: {
-    startTime?: string; // HH:MM
-    endTime?: string;   // HH:MM
-    timezone?: string;
-    daysOfWeek?: string[];
+  schedule: {
+    startTime: string; // HH:MM - fascia oraria di inizio
+    endTime: string;   // HH:MM - fascia oraria di fine  
+    timezone: string;  // timezone (default: Europe/Rome)
+    daysOfWeek?: string[]; // giorni della settimana (opzionale)
   };
 }
 
@@ -291,11 +290,9 @@ export interface CampaignFilters {
 export interface CampaignFormData extends Omit<CreateCampaignRequest, 'timing'> {
   timing: {
     intervalBetweenMessages: number;
-    messagesPerHour: number;
-    enableSchedule: boolean;
-    startTime?: string;
-    endTime?: string;
-    timezone?: string;
+    startTime: string;
+    endTime: string;
+    timezone: string;
     daysOfWeek?: string[];
   };
 }

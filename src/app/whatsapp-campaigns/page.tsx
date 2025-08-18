@@ -65,6 +65,12 @@ function CampaignsContent() {
   const [isActioning, setIsActioning] = useState<string | null>(null);
   void isActioning; // Evita warning unused var
   const [activeTab, setActiveTab] = useState('campaigns');
+  
+  // Variabili dinamiche per template
+  const [availableVariables, setAvailableVariables] = useState<{
+    fixed: Array<{ key: string; description: string }>;
+    dynamic: Array<{ key: string; description: string }>;
+  } | null>(null);
 
   // Stati per nuova sessione
   const [showNewSessionDialog, setShowNewSessionDialog] = useState(false);
@@ -84,7 +90,11 @@ function CampaignsContent() {
     messageSequences: [],
     timing: {
       intervalBetweenMessages: 30,
-      messagesPerHour: 60
+      schedule: {
+        startTime: '09:00',
+        endTime: '18:00',
+        timezone: 'Europe/Rome'
+      }
     }
   });
 
@@ -155,6 +165,17 @@ function CampaignsContent() {
     }
   }, []);
 
+  const loadAvailableVariables = useCallback(async () => {
+    try {
+      const response = await apiClient.getWhatsAppTemplateVariables();
+      if (response.success && response.data) {
+        setAvailableVariables(response.data);
+      }
+    } catch (error) {
+      console.error('Errore caricamento variabili:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadCampaigns();
   }, [loadCampaigns]);
@@ -162,7 +183,8 @@ function CampaignsContent() {
   useEffect(() => {
     loadSessions();
     loadContactLists();
-  }, [loadSessions, loadContactLists]);
+    loadAvailableVariables();
+  }, [loadSessions, loadContactLists, loadAvailableVariables]);
 
   const handleCampaignAction = async (campaignId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
     setIsActioning(campaignId);
@@ -348,7 +370,11 @@ function CampaignsContent() {
           messageSequences: [],
           timing: {
             intervalBetweenMessages: 30,
-            messagesPerHour: 60
+            schedule: {
+              startTime: '09:00',
+              endTime: '18:00',
+              timezone: 'Europe/Rome'
+            }
           }
         });
         await loadCampaigns();
@@ -625,7 +651,7 @@ function CampaignsContent() {
                       Nuova Campagna
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>Crea Nuova Campagna WhatsApp</DialogTitle>
                       <DialogDescription>
@@ -705,52 +731,50 @@ function CampaignsContent() {
                           rows={6}
                         />
                         
-                        {/* Variabili Fisse */}
-                        <div className="mt-3">
-                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
-                          <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('nome')}>
-                              +nome
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('cognome')}>
-                              +cognome
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('email')}>
-                              +email
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('telefono')}>
-                              +telefono
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('azienda')}>
-                              +azienda
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('posizione')}>
-                              +posizione
-                            </Button>
-                          </div>
-                        </div>
+                        {/* Variabili disponibili */}
+                        {availableVariables && (
+                          <div className="mt-3">
+                            {/* Variabili Fisse */}
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {availableVariables.fixed.map((variable) => (
+                                  <Button 
+                                    key={variable.key}
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={() => insertTemplateVariable(variable.key)}
+                                    title={variable.description}
+                                  >
+                                    +{variable.key}
+                                  </Button>
+                                ))}
+                              </div>
+                            </div>
 
-                        {/* Variabili Dinamiche */}
-                        <div className="mt-3">
-                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Dinamiche:</p>
-                          <div className="flex flex-wrap gap-2">
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_1')}>
-                              +proprietà_1
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_2')}>
-                              +proprietà_2
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('proprietà_3')}>
-                              +proprietà_3
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('tag_1')}>
-                              +tag_1
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => insertTemplateVariable('tag_2')}>
-                              +tag_2
-                            </Button>
+                            {/* Variabili Dinamiche */}
+                            {availableVariables.dynamic.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
+                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                  {availableVariables.dynamic.map((variable) => (
+                                    <Button 
+                                      key={variable.key}
+                                      type="button" 
+                                      variant="outline" 
+                                      size="sm" 
+                                      onClick={() => insertTemplateVariable(variable.key)}
+                                      title={variable.description}
+                                    >
+                                      +{variable.key}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        )}
 
                         <p className="text-xs text-gray-500 mt-2">
                           💡 Le variabili verranno sostituite automaticamente con i dati dei contatti
@@ -829,22 +853,38 @@ function CampaignsContent() {
                                 />
                                 
                                 {/* Variabili per questa sequenza */}
-                                <div className="mt-2">
-                                  <div className="flex flex-wrap gap-1">
-                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6" 
-                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'nome')}>
-                                      +nome
-                                    </Button>
-                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6"
-                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'azienda')}>
-                                      +azienda
-                                    </Button>
-                                    <Button type="button" variant="outline" size="sm" className="text-xs h-6"
-                                      onClick={() => insertTemplateVariableInSequence(sequence.id, 'email')}>
-                                      +email
-                                    </Button>
+                                {availableVariables && (
+                                  <div className="mt-2">
+                                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                                      {availableVariables.fixed.map((variable) => (
+                                        <Button 
+                                          key={variable.key}
+                                          type="button" 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="text-xs h-6" 
+                                          onClick={() => insertTemplateVariableInSequence(sequence.id, variable.key)}
+                                          title={variable.description}
+                                        >
+                                          +{variable.key}
+                                        </Button>
+                                      ))}
+                                      {availableVariables.dynamic.slice(0, 3).map((variable) => (
+                                        <Button 
+                                          key={variable.key}
+                                          type="button" 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="text-xs h-6" 
+                                          onClick={() => insertTemplateVariableInSequence(sequence.id, variable.key)}
+                                          title={variable.description}
+                                        >
+                                          +{variable.key}
+                                        </Button>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -858,7 +898,8 @@ function CampaignsContent() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Configurazione Timing */}
+                      <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium">Intervallo tra messaggi (secondi)</label>
                           <Input
@@ -871,19 +912,42 @@ function CampaignsContent() {
                               timing: { ...prev.timing, intervalBetweenMessages: Number(e.target.value) }
                             }))}
                           />
+                          <p className="text-xs text-gray-500 mt-1">Tempo di attesa tra un messaggio e l'altro</p>
                         </div>
+
                         <div>
-                          <label className="text-sm font-medium">Messaggi per ora</label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max="200"
-                            value={newCampaignData.timing.messagesPerHour}
-                            onChange={(e) => setNewCampaignData(prev => ({ 
-                              ...prev, 
-                              timing: { ...prev.timing, messagesPerHour: Number(e.target.value) }
-                            }))}
-                          />
+                          <label className="text-sm font-medium">Fascia Oraria di Invio</label>
+                          <div className="grid grid-cols-2 gap-3 mt-2">
+                            <div>
+                              <label className="text-xs text-gray-600">Dalle</label>
+                              <Input
+                                type="time"
+                                value={newCampaignData.timing.schedule.startTime}
+                                onChange={(e) => setNewCampaignData(prev => ({ 
+                                  ...prev, 
+                                  timing: { 
+                                    ...prev.timing, 
+                                    schedule: { ...prev.timing.schedule, startTime: e.target.value }
+                                  }
+                                }))}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-600">Alle</label>
+                              <Input
+                                type="time"
+                                value={newCampaignData.timing.schedule.endTime}
+                                onChange={(e) => setNewCampaignData(prev => ({ 
+                                  ...prev, 
+                                  timing: { 
+                                    ...prev.timing, 
+                                    schedule: { ...prev.timing.schedule, endTime: e.target.value }
+                                  }
+                                }))}
+                              />
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">I messaggi verranno inviati solo in questa fascia oraria (fuso italiano)</p>
                         </div>
                       </div>
 

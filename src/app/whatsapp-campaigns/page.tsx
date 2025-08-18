@@ -119,6 +119,9 @@ function CampaignsContent() {
   // Stati per Dettagli Campagna
   const [selectedCampaign, setSelectedCampaign] = useState<WhatsappCampaign | null>(null);
   const [showCampaignDetails, setShowCampaignDetails] = useState(false);
+  const [showAllMessages, setShowAllMessages] = useState(false);
+  const [messageFilter, setMessageFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
+  const [messageSearch, setMessageSearch] = useState('');
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -346,26 +349,26 @@ function CampaignsContent() {
                  const qrResponse = await apiClient.getWhatsAppSessionQrCode(newSessionData.sessionId);
                  console.log('📱 Risposta QR code:', qrResponse);
                  
-                         if (qrResponse.success && qrResponse.data?.qrCode) {
-          console.log('✅ QR code recuperato con successo!');
-          setQrCodeData(qrResponse.data.qrCode);
-          setSelectedQrSession(newSessionData.sessionId);
+                 if (qrResponse.success && qrResponse.data?.qrCode) {
+                   console.log('✅ QR code recuperato con successo!');
+                   setQrCodeData(qrResponse.data.qrCode);
+                   setSelectedQrSession(newSessionData.sessionId);
           
           // NUOVO: Avvia monitoraggio attivo della connessione
           startQrMonitoring(newSessionData.sessionId);
           
-          toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
-          return true;
-        }
-                             } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
-                // Sessione autenticata! Chiudi dialog e aggiorna lista
-                console.log('🎉 Sessione autenticata con successo!');
-                setQrCodeData(null);
-                setSelectedQrSession(null);
+                   toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
+                   return true;
+                 }
+               } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
+                 // Sessione autenticata! Chiudi dialog e aggiorna lista
+                 console.log('🎉 Sessione autenticata con successo!');
+                 setQrCodeData(null);
+                 setSelectedQrSession(null);
                 setShowNewSessionDialog(false); // NUOVO: Chiudi anche il dialog di creazione
-                toast.success('WhatsApp connesso con successo!');
-                await loadSessions(); // Ricarica le sessioni
-                return true; // Stop retry
+                 toast.success('WhatsApp connesso con successo!');
+                 await loadSessions(); // Ricarica le sessioni
+                 return true; // Stop retry
                } else if (sessionStatus === 'connecting') {
                  console.log('⏳ Sessione ancora in connessione, continuo ad aspettare...');
                } else if (sessionStatus === 'error') {
@@ -1029,11 +1032,11 @@ function CampaignsContent() {
                         
                         {/* Variabili disponibili */}
                         {availableVariables && (
-                          <div className="mt-3">
+                        <div className="mt-3">
                             {/* Variabili Fisse */}
                             <div className="mb-3">
-                              <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
-                              <div className="flex flex-wrap gap-2">
+                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
+                          <div className="flex flex-wrap gap-2">
                                 {availableVariables.fixed.map((variable) => (
                                   <Button 
                                     key={variable.key}
@@ -1044,12 +1047,12 @@ function CampaignsContent() {
                                     title={variable.description}
                                   >
                                     +{variable.key}
-                                  </Button>
+                            </Button>
                                 ))}
-                              </div>
-                            </div>
+                          </div>
+                        </div>
 
-                            {/* Variabili Dinamiche */}
+                        {/* Variabili Dinamiche */}
                             {availableVariables.dynamic.length > 0 && (
                               <div>
                                 <p className="text-xs font-medium text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
@@ -1064,10 +1067,10 @@ function CampaignsContent() {
                                       title={variable.description}
                                     >
                                       +{variable.key}
-                                    </Button>
+                            </Button>
                                   ))}
-                                </div>
-                              </div>
+                          </div>
+                        </div>
                             )}
                           </div>
                         )}
@@ -1150,7 +1153,7 @@ function CampaignsContent() {
                                 
                                 {/* Variabili per questa sequenza */}
                                 {availableVariables && (
-                                  <div className="mt-2">
+                                <div className="mt-2">
                                     <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
                                       {availableVariables.fixed.map((variable) => (
                                         <Button 
@@ -1163,7 +1166,7 @@ function CampaignsContent() {
                                           title={variable.description}
                                         >
                                           +{variable.key}
-                                        </Button>
+                                    </Button>
                                       ))}
                                       {availableVariables.dynamic.slice(0, 3).map((variable) => (
                                         <Button 
@@ -1176,10 +1179,10 @@ function CampaignsContent() {
                                           title={variable.description}
                                         >
                                           +{variable.key}
-                                        </Button>
+                                    </Button>
                                       ))}
-                                    </div>
                                   </div>
+                                </div>
                                 )}
                               </div>
                             </div>
@@ -1216,17 +1219,17 @@ function CampaignsContent() {
                           <div className="grid grid-cols-2 gap-3 mt-2">
                             <div>
                               <label className="text-xs text-gray-600">Dalle</label>
-                              <Input
+                          <Input
                                 type="time"
                                 value={newCampaignData.timing.schedule.startTime}
-                                onChange={(e) => setNewCampaignData(prev => ({ 
-                                  ...prev, 
+                            onChange={(e) => setNewCampaignData(prev => ({ 
+                              ...prev, 
                                   timing: { 
                                     ...prev.timing, 
                                     schedule: { ...prev.timing.schedule, startTime: e.target.value }
                                   }
-                                }))}
-                              />
+                            }))}
+                          />
                             </div>
                             <div>
                               <label className="text-xs text-gray-600">Alle</label>
@@ -1395,13 +1398,13 @@ function CampaignsContent() {
                     <RefreshCw className="h-4 w-4" />
                     Aggiorna Sessioni
                   </Button>
-                  <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nuova Sessione
-                      </Button>
-                    </DialogTrigger>
+                <Dialog open={showNewSessionDialog} onOpenChange={setShowNewSessionDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuova Sessione
+                    </Button>
+                  </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Crea Nuova Sessione WhatsApp</DialogTitle>
@@ -1511,7 +1514,7 @@ function CampaignsContent() {
                           <span className="text-sm font-medium">{session.stats.activeCampaigns}</span>
                         </div>
 
-                                                {session.status === 'qr_ready' && (
+                        {session.status === 'qr_ready' && (
                           <Button 
                             className="w-full mt-3" 
                             variant="outline"
@@ -1519,7 +1522,7 @@ function CampaignsContent() {
                           >
                             <QrCode className="h-4 w-4 mr-2" />
                             Mostra QR Code
-                          </Button>
+                </Button>
                         )}
 
                         {/* ✅ NUOVO: Bottone Riconnetti prominente per sessioni disconnesse */}
@@ -1606,7 +1609,14 @@ function CampaignsContent() {
           </Dialog>
 
           {/* Dialog Dettagli Campagna */}
-          <Dialog open={showCampaignDetails} onOpenChange={setShowCampaignDetails}>
+          <Dialog open={showCampaignDetails} onOpenChange={(open) => {
+            setShowCampaignDetails(open);
+            if (!open) {
+              setShowAllMessages(false); // Reset quando si chiude il dialog
+              setMessageFilter('all');
+              setMessageSearch('');
+            }
+          }}>
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Dettagli Campagna: {selectedCampaign?.name}</DialogTitle>
@@ -1757,14 +1767,80 @@ function CampaignsContent() {
                   {/* Coda Messaggi */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Stato Messaggi ({selectedCampaign.messageQueue.length})</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Stato Messaggi ({selectedCampaign.messageQueue.length})</span>
+                        {selectedCampaign.messageQueue.length > 20 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowAllMessages(!showAllMessages)}
+                            className="text-xs"
+                          >
+                            {showAllMessages ? 'Mostra meno' : 'Mostra tutti'}
+                          </Button>
+                        )}
+                      </CardTitle>
                       <div className="text-sm text-gray-600">
-                        Visualizzati primi 20 messaggi • Ordinati per data di invio
+                        {showAllMessages 
+                          ? `Visualizzati tutti i ${selectedCampaign.messageQueue.length} messaggi`
+                          : `Visualizzati primi ${Math.min(20, selectedCampaign.messageQueue.length)} messaggi`
+                        } • Ordinati per data di invio
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {selectedCampaign.messageQueue.slice(0, 20).map((message, index) => {
+                      {/* Filtri e Ricerca (visibili solo quando si mostrano tutti) */}
+                      {showAllMessages && selectedCampaign.messageQueue.length > 10 && (
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg space-y-3">
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="flex-1">
+                              <Input
+                                placeholder="Cerca per nome, numero o ID contatto..."
+                                value={messageSearch}
+                                onChange={(e) => setMessageSearch(e.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                            <Select value={messageFilter} onValueChange={(value: any) => setMessageFilter(value)}>
+                              <SelectTrigger className="w-40">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Tutti gli stati</SelectItem>
+                                <SelectItem value="pending">In attesa</SelectItem>
+                                <SelectItem value="sent">Inviati</SelectItem>
+                                <SelectItem value="failed">Falliti</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className={`space-y-2 overflow-y-auto ${showAllMessages ? 'max-h-96' : 'max-h-60'}`}>
+                        {(() => {
+                          // Logica di filtraggio e ricerca
+                          let filteredMessages = showAllMessages 
+                            ? selectedCampaign.messageQueue 
+                            : selectedCampaign.messageQueue.slice(0, 20);
+
+                          // Applica filtro stato
+                          if (messageFilter !== 'all') {
+                            filteredMessages = filteredMessages.filter(m => m.status === messageFilter);
+                          }
+
+                          // Applica ricerca testuale
+                          if (messageSearch.trim()) {
+                            const searchLower = messageSearch.toLowerCase().trim();
+                            filteredMessages = filteredMessages.filter(message => {
+                              const contact = allContacts.find(c => c._id === message.contactId);
+                              return (
+                                contact?.name?.toLowerCase().includes(searchLower) ||
+                                message.phoneNumber.includes(searchLower) ||
+                                message.contactId.toLowerCase().includes(searchLower)
+                              );
+                            });
+                          }
+
+                          return filteredMessages.map((message, index) => {
                           // Cerca il contatto corrispondente nei contatti caricati
                           const contact = allContacts.find(c => c._id === message.contactId);
                           
@@ -1815,11 +1891,44 @@ function CampaignsContent() {
                                 )}
                               </div>
                             </div>
-                          );
-                        })}
-                        {selectedCampaign.messageQueue.length > 20 && (
+                                                     );
+                         });
+                        })()}
+                        
+                        {/* Messaggi filtrati vuoti */}
+                        {showAllMessages && messageSearch.trim() && (() => {
+                          let filteredMessages = selectedCampaign.messageQueue;
+                          if (messageFilter !== 'all') {
+                            filteredMessages = filteredMessages.filter(m => m.status === messageFilter);
+                          }
+                          const searchLower = messageSearch.toLowerCase().trim();
+                          filteredMessages = filteredMessages.filter(message => {
+                            const contact = allContacts.find(c => c._id === message.contactId);
+                            return (
+                              contact?.name?.toLowerCase().includes(searchLower) ||
+                              message.phoneNumber.includes(searchLower) ||
+                              message.contactId.toLowerCase().includes(searchLower)
+                            );
+                          });
+                          return filteredMessages.length === 0;
+                        })() && (
+                          <div className="text-center text-gray-500 py-8">
+                            🔍 Nessun messaggio trovato con i filtri attuali
+                          </div>
+                        )}
+
+                        {!showAllMessages && selectedCampaign.messageQueue.length > 20 && (
                           <div className="text-center text-sm text-gray-500 py-3 border-t">
-                            💬 Altri {selectedCampaign.messageQueue.length - 20} messaggi in coda
+                            💬 Altri {selectedCampaign.messageQueue.length - 20} messaggi nascosti
+                            <br />
+                            <Button
+                              variant="link"
+                              size="sm"
+                              onClick={() => setShowAllMessages(true)}
+                              className="text-xs mt-1 p-0 h-auto"
+                            >
+                              Clicca "Mostra tutti" per visualizzarli
+                            </Button>
                           </div>
                         )}
                         {selectedCampaign.messageQueue.length === 0 && (
@@ -1852,4 +1961,5 @@ export default function WhatsAppCampaignsPage() {
   }
 
   return <CampaignsContent />;
+} 
 } 

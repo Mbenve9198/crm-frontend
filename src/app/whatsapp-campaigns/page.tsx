@@ -1962,4 +1962,3 @@ export default function WhatsAppCampaignsPage() {
 
   return <CampaignsContent />;
 } 
-} 

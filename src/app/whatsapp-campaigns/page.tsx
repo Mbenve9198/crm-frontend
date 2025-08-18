@@ -140,7 +140,7 @@ function CampaignsContent() {
         additionalData
       );
       
-      if (response.success) {
+      if (response.success && response.data) {
         // Ricarica la campagna per aggiornare i dati
         const updatedCampaign = await apiClient.getWhatsAppCampaign(selectedCampaign._id);
         if (updatedCampaign.success && updatedCampaign.data) {

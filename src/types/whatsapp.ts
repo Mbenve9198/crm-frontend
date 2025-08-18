@@ -134,6 +134,14 @@ export interface MessageQueueItem {
   messageId?: string;
   errorMessage?: string;
   retryCount: number;
+  
+  // Proprietà per sequenze di follow-up
+  sequenceId?: string;
+  sequenceIndex?: number;
+  followUpScheduledFor?: string;
+  hasReceivedResponse?: boolean;
+  responseReceivedAt?: string;
+  condition?: 'no_response' | 'always';
 }
 
 export interface CampaignStats {
@@ -155,6 +163,7 @@ export interface WhatsappCampaign {
   contactFilters?: CampaignContactFilters;
   messageTemplate: string;
   templateVariables: string[];
+  messageSequences?: MessageSequence[];  // ✅ Aggiunto supporto per sequenze
   attachments: CampaignAttachment[];
   timing: CampaignTiming;
   status: CampaignStatus;
@@ -196,6 +205,7 @@ export interface MessageSequence {
   delayMinutes: number; // Minuti di attesa prima di inviare questo messaggio
   condition: 'no_response' | 'always'; // Condizione per inviare il messaggio
   isActive: boolean;
+  templateVariables?: string[]; // ✅ Aggiunto supporto per variabili template
 }
 
 export interface CreateCampaignRequest {

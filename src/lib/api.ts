@@ -143,6 +143,11 @@ class ApiClient {
     this.reloadTokenFromStorage();
   }
 
+  // Metodo per ottenere l'URL base (per debug)
+  public getBaseURL(): string {
+    return this.baseURL;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}

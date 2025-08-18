@@ -360,4 +360,14 @@ export const ATTACHMENT_TYPES = [
   { value: 'audio', label: 'Audio', accept: 'audio/*' },
   { value: 'video', label: 'Video', accept: 'video/*' },
   { value: 'document', label: 'Documento', accept: '.pdf,.doc,.docx,.txt' }
-] as const; 
+] as const;
+
+export interface UpdateMessageStatusResponse {
+  messageId: string;
+  contactId: string;
+  phoneNumber: string;
+  oldStatus: string;
+  newStatus: string;
+  updatedAt: string;
+  stats: CampaignStats;
+} 

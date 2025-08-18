@@ -116,6 +116,10 @@ function CampaignsContent() {
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [qrMonitorInterval, setQrMonitorInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Stati per Dettagli Campagna
+  const [selectedCampaign, setSelectedCampaign] = useState<WhatsappCampaign | null>(null);
+  const [showCampaignDetails, setShowCampaignDetails] = useState(false);
+
   const loadCampaigns = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -1304,7 +1308,10 @@ function CampaignsContent() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => {}}>
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedCampaign(campaign);
+                                  setShowCampaignDetails(true);
+                                }}>
                                       <Eye className="h-4 w-4 mr-2" />
                                   Dettagli
                                 </DropdownMenuItem>
@@ -1595,6 +1602,202 @@ function CampaignsContent() {
               <p className="text-sm text-gray-600 text-center">
                 Il QR code si aggiorna automaticamente ogni 30 secondi
               </p>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog Dettagli Campagna */}
+          <Dialog open={showCampaignDetails} onOpenChange={setShowCampaignDetails}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Dettagli Campagna: {selectedCampaign?.name}</DialogTitle>
+                <DialogDescription>
+                  Informazioni dettagliate e statistiche della campagna
+                </DialogDescription>
+              </DialogHeader>
+              
+              {selectedCampaign && (
+                <div className="space-y-6">
+                  {/* Statistiche Generali */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {selectedCampaign.stats.messagesSent}
+                        </div>
+                        <div className="text-sm text-gray-600">Messaggi Inviati</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {selectedCampaign.stats.totalContacts}
+                        </div>
+                        <div className="text-sm text-gray-600">Contatti Totali</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {selectedCampaign.stats.repliesReceived}
+                        </div>
+                        <div className="text-sm text-gray-600">Risposte</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-red-600">
+                          {selectedCampaign.stats.errors}
+                        </div>
+                        <div className="text-sm text-gray-600">Errori</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Informazioni Campagna */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Informazioni Campagna</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Stato</label>
+                          <div className="mt-1">{getStatusBadge(selectedCampaign.status)}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Lista Target</label>
+                          <div className="mt-1">{selectedCampaign.targetList}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Numero WhatsApp</label>
+                          <div className="mt-1">{selectedCampaign.whatsappNumber}</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Data Creazione</label>
+                          <div className="mt-1">{new Date(selectedCampaign.createdAt).toLocaleDateString('it-IT')}</div>
+                        </div>
+                      </div>
+                      
+                      {selectedCampaign.description && (
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Descrizione</label>
+                          <div className="mt-1 text-sm">{selectedCampaign.description}</div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Timing e Configurazione */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Configurazione Invio</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Intervallo tra Messaggi</label>
+                          <div className="mt-1">{selectedCampaign.timing.intervalBetweenMessages} secondi</div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-600">Fascia Oraria</label>
+                          <div className="mt-1">
+                            {selectedCampaign.timing.schedule.startTime} - {selectedCampaign.timing.schedule.endTime}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Template Messaggio */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Template Messaggio</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-gray-50 p-3 rounded-lg text-sm font-mono">
+                        {selectedCampaign.messageTemplate}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Sequenze di Follow-up */}
+                  {selectedCampaign.messageSequences && selectedCampaign.messageSequences.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Sequenze di Follow-up ({selectedCampaign.messageSequences.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {selectedCampaign.messageSequences.map((sequence, index) => (
+                            <div key={sequence.id} className="border rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="font-medium">Follow-up #{index + 1}</span>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={sequence.isActive ? "default" : "secondary"}>
+                                    {sequence.isActive ? "Attivo" : "Inattivo"}
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {sequence.delayMinutes}min dopo
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {sequence.condition === 'no_response' ? 'Solo se nessuna risposta' : 'Sempre'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 p-2 rounded text-sm font-mono">
+                                {sequence.messageTemplate}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Coda Messaggi */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Stato Messaggi ({selectedCampaign.messageQueue.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {selectedCampaign.messageQueue.slice(0, 20).map((message, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>Contatto {message.contactId.slice(-4)}</span>
+                              {message.sequenceIndex > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Follow-up #{message.sequenceIndex}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={
+                                message.status === 'sent' ? 'default' :
+                                message.status === 'delivered' ? 'default' :
+                                message.status === 'failed' ? 'destructive' :
+                                'secondary'
+                              }>
+                                {message.status}
+                              </Badge>
+                              {message.sentAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(message.sentAt).toLocaleString('it-IT')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {selectedCampaign.messageQueue.length > 20 && (
+                          <div className="text-center text-sm text-gray-500 py-2">
+                            ... e altri {selectedCampaign.messageQueue.length - 20} messaggi
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         </div>

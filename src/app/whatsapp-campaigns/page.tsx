@@ -91,6 +91,7 @@ function CampaignsContent() {
   // Stati per QR Code
   const [selectedQrSession, setSelectedQrSession] = useState<string | null>(null);
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [qrMonitorInterval, setQrMonitorInterval] = useState<NodeJS.Timeout | null>(null);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -243,7 +244,7 @@ function CampaignsContent() {
         
         // Prova a recuperare il QR code più volte con retry
         let retryCount = 0;
-        const maxRetries = 8; // 8 tentativi in 12 secondi
+        const maxRetries = 20; // 20 tentativi in 20 secondi
         
         const tryGetQrCode = async () => {
           try {
@@ -262,21 +263,26 @@ function CampaignsContent() {
                  const qrResponse = await apiClient.getWhatsAppSessionQrCode(newSessionData.sessionId);
                  console.log('📱 Risposta QR code:', qrResponse);
                  
-                 if (qrResponse.success && qrResponse.data?.qrCode) {
-                   console.log('✅ QR code recuperato con successo!');
-                   setQrCodeData(qrResponse.data.qrCode);
-                   setSelectedQrSession(newSessionData.sessionId);
-                   toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
-                   return true;
-                 }
-               } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
-                 // Sessione autenticata! Chiudi dialog e aggiorna lista
-                 console.log('🎉 Sessione autenticata con successo!');
-                 setQrCodeData(null);
-                 setSelectedQrSession(null);
-                 toast.success('WhatsApp connesso con successo!');
-                 await loadSessions(); // Ricarica le sessioni
-                 return true; // Stop retry
+                         if (qrResponse.success && qrResponse.data?.qrCode) {
+          console.log('✅ QR code recuperato con successo!');
+          setQrCodeData(qrResponse.data.qrCode);
+          setSelectedQrSession(newSessionData.sessionId);
+          
+          // NUOVO: Avvia monitoraggio attivo della connessione
+          startQrMonitoring(newSessionData.sessionId);
+          
+          toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
+          return true;
+        }
+                             } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
+                // Sessione autenticata! Chiudi dialog e aggiorna lista
+                console.log('🎉 Sessione autenticata con successo!');
+                setQrCodeData(null);
+                setSelectedQrSession(null);
+                setShowNewSessionDialog(false); // NUOVO: Chiudi anche il dialog di creazione
+                toast.success('WhatsApp connesso con successo!');
+                await loadSessions(); // Ricarica le sessioni
+                return true; // Stop retry
                } else if (sessionStatus === 'connecting') {
                  console.log('⏳ Sessione ancora in connessione, continuo ad aspettare...');
                } else if (sessionStatus === 'error') {
@@ -288,8 +294,8 @@ function CampaignsContent() {
             
             retryCount++;
             if (retryCount < maxRetries) {
-              // Riprova dopo 1.5 secondi
-              setTimeout(tryGetQrCode, 1500);
+              // Riprova dopo 1 secondo (più veloce)
+              setTimeout(tryGetQrCode, 1000);
             } else {
               console.warn('⚠️ Timeout recupero QR code. Sessione creata, usa "Mostra QR" manualmente.');
               toast.warning('Sessione creata. Clicca su "Mostra QR" per collegare WhatsApp');
@@ -423,6 +429,53 @@ function CampaignsContent() {
       console.error('❌ Errore aggiornamento sessioni:', error);
       toast.error('Errore durante l\'aggiornamento delle sessioni');
     }
+  };
+
+  const startQrMonitoring = (sessionId: string) => {
+    // Ferma monitoraggio precedente se attivo
+    if (qrMonitorInterval) {
+      clearInterval(qrMonitorInterval);
+    }
+
+    console.log(`📡 Avvio monitoraggio QR per sessione: ${sessionId}`);
+    
+    const interval = setInterval(async () => {
+      try {
+        const sessionResponse = await apiClient.getWhatsAppSession(sessionId);
+        
+        if (sessionResponse.success && sessionResponse.data) {
+          const status = sessionResponse.data.status;
+          console.log(`🔍 Monitor QR - Stato sessione: ${status}`);
+          
+          if (status === 'authenticated' || status === 'connected') {
+            console.log('🎉 QR Monitor - Connessione rilevata!');
+            
+            // Chiudi dialog e ferma monitoraggio
+            setQrCodeData(null);
+            setSelectedQrSession(null);
+            setShowNewSessionDialog(false);
+            clearInterval(interval);
+            setQrMonitorInterval(null);
+            
+            toast.success('WhatsApp connesso con successo!');
+            await loadSessions();
+          }
+        }
+      } catch (error) {
+        console.error('❌ Errore monitoraggio QR:', error);
+      }
+    }, 2000); // Controlla ogni 2 secondi
+
+    setQrMonitorInterval(interval);
+    
+    // Auto-stop dopo 5 minuti
+    setTimeout(() => {
+      if (qrMonitorInterval === interval) {
+        clearInterval(interval);
+        setQrMonitorInterval(null);
+        console.log('⏰ Timeout monitoraggio QR');
+      }
+    }, 5 * 60 * 1000);
   };
 
   const getStatusBadge = (status: CampaignStatus) => {
@@ -1133,6 +1186,12 @@ function CampaignsContent() {
           <Dialog open={!!selectedQrSession} onOpenChange={() => {
             setSelectedQrSession(null);
             setQrCodeData(null);
+            
+            // Ferma monitoraggio quando dialog si chiude
+            if (qrMonitorInterval) {
+              clearInterval(qrMonitorInterval);
+              setQrMonitorInterval(null);
+            }
           }}>
             <DialogContent className="max-w-md">
               <DialogHeader>

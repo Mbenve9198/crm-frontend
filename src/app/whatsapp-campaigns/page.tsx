@@ -209,7 +209,7 @@ function CampaignsContent() {
       
       // Debug: prima di fare la chiamata
       console.log('🔗 Chiamando API createWhatsAppSession...');
-      console.log('🌐 API Base URL:', (apiClient as any).baseURL);
+      // console.log('🌐 API Base URL:', apiClient.baseURL); // Rimosso per evitare errore TypeScript
       
       const response = await apiClient.createWhatsAppSession(newSessionData);
       

@@ -113,12 +113,23 @@ function CampaignsContent() {
 
   const loadSessions = useCallback(async () => {
     try {
+      console.log('🔄 Caricamento sessioni WhatsApp...');
       const response = await apiClient.getWhatsAppSessions();
+      console.log('📝 Risposta sessioni:', response);
+      
       if (response.success && response.data) {
+        console.log('✅ Sessioni caricate:', response.data.sessions.length);
         setSessions(response.data.sessions);
+        
+        // Debug: mostra lo stato di ogni sessione
+        response.data.sessions.forEach(session => {
+          console.log(`📱 Sessione ${session.sessionId}: stato = ${session.status}`);
+        });
+      } else {
+        console.warn('⚠️ Nessuna sessione trovata');
       }
     } catch (error) {
-      console.error('Errore caricamento sessioni:', error);
+      console.error('❌ Errore caricamento sessioni:', error);
       toast.error('Errore nel caricare le sessioni WhatsApp');
     }
   }, []);
@@ -194,29 +205,84 @@ function CampaignsContent() {
     }
 
     try {
+      console.log('🚀 Creazione sessione:', newSessionData);
       const response = await apiClient.createWhatsAppSession(newSessionData);
+      console.log('📝 Risposta creazione sessione:', response);
+      
       if (response.success) {
         toast.success('Sessione WhatsApp creata con successo');
         setShowNewSessionDialog(false);
         
-        // CRITICAL FIX: Mostra automaticamente il QR code dopo la creazione
-        toast.info('Generazione QR code in corso...', { duration: 2000 });
-        
-        // Aspetta un momento per permettere al backend di generare il QR
-        setTimeout(async () => {
-          try {
-            await handleShowQrCode(newSessionData.sessionId);
-          } catch (error) {
-            console.error('Errore recupero QR automatico:', error);
-            toast.warning('Sessione creata. Clicca su "Mostra QR" per collegare WhatsApp');
-          }
-        }, 3000);
-        
+        // Reset form
         setNewSessionData({ name: '', sessionId: '' });
+        
+        // Ricarica le sessioni per avere l'ultima versione
         await loadSessions();
+        
+        // CRITICAL FIX: Attendi che il backend generi il QR code
+        toast.info('Generazione QR code in corso...', { duration: 3000 });
+        
+        // Prova a recuperare il QR code più volte con retry
+        let retryCount = 0;
+        const maxRetries = 8; // 8 tentativi in 12 secondi
+        
+        const tryGetQrCode = async () => {
+          try {
+            console.log(`🔄 Tentativo ${retryCount + 1}/${maxRetries} per recuperare QR code...`);
+            
+            // Prima controlla lo stato della sessione
+            const sessionResponse = await apiClient.getWhatsAppSession(newSessionData.sessionId);
+            console.log('📊 Stato sessione:', sessionResponse);
+            
+            if (sessionResponse.success && sessionResponse.data) {
+              const sessionStatus = sessionResponse.data.status;
+              console.log(`🔍 Stato attuale sessione: ${sessionStatus}`);
+              
+              if (sessionStatus === 'qr_ready') {
+                // QR code dovrebbe essere pronto, prova a recuperarlo
+                const qrResponse = await apiClient.getWhatsAppSessionQrCode(newSessionData.sessionId);
+                console.log('📱 Risposta QR code:', qrResponse);
+                
+                if (qrResponse.success && qrResponse.data?.qrCode) {
+                  console.log('✅ QR code recuperato con successo!');
+                  setQrCodeData(qrResponse.data.qrCode);
+                  setSelectedQrSession(newSessionData.sessionId);
+                  toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
+                  return true;
+                }
+              } else if (sessionStatus === 'connecting') {
+                console.log('⏳ Sessione ancora in connessione, continuo ad aspettare...');
+              } else if (sessionStatus === 'error') {
+                console.error('❌ Errore nella sessione WhatsApp');
+                toast.error('Errore nella connessione WhatsApp. Riprova.');
+                return true; // Stop retry
+              }
+            }
+            
+            retryCount++;
+            if (retryCount < maxRetries) {
+              // Riprova dopo 1.5 secondi
+              setTimeout(tryGetQrCode, 1500);
+            } else {
+              console.warn('⚠️ Timeout recupero QR code. Sessione creata, usa "Mostra QR" manualmente.');
+              toast.warning('Sessione creata. Clicca su "Mostra QR" per collegare WhatsApp');
+            }
+          } catch (error) {
+            console.error('❌ Errore durante recupero QR automatico:', error);
+            retryCount++;
+            if (retryCount < maxRetries) {
+              setTimeout(tryGetQrCode, 1500);
+            } else {
+              toast.warning('Sessione creata. Clicca su "Mostra QR" per collegare WhatsApp');
+            }
+          }
+        };
+        
+        // Inizia il polling dopo 2 secondi
+        setTimeout(tryGetQrCode, 2000);
       }
     } catch (error) {
-      console.error('Errore creazione sessione:', error);
+      console.error('❌ Errore creazione sessione:', error);
       toast.error('Errore nella creazione della sessione');
     }
   };
@@ -253,14 +319,22 @@ function CampaignsContent() {
 
   const handleShowQrCode = async (sessionId: string) => {
     try {
+      console.log('🔍 Richiesta QR code per sessione:', sessionId);
       const response = await apiClient.getWhatsAppSessionQrCode(sessionId);
+      console.log('📱 Risposta API QR code:', response);
+      
       if (response.success && response.data) {
+        console.log('✅ QR code ricevuto, apertura dialog...');
         setQrCodeData(response.data.qrCode);
         setSelectedQrSession(sessionId);
+        toast.success('QR code caricato!');
+      } else {
+        console.warn('⚠️ QR code non disponibile:', response.message || 'Nessun dato');
+        toast.warning(response.message || 'QR code non disponibile al momento');
       }
     } catch (error) {
-      console.error('Errore ottenimento QR:', error);
-      toast.error('Errore nel ottenere il QR code');
+      console.error('❌ Errore ottenimento QR:', error);
+      toast.error('Errore nel ottenere il QR code: ' + (error instanceof Error ? error.message : 'Errore sconosciuto'));
     }
   };
 

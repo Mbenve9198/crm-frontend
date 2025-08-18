@@ -120,8 +120,44 @@ function CampaignsContent() {
   const [selectedCampaign, setSelectedCampaign] = useState<WhatsappCampaign | null>(null);
   const [showCampaignDetails, setShowCampaignDetails] = useState(false);
   const [showAllMessages, setShowAllMessages] = useState(false);
-  const [messageFilter, setMessageFilter] = useState<'all' | 'pending' | 'sent' | 'failed'>('all');
+  const [messageFilter, setMessageFilter] = useState<'all' | 'pending' | 'sent' | 'failed' | 'no_whatsapp'>('all');
   const [messageSearch, setMessageSearch] = useState('');
+  
+  // Stati per cambio stato messaggio
+  const [updatingMessageId, setUpdatingMessageId] = useState<string | null>(null);
+
+  // Funzione per aggiornare stato messaggio
+  const updateMessageStatus = async (messageId: string, newStatus: string, additionalData?: { messageId?: string; errorMessage?: string }) => {
+    if (!selectedCampaign) return;
+    
+    try {
+      setUpdatingMessageId(messageId);
+      
+      const response = await apiClient.updateMessageStatus(
+        selectedCampaign._id, 
+        messageId, 
+        newStatus, 
+        additionalData
+      );
+      
+      if (response.success) {
+        // Ricarica la campagna per aggiornare i dati
+        const updatedCampaign = await apiClient.getWhatsAppCampaign(selectedCampaign._id);
+        if (updatedCampaign.success && updatedCampaign.data) {
+          setSelectedCampaign(updatedCampaign.data);
+        }
+        
+        // Ricarica anche la lista delle campagne per aggiornare le statistiche
+        await loadCampaigns();
+        
+        console.log(`✅ Stato messaggio aggiornato: ${response.data.oldStatus} → ${response.data.newStatus}`);
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento stato messaggio:', error);
+    } finally {
+      setUpdatingMessageId(null);
+    }
+  };
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -1800,7 +1836,7 @@ function CampaignsContent() {
                                 className="text-sm"
                               />
                             </div>
-                            <Select value={messageFilter} onValueChange={(value: "all" | "pending" | "sent" | "failed") => setMessageFilter(value)}>
+                            <Select value={messageFilter} onValueChange={(value: "all" | "pending" | "sent" | "failed" | "no_whatsapp") => setMessageFilter(value)}>
                               <SelectTrigger className="w-40">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1809,6 +1845,7 @@ function CampaignsContent() {
                                 <SelectItem value="pending">In attesa</SelectItem>
                                 <SelectItem value="sent">Inviati</SelectItem>
                                 <SelectItem value="failed">Falliti</SelectItem>
+                                <SelectItem value="no_whatsapp">No WhatsApp</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1867,18 +1904,78 @@ function CampaignsContent() {
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant={
-                                  message.status === 'sent' ? 'default' :
-                                  message.status === 'delivered' ? 'default' :
-                                  message.status === 'failed' ? 'destructive' :
-                                  'secondary'
-                                } className="capitalize">
-                                  {message.status === 'sent' ? 'Inviato' :
-                                   message.status === 'delivered' ? 'Consegnato' :
-                                   message.status === 'failed' ? 'Fallito' :
-                                   message.status === 'pending' ? 'In Attesa' :
-                                   message.status}
-                                </Badge>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="p-0">
+                                      <Badge variant={
+                                        message.status === 'sent' ? 'default' :
+                                        message.status === 'delivered' ? 'default' :
+                                        message.status === 'read' ? 'default' :
+                                        message.status === 'failed' ? 'destructive' :
+                                        message.status === 'no_whatsapp' ? 'outline' :
+                                        'secondary'
+                                      } className="capitalize cursor-pointer hover:opacity-80">
+                                        {updatingMessageId === message._id ? (
+                                          <Loader2 className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <>
+                                            {message.status === 'sent' ? 'Inviato' :
+                                             message.status === 'delivered' ? 'Consegnato' :
+                                             message.status === 'read' ? 'Letto' :
+                                             message.status === 'failed' ? 'Fallito' :
+                                             message.status === 'no_whatsapp' ? 'No WhatsApp' :
+                                             message.status === 'pending' ? 'In Attesa' :
+                                             message.status}
+                                          </>
+                                        )}
+                                      </Badge>
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'pending')}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <Clock className="w-4 h-4 mr-2" />
+                                      In Attesa
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'sent')}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <MessageCircle className="w-4 h-4 mr-2" />
+                                      Inviato
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'delivered')}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      Consegnato
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'read')}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <Eye className="w-4 h-4 mr-2" />
+                                      Letto
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'failed', { errorMessage: 'Marcato manualmente come fallito' })}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Fallito
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'no_whatsapp')}
+                                      disabled={updatingMessageId === message._id}
+                                    >
+                                      <Ban className="w-4 h-4 mr-2" />
+                                      No WhatsApp
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                                 {message.sentAt && (
                                   <span className="text-xs text-gray-500 min-w-max">
                                     {new Date(message.sentAt).toLocaleString('it-IT', {

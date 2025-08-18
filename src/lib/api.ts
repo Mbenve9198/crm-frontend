@@ -1020,6 +1020,16 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async updateMessageStatus(campaignId: string, messageId: string, status: string, data?: { messageId?: string; errorMessage?: string }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/whatsapp-campaigns/${campaignId}/messages/${messageId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        status,
+        ...data
+      }),
+    });
+  }
 }
 
 // Istanza singleton dell'API client

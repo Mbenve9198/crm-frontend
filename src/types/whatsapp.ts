@@ -123,10 +123,11 @@ export interface CampaignContactFilters {
 }
 
 export interface MessageQueueItem {
+  _id: string;
   contactId: string;
   phoneNumber: string;
   compiledMessage: string;
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'no_whatsapp';
   scheduledAt?: string;
   sentAt?: string;
   deliveredAt?: string;
@@ -151,6 +152,7 @@ export interface CampaignStats {
   messagesRead: number;
   repliesReceived: number;
   errors: number;
+  noWhatsapp: number;
 }
 
 export interface WhatsappCampaign {

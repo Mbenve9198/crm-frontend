@@ -206,8 +206,18 @@ function CampaignsContent() {
 
     try {
       console.log('🚀 Creazione sessione:', newSessionData);
+      
+      // Debug: prima di fare la chiamata
+      console.log('🔗 Chiamando API createWhatsAppSession...');
+      console.log('🌐 API Base URL:', (apiClient as any).baseURL);
+      
       const response = await apiClient.createWhatsAppSession(newSessionData);
+      
+      // Debug: risposta ricevuta
       console.log('📝 Risposta creazione sessione:', response);
+      console.log('📊 Response.success:', response.success);
+      console.log('📊 Response.data:', response.data);
+      console.log('📊 Response.message:', response.message);
       
       if (response.success) {
         toast.success('Sessione WhatsApp creata con successo');
@@ -283,7 +293,15 @@ function CampaignsContent() {
       }
     } catch (error) {
       console.error('❌ Errore creazione sessione:', error);
-      toast.error('Errore nella creazione della sessione');
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack');
+      
+      if (error instanceof Error && error.message) {
+        toast.error(`Errore nella creazione della sessione: ${error.message}`);
+      } else {
+        toast.error('Errore nella creazione della sessione');
+      }
     }
   };
 

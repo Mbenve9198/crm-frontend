@@ -1758,39 +1758,73 @@ function CampaignsContent() {
                   <Card>
                     <CardHeader>
                       <CardTitle>Stato Messaggi ({selectedCampaign.messageQueue.length})</CardTitle>
+                      <div className="text-sm text-gray-600">
+                        Visualizzati primi 20 messaggi • Ordinati per data di invio
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {selectedCampaign.messageQueue.slice(0, 20).map((message, index) => (
-                          <div key={index} className="flex items-center justify-between p-2 border rounded text-sm">
-                            <div className="flex items-center gap-2">
-                              <span>Contatto {message.contactId.slice(-4)}</span>
-                              {message.sequenceIndex && message.sequenceIndex > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Follow-up #{message.sequenceIndex}
+                        {selectedCampaign.messageQueue.slice(0, 20).map((message, index) => {
+                          // Cerca il contatto corrispondente nei contatti caricati
+                          const contact = allContacts.find(c => c._id === message.contactId);
+                          
+                          return (
+                            <div key={index} className="flex items-center justify-between p-3 border rounded-lg text-sm hover:bg-gray-50">
+                              <div className="flex items-center gap-3">
+                                <div className="flex flex-col min-w-0 flex-1">
+                                  {contact?.name && (
+                                    <span className="font-medium text-gray-900 truncate">
+                                      {contact.name}
+                                    </span>
+                                  )}
+                                  <span className="font-mono text-blue-600">
+                                    {message.phoneNumber}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    ID: {message.contactId.slice(-4)}
+                                  </span>
+                                </div>
+                                {message.sequenceIndex && message.sequenceIndex > 0 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Follow-up #{message.sequenceIndex}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={
+                                  message.status === 'sent' ? 'default' :
+                                  message.status === 'delivered' ? 'default' :
+                                  message.status === 'failed' ? 'destructive' :
+                                  'secondary'
+                                } className="capitalize">
+                                  {message.status === 'sent' ? 'Inviato' :
+                                   message.status === 'delivered' ? 'Consegnato' :
+                                   message.status === 'failed' ? 'Fallito' :
+                                   message.status === 'pending' ? 'In Attesa' :
+                                   message.status}
                                 </Badge>
-                              )}
+                                {message.sentAt && (
+                                  <span className="text-xs text-gray-500 min-w-max">
+                                    {new Date(message.sentAt).toLocaleString('it-IT', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={
-                                message.status === 'sent' ? 'default' :
-                                message.status === 'delivered' ? 'default' :
-                                message.status === 'failed' ? 'destructive' :
-                                'secondary'
-                              }>
-                                {message.status}
-                              </Badge>
-                              {message.sentAt && (
-                                <span className="text-xs text-gray-500">
-                                  {new Date(message.sentAt).toLocaleString('it-IT')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                         {selectedCampaign.messageQueue.length > 20 && (
-                          <div className="text-center text-sm text-gray-500 py-2">
-                            ... e altri {selectedCampaign.messageQueue.length - 20} messaggi
+                          <div className="text-center text-sm text-gray-500 py-3 border-t">
+                            💬 Altri {selectedCampaign.messageQueue.length - 20} messaggi in coda
+                          </div>
+                        )}
+                        {selectedCampaign.messageQueue.length === 0 && (
+                          <div className="text-center text-gray-500 py-8">
+                            📭 Nessun messaggio in coda
                           </div>
                         )}
                       </div>

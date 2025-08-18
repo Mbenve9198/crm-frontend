@@ -127,10 +127,17 @@ function CampaignsContent() {
         });
       } else {
         console.warn('⚠️ Nessuna sessione trovata');
+        setSessions([]); // Imposta array vuoto invece di non fare nulla
       }
     } catch (error) {
       console.error('❌ Errore caricamento sessioni:', error);
-      toast.error('Errore nel caricare le sessioni WhatsApp');
+      setSessions([]); // Imposta array vuoto in caso di errore
+      
+      if (error instanceof Error && error.message.includes('Timeout')) {
+        toast.error('Timeout nel caricamento sessioni. Il backend potrebbe essere occupato.');
+      } else {
+        toast.error('Errore nel caricare le sessioni WhatsApp');
+      }
     }
   }, []);
 
@@ -244,29 +251,37 @@ function CampaignsContent() {
             const sessionResponse = await apiClient.getWhatsAppSession(newSessionData.sessionId);
             console.log('📊 Stato sessione:', sessionResponse);
             
-            if (sessionResponse.success && sessionResponse.data) {
-              const sessionStatus = sessionResponse.data.status;
-              console.log(`🔍 Stato attuale sessione: ${sessionStatus}`);
-              
-              if (sessionStatus === 'qr_ready') {
-                // QR code dovrebbe essere pronto, prova a recuperarlo
-                const qrResponse = await apiClient.getWhatsAppSessionQrCode(newSessionData.sessionId);
-                console.log('📱 Risposta QR code:', qrResponse);
-                
-                if (qrResponse.success && qrResponse.data?.qrCode) {
-                  console.log('✅ QR code recuperato con successo!');
-                  setQrCodeData(qrResponse.data.qrCode);
-                  setSelectedQrSession(newSessionData.sessionId);
-                  toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
-                  return true;
-                }
-              } else if (sessionStatus === 'connecting') {
-                console.log('⏳ Sessione ancora in connessione, continuo ad aspettare...');
-              } else if (sessionStatus === 'error') {
-                console.error('❌ Errore nella sessione WhatsApp');
-                toast.error('Errore nella connessione WhatsApp. Riprova.');
-                return true; // Stop retry
-              }
+                         if (sessionResponse.success && sessionResponse.data) {
+               const sessionStatus = sessionResponse.data.status;
+               console.log(`🔍 Stato attuale sessione: ${sessionStatus}`);
+               
+               if (sessionStatus === 'qr_ready') {
+                 // QR code dovrebbe essere pronto, prova a recuperarlo
+                 const qrResponse = await apiClient.getWhatsAppSessionQrCode(newSessionData.sessionId);
+                 console.log('📱 Risposta QR code:', qrResponse);
+                 
+                 if (qrResponse.success && qrResponse.data?.qrCode) {
+                   console.log('✅ QR code recuperato con successo!');
+                   setQrCodeData(qrResponse.data.qrCode);
+                   setSelectedQrSession(newSessionData.sessionId);
+                   toast.success('QR code pronto! Scansiona con WhatsApp per connettere.');
+                   return true;
+                 }
+               } else if (sessionStatus === 'authenticated' || sessionStatus === 'connected') {
+                 // Sessione autenticata! Chiudi dialog e aggiorna lista
+                 console.log('🎉 Sessione autenticata con successo!');
+                 setQrCodeData(null);
+                 setSelectedQrSession(null);
+                 toast.success('WhatsApp connesso con successo!');
+                 await loadSessions(); // Ricarica le sessioni
+                 return true; // Stop retry
+               } else if (sessionStatus === 'connecting') {
+                 console.log('⏳ Sessione ancora in connessione, continuo ad aspettare...');
+               } else if (sessionStatus === 'error') {
+                 console.error('❌ Errore nella sessione WhatsApp');
+                 toast.error('Errore nella connessione WhatsApp. Riprova.');
+                 return true; // Stop retry
+               }
             }
             
             retryCount++;

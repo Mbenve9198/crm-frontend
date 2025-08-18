@@ -153,7 +153,8 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    const timeoutMs = 30000; // Timeout di 30 secondi per le richieste (specialmente per la creazione sessioni WhatsApp)
+    // Timeout più alto per endpoint delle sessioni WhatsApp
+    const timeoutMs = endpoint.includes('/whatsapp-sessions') ? 60000 : 30000;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

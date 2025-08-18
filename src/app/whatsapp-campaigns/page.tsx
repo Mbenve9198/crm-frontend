@@ -1800,7 +1800,7 @@ function CampaignsContent() {
                                 className="text-sm"
                               />
                             </div>
-                            <Select value={messageFilter} onValueChange={(value: any) => setMessageFilter(value)}>
+                            <Select value={messageFilter} onValueChange={(value: "all" | "pending" | "sent" | "failed") => setMessageFilter(value)}>
                               <SelectTrigger className="w-40">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1927,7 +1927,7 @@ function CampaignsContent() {
                               onClick={() => setShowAllMessages(true)}
                               className="text-xs mt-1 p-0 h-auto"
                             >
-                              Clicca "Mostra tutti" per visualizzarli
+                              Clicca &quot;Mostra tutti&quot; per visualizzarli
                             </Button>
                           </div>
                         )}

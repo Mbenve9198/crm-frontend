@@ -274,22 +274,15 @@ function CampaignsContent() {
     loadAllCampaigns();
   }, [loadSessions, loadContactLists, loadAvailableVariables, loadAllContacts, loadAllCampaigns]);
 
-  // ✅ AUTO-REFRESH: Ricarica campagne solo quando necessario (non durante operazioni)
-  useEffect(() => {
-    // Solo auto-refresh se non ci sono modal aperte o operazioni in corso
-    if (showNewCampaignDialog || showNewSessionDialog || selectedQrSession || isActioning) {
-      return; // Non fare auto-refresh durante operazioni utente
-    }
-
-    const interval = setInterval(() => {
-      if (!isLoading) {
-        console.log('🔄 Auto-refresh campagne per aggiornare statistiche...');
-        loadCampaigns();
-      }
-    }, 30000); // Ogni 30 secondi invece di 10 (meno invasivo)
-
-    return () => clearInterval(interval);
-  }, [loadCampaigns, isLoading, showNewCampaignDialog, showNewSessionDialog, selectedQrSession, isActioning]);
+  // ❌ AUTO-REFRESH DISABILITATO TEMPORANEAMENTE per fix sessioni
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     if (!isLoading) {
+  //       loadCampaigns();
+  //     }
+  //   }, 60000); // 1 minuto
+  //   return () => clearInterval(interval);
+  // }, [loadCampaigns, isLoading]);
 
   const handleCampaignAction = async (campaignId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
     setIsActioning(campaignId);
@@ -1342,12 +1335,12 @@ function CampaignsContent() {
                           <TableCell>{getStatusBadge(campaign.status)}</TableCell>
                           <TableCell>
                             <Badge variant={
-                              campaign.priority === 'alta' ? 'destructive' :
-                              campaign.priority === 'media' ? 'default' : 'secondary'
+                              (campaign.priority || 'media') === 'alta' ? 'destructive' :
+                              (campaign.priority || 'media') === 'media' ? 'default' : 'secondary'
                             } className="text-xs">
-                              {campaign.priority === 'alta' && '🔴 Alta'}
-                              {campaign.priority === 'media' && '🟡 Media'}
-                              {campaign.priority === 'bassa' && '🔵 Bassa'}
+                              {(campaign.priority || 'media') === 'alta' && '🔴 Alta'}
+                              {(campaign.priority || 'media') === 'media' && '🟡 Media'}
+                              {(campaign.priority || 'media') === 'bassa' && '🔵 Bassa'}
                             </Badge>
                           </TableCell>
                           <TableCell>{campaign.whatsappNumber}</TableCell>
@@ -1768,12 +1761,12 @@ function CampaignsContent() {
                           <label className="text-sm font-medium text-gray-600">Priorità Campagna</label>
                           <div className="mt-1">
                             <Badge variant={
-                              selectedCampaign.priority === 'alta' ? 'destructive' :
-                              selectedCampaign.priority === 'media' ? 'default' : 'secondary'
+                              (selectedCampaign.priority || 'media') === 'alta' ? 'destructive' :
+                              (selectedCampaign.priority || 'media') === 'media' ? 'default' : 'secondary'
                             }>
-                              {selectedCampaign.priority === 'alta' && '🔴 Alta'}
-                              {selectedCampaign.priority === 'media' && '🟡 Media'}
-                              {selectedCampaign.priority === 'bassa' && '🔵 Bassa'}
+                              {(selectedCampaign.priority || 'media') === 'alta' && '🔴 Alta'}
+                              {(selectedCampaign.priority || 'media') === 'media' && '🟡 Media'}
+                              {(selectedCampaign.priority || 'media') === 'bassa' && '🔵 Bassa'}
                             </Badge>
                           </div>
                         </div>

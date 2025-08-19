@@ -92,6 +92,7 @@ export interface SessionStatsResponse {
 
 // Tipi per Campagne WhatsApp
 export type CampaignStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'completed' | 'cancelled';
+export type CampaignPriority = 'alta' | 'media' | 'bassa';
 export type AttachmentType = 'image' | 'audio' | 'video' | 'document';
 
 export interface CampaignAttachment {
@@ -103,7 +104,6 @@ export interface CampaignAttachment {
 }
 
 export interface CampaignTiming {
-  intervalBetweenMessages: number; // secondi
   schedule: {
     startTime: string; // HH:MM - fascia oraria di inizio
     endTime: string;   // HH:MM - fascia oraria di fine  
@@ -167,6 +167,7 @@ export interface WhatsappCampaign {
   templateVariables: string[];
   messageSequences?: MessageSequence[];  // ✅ Aggiunto supporto per sequenze
   attachments: CampaignAttachment[];
+  priority: CampaignPriority; // ✅ Nuovo sistema priorità
   timing: CampaignTiming;
   status: CampaignStatus;
   stats: CampaignStats;
@@ -218,6 +219,7 @@ export interface CreateCampaignRequest {
   contactFilters?: CampaignContactFilters;
   messageTemplate: string; // Primo messaggio
   messageSequences?: MessageSequence[]; // Messaggi di follow-up
+  priority: CampaignPriority; // ✅ Sistema priorità invece di timing manuale
   timing: CampaignTiming;
   scheduledStartAt?: string;
 }
@@ -229,6 +231,7 @@ export interface UpdateCampaignRequest {
   targetList?: string;
   contactFilters?: CampaignContactFilters;
   messageTemplate?: string;
+  priority?: CampaignPriority; // ✅ Sistema priorità
   timing?: CampaignTiming;
   scheduledStartAt?: string;
 }

@@ -96,13 +96,13 @@ function CampaignsContent() {
     targetList: '',
     messageTemplate: '',
     messageSequences: [],
+    priority: 'media', // ✅ Default priorità media
     contactFilters: {
       excludeContacts: [],
       excludeFromCampaigns: [],
       excludeContactedWithinDays: undefined
     },
     timing: {
-      intervalBetweenMessages: 30,
       schedule: {
         startTime: '09:00',
         endTime: '18:00',
@@ -473,8 +473,8 @@ function CampaignsContent() {
             excludeFromCampaigns: [],
             excludeContactedWithinDays: undefined
           },
+          priority: 'media', // ✅ Default priorità media
           timing: {
-            intervalBetweenMessages: 30,
             schedule: {
               startTime: '09:00',
               endTime: '18:00',
@@ -1233,21 +1233,29 @@ function CampaignsContent() {
                         </div>
                       </div>
 
-                      {/* Configurazione Timing */}
+                      {/* Configurazione Smart */}
                       <div className="space-y-4">
                         <div>
-                          <label className="text-sm font-medium">Intervallo tra messaggi (secondi)</label>
-                          <Input
-                            type="number"
-                            min="5"
-                            max="3600"
-                            value={newCampaignData.timing.intervalBetweenMessages}
-                            onChange={(e) => setNewCampaignData(prev => ({ 
-                              ...prev, 
-                              timing: { ...prev.timing, intervalBetweenMessages: Number(e.target.value) }
-                            }))}
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Tempo di attesa tra un messaggio e l&apos;altro</p>
+                          <label className="text-sm font-medium">Priorità Campagna</label>
+                          <Select value={newCampaignData.priority} onValueChange={(value: 'alta' | 'media' | 'bassa') => 
+                            setNewCampaignData(prev => ({ ...prev, priority: value }))
+                          }>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleziona priorità" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="alta">
+                                🔴 Alta - Invio rapido (30 msg/ora)
+                              </SelectItem>
+                              <SelectItem value="media">
+                                🟡 Media - Invio standard (25 msg/ora)
+                              </SelectItem>
+                              <SelectItem value="bassa">
+                                🔵 Bassa - Invio sicuro (15 msg/ora)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-gray-500 mt-1">Il sistema gestisce automaticamente timing e rate limiting per sicurezza WhatsApp</p>
                         </div>
 
                         <div>
@@ -1307,6 +1315,7 @@ function CampaignsContent() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Stato</TableHead>
+                        <TableHead>Priorità</TableHead>
                         <TableHead>Sessione</TableHead>
                         <TableHead>Lista Target</TableHead>
                         <TableHead>Messaggi</TableHead>
@@ -1326,6 +1335,16 @@ function CampaignsContent() {
                             </div>
                           </TableCell>
                           <TableCell>{getStatusBadge(campaign.status)}</TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              campaign.priority === 'alta' ? 'destructive' :
+                              campaign.priority === 'media' ? 'default' : 'secondary'
+                            } className="text-xs">
+                              {campaign.priority === 'alta' && '🔴 Alta'}
+                              {campaign.priority === 'media' && '🟡 Media'}
+                              {campaign.priority === 'bassa' && '🔵 Bassa'}
+                            </Badge>
+                          </TableCell>
                           <TableCell>{campaign.whatsappNumber}</TableCell>
                           <TableCell>{campaign.targetList}</TableCell>
                           <TableCell>
@@ -1741,8 +1760,17 @@ function CampaignsContent() {
                     <CardContent className="space-y-3">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-600">Intervallo tra Messaggi</label>
-                          <div className="mt-1">{selectedCampaign.timing.intervalBetweenMessages} secondi</div>
+                          <label className="text-sm font-medium text-gray-600">Priorità Campagna</label>
+                          <div className="mt-1">
+                            <Badge variant={
+                              selectedCampaign.priority === 'alta' ? 'destructive' :
+                              selectedCampaign.priority === 'media' ? 'default' : 'secondary'
+                            }>
+                              {selectedCampaign.priority === 'alta' && '🔴 Alta'}
+                              {selectedCampaign.priority === 'media' && '🟡 Media'}
+                              {selectedCampaign.priority === 'bassa' && '🔵 Bassa'}
+                            </Badge>
+                          </div>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-600">Fascia Oraria</label>

@@ -274,17 +274,22 @@ function CampaignsContent() {
     loadAllCampaigns();
   }, [loadSessions, loadContactLists, loadAvailableVariables, loadAllContacts, loadAllCampaigns]);
 
-  // ✅ AUTO-REFRESH: Ricarica campagne ogni 10 secondi per aggiornare statistiche
+  // ✅ AUTO-REFRESH: Ricarica campagne solo quando necessario (non durante operazioni)
   useEffect(() => {
+    // Solo auto-refresh se non ci sono modal aperte o operazioni in corso
+    if (showNewCampaignDialog || showNewSessionDialog || selectedQrSession || isActioning) {
+      return; // Non fare auto-refresh durante operazioni utente
+    }
+
     const interval = setInterval(() => {
-      if (!isLoading) { // Solo se non è già in caricamento
+      if (!isLoading) {
         console.log('🔄 Auto-refresh campagne per aggiornare statistiche...');
         loadCampaigns();
       }
-    }, 10000); // Ogni 10 secondi
+    }, 30000); // Ogni 30 secondi invece di 10 (meno invasivo)
 
     return () => clearInterval(interval);
-  }, [loadCampaigns, isLoading]);
+  }, [loadCampaigns, isLoading, showNewCampaignDialog, showNewSessionDialog, selectedQrSession, isActioning]);
 
   const handleCampaignAction = async (campaignId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
     setIsActioning(campaignId);

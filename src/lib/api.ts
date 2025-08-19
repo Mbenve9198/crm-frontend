@@ -398,6 +398,18 @@ class ApiClient {
     });
   }
 
+  async removeContactsFromListBulk(contactIds: string[], listName: string): Promise<ApiResponse<{
+    removedCount: number;
+    notInList: number;
+    totalProcessed: number;
+    totalRequested: number;
+  }>> {
+    return this.request(`/contacts/lists/${listName}/bulk-remove`, {
+      method: 'POST',
+      body: JSON.stringify({ contactIds }),
+    });
+  }
+
   async removeContactFromList(contactId: string, listName: string): Promise<ApiResponse<Contact>> {
     return this.request(`/contacts/lists/${listName}/contacts/${contactId}`, {
       method: 'DELETE',

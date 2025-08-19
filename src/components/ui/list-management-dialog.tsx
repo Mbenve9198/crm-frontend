@@ -45,6 +45,7 @@ export function ListManagementDialog({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'add' | 'remove'>('add');
 
   // Carica le liste esistenti quando il dialog si apre
   useEffect(() => {
@@ -52,6 +53,13 @@ export function ListManagementDialog({
       loadLists();
     }
   }, [open]);
+
+  // Quando si cambia da "aggiungi" a "rimuovi", disabilita "nuova lista"
+  useEffect(() => {
+    if (actionType === 'remove' && isCreatingNew) {
+      setIsCreatingNew(false);
+    }
+  }, [actionType]);
 
   const loadLists = async () => {
     try {
@@ -73,7 +81,7 @@ export function ListManagementDialog({
     }
   };
 
-  const handleAddToList = async () => {
+  const handleListAction = async () => {
     const listName = isCreatingNew ? newListName.trim() : selectedList;
     
     if (!listName) {
@@ -86,24 +94,46 @@ export function ListManagementDialog({
       return;
     }
 
+    // Per la rimozione, non permettere la creazione di nuove liste
+    if (actionType === 'remove' && isCreatingNew) {
+      setError("Non puoi rimuovere contatti da una lista che non esiste");
+      return;
+    }
+
     try {
       setIsProcessing(true);
       setError(null);
       
       const contactIds = Array.from(selectedContacts);
-      console.log(`📋 Aggiungendo ${contactIds.length} contatti alla lista "${listName}"`);
       
-      const response = await apiClient.addContactsToListBulk(contactIds, listName);
+      let response;
+      if (actionType === 'add') {
+        console.log(`📋 Aggiungendo ${contactIds.length} contatti alla lista "${listName}"`);
+        response = await apiClient.addContactsToListBulk(contactIds, listName);
+      } else {
+        console.log(`📋 Rimuovendo ${contactIds.length} contatti dalla lista "${listName}"`);
+        response = await apiClient.removeContactsFromListBulk(contactIds, listName);
+      }
       
       if (response.success && response.data) {
-        const { addedCount, alreadyInList } = response.data;
-        
         let message = `✅ Operazione completata!`;
-        if (addedCount > 0) {
-          message += `\n• ${addedCount} contatti aggiunti alla lista "${listName}"`;
-        }
-        if (alreadyInList > 0) {
-          message += `\n• ${alreadyInList} contatti erano già nella lista`;
+        
+        if (actionType === 'add') {
+          const data = response.data as { addedCount: number; alreadyInList: number; totalProcessed: number; totalRequested: number; };
+          if (data.addedCount > 0) {
+            message += `\n• ${data.addedCount} contatti aggiunti alla lista "${listName}"`;
+          }
+          if (data.alreadyInList > 0) {
+            message += `\n• ${data.alreadyInList} contatti erano già nella lista`;
+          }
+        } else {
+          const data = response.data as { removedCount: number; notInList: number; totalProcessed: number; totalRequested: number; };
+          if (data.removedCount > 0) {
+            message += `\n• ${data.removedCount} contatti rimossi dalla lista "${listName}"`;
+          }
+          if (data.notInList > 0) {
+            message += `\n• ${data.notInList} contatti non erano nella lista`;
+          }
         }
         
         alert(message);
@@ -112,10 +142,10 @@ export function ListManagementDialog({
         onOpenChange(false);
         onComplete();
       } else {
-        throw new Error(response.message || 'Errore durante l\'aggiunta alla lista');
+        throw new Error(response.message || `Errore durante ${actionType === 'add' ? 'l\'aggiunta alla' : 'la rimozione dalla'} lista`);
       }
     } catch (error) {
-      console.error('❌ Errore aggiunta alla lista:', error);
+      console.error(`❌ Errore ${actionType === 'add' ? 'aggiunta alla' : 'rimozione dalla'} lista:`, error);
       setError(error instanceof Error ? error.message : 'Errore sconosciuto');
     } finally {
       setIsProcessing(false);
@@ -128,6 +158,7 @@ export function ListManagementDialog({
     setSelectedList("");
     setNewListName("");
     setIsCreatingNew(false);
+    setActionType('add');
     setError(null);
   };
 
@@ -151,8 +182,31 @@ export function ListManagementDialog({
               </span>
             </div>
             <p className="text-sm text-blue-600 mt-1">
-              Verranno aggiunti alla lista selezionata
+              Verranno {actionType === 'add' ? 'aggiunti alla' : 'rimossi dalla'} lista selezionata
             </p>
+          </div>
+
+          {/* Scelta azione */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700">Azione da eseguire</label>
+            <div className="flex gap-2">
+              <Button
+                variant={actionType === 'add' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActionType('add')}
+                className="flex-1"
+              >
+                ➕ Aggiungi alla lista
+              </Button>
+              <Button
+                variant={actionType === 'remove' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActionType('remove')}
+                className="flex-1"
+              >
+                ➖ Rimuovi dalla lista
+              </Button>
+            </div>
           </div>
 
           {/* Toggle modalità */}
@@ -169,6 +223,7 @@ export function ListManagementDialog({
               variant={isCreatingNew ? "default" : "outline"}
               size="sm"
               onClick={() => setIsCreatingNew(true)}
+              disabled={actionType === 'remove'}
               className="flex-1"
             >
               <Plus className="h-4 w-4 mr-1" />
@@ -251,7 +306,7 @@ export function ListManagementDialog({
               Annulla
             </Button>
             <Button
-              onClick={handleAddToList}
+              onClick={handleListAction}
               disabled={isProcessing || (!selectedList && !newListName.trim())}
               className="flex-1"
             >
@@ -263,7 +318,7 @@ export function ListManagementDialog({
               ) : (
                 <>
                   <Tag className="h-4 w-4 mr-2" />
-                  Aggiungi alla Lista
+                  {actionType === 'add' ? 'Aggiungi alla Lista' : 'Rimuovi dalla Lista'}
                 </>
               )}
             </Button>

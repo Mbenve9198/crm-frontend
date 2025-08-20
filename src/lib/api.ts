@@ -62,16 +62,23 @@ type ContactStats = {
   contactsByList: Record<string, number>;
 };
 
-type CsvAnalysisResult = {
+export type CsvAnalysisResult = {
   headers: string[];          // Il backend restituisce "headers" non "columns"
   sampleRows: Record<string, string>[]; // Il backend restituisce "sampleRows" non "preview"
   availableFields: {
+    fixed: string[];
+    existingProperties: string[];
+    newProperties: string;
+  };
+  mappingInstructions: Record<string, string>;
+  dynamicPropertiesInfo: {
     existing: string[];
-    properties: string;
+    count: number;
+    usage: string;
   };
 };
 
-type CsvImportResult = {
+export type CsvImportResult = {
   imported: number;
   skipped: number;
   updated: number;

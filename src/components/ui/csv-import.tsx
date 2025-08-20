@@ -34,29 +34,26 @@ import {
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-type CsvAnalysisResult = {
-  headers: string[];          // Il backend restituisce "headers" non "columns"
-  sampleRows: Record<string, string>[]; // Il backend restituisce "sampleRows" non "preview"
-  availableFields: {
-    existing: string[];
-    properties: string;
-  };
-};
-
-type CsvImportResult = {
-  imported: number;
-  skipped: number;
-  updated: number;
-  errors: string[];
-};
+// Importa i tipi dalla libreria API
+import { CsvAnalysisResult, CsvImportResult } from "@/lib/api";
 
 type ImportStep = "upload" | "mapping" | "preview" | "importing" | "complete";
 
-const AVAILABLE_FIELDS = [
-  { value: "name", label: "Nome", required: true },
-  { value: "email", label: "Email", required: false },
-  { value: "phone", label: "Telefono", required: false },
-  { value: "lists", label: "Liste (separate da virgola)", required: false },
+type MappingOption = {
+  value: string;
+  label: string;
+  description: string;
+  required?: boolean;
+  type?: "fixed" | "existing" | "new" | "special";
+};
+
+// Campi base - verranno sostituiti dai dati del backend quando disponibili
+const DEFAULT_FIELDS: MappingOption[] = [
+  { value: "name", label: "Nome", description: "Campo nome del contatto (obbligatorio)", required: true, type: "fixed" },
+  { value: "email", label: "Email", description: "Campo email (opzionale ma unico se fornito)", required: false, type: "fixed" },
+  { value: "phone", label: "Telefono", description: "Campo telefono (opzionale)", required: false, type: "fixed" },
+  { value: "lists", label: "Liste", description: "Liste separate da virgola", required: false, type: "fixed" },
+  { value: "ignore", label: "Ignora colonna", description: "Ignora questa colonna durante l'importazione", required: false, type: "special" },
 ];
 
 export function CsvImportDialog({ 
@@ -72,6 +69,7 @@ export function CsvImportDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [analysisResult, setAnalysisResult] = useState<CsvAnalysisResult | null>(null);
+  const [mappingOptions, setMappingOptions] = useState<MappingOption[]>(DEFAULT_FIELDS);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [customProperties, setCustomProperties] = useState<string[]>([]);
   const [newPropertyName, setNewPropertyName] = useState("");
@@ -80,6 +78,48 @@ export function CsvImportDialog({
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [isTestingAuth, setIsTestingAuth] = useState(false);
+
+  // Costruisce le opzioni di mappatura dai dati del backend
+  const buildMappingOptions = (result: CsvAnalysisResult): MappingOption[] => {
+    const options: MappingOption[] = [];
+
+    // Campi fissi
+    result.availableFields.fixed.forEach(field => {
+      const description = result.mappingInstructions[field] || `Campo ${field}`;
+      const required = field === 'name'; // Solo il nome è obbligatorio
+      options.push({
+        value: field,
+        label: field === 'name' ? 'Nome' : field === 'email' ? 'Email' : field === 'phone' ? 'Telefono' : field === 'lists' ? 'Liste' : field,
+        description,
+        required,
+        type: 'fixed'
+      });
+    });
+
+    // Proprietà dinamiche esistenti
+    result.availableFields.existingProperties.forEach(prop => {
+      const propertyKey = `properties.${prop}`;
+      const description = result.mappingInstructions[propertyKey] || `Proprietà esistente: ${prop}`;
+      options.push({
+        value: propertyKey,
+        label: `📋 ${prop}`,
+        description,
+        required: false,
+        type: 'existing'
+      });
+    });
+
+    // Opzione ignora
+    options.push({
+      value: 'ignore',
+      label: 'Ignora colonna',
+      description: 'Ignora questa colonna durante l\'importazione',
+      required: false,
+      type: 'special'
+    });
+
+    return options;
+  };
 
   const handleTestAuth = async () => {
     setIsTestingAuth(true);
@@ -190,7 +230,21 @@ export function CsvImportDialog({
           });
         }
         
-        setAnalysisResult(response.data);
+        // Assicuriamoci che i campi richiesti esistano
+        const completeResult: CsvAnalysisResult = {
+          headers: response.data.headers || [],
+          sampleRows: response.data.sampleRows || [],
+          availableFields: response.data.availableFields || { fixed: [], existingProperties: [], newProperties: '' },
+          mappingInstructions: response.data.mappingInstructions || {},
+          dynamicPropertiesInfo: response.data.dynamicPropertiesInfo || { existing: [], count: 0, usage: '' }
+        };
+        
+        setAnalysisResult(completeResult);
+        
+        // Costruisce le opzioni di mappatura dai dati del backend
+        const options = buildMappingOptions(completeResult);
+        setMappingOptions(options);
+        
         setCurrentStep("mapping");
         
         // Auto-mappatura intelligente

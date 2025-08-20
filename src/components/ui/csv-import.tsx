@@ -343,13 +343,14 @@ export function CsvImportDialog({
 
   const getAllAvailableFields = () => {
     return [
-      ...AVAILABLE_FIELDS,
+      ...mappingOptions,
       ...customProperties.map((prop) => ({
         value: prop,
         label: prop.replace("properties.", "").charAt(0).toUpperCase() + prop.replace("properties.", "").slice(1),
+        description: `Proprietà personalizzata: ${prop}`,
         required: false,
+        type: 'new' as const
       })),
-      { value: "ignore", label: "Ignora colonna", required: false },
     ];
   };
 
@@ -373,7 +374,7 @@ export function CsvImportDialog({
   };
 
   const validateMapping = () => {
-    const requiredFields = AVAILABLE_FIELDS.filter((f) => f.required).map((f) => f.value);
+    const requiredFields = mappingOptions.filter((f) => f.required).map((f) => f.value);
     const mappedFields = Object.values(columnMapping);
     
     return requiredFields.every((field) => mappedFields.includes(field));
@@ -649,7 +650,7 @@ export function CsvImportDialog({
                           <span className="font-medium">
                             {targetField.startsWith("properties.") 
                               ? targetField.replace("properties.", "").charAt(0).toUpperCase() + targetField.replace("properties.", "").slice(1)
-                              : AVAILABLE_FIELDS.find(f => f.value === targetField)?.label || targetField
+                              : mappingOptions.find(f => f.value === targetField)?.label || targetField
                             }:
                           </span>{" "}
                           <span className="text-gray-600">{safeStringify(row[csvCol])}</span>

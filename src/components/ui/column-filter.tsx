@@ -28,7 +28,9 @@ type ColumnFilterComponentProps = {
 
 const filterConditions: { value: FilterCondition; label: string; type: 'text' | 'number' | 'select' }[] = [
   { value: 'equals', label: 'È uguale a', type: 'text' },
+  { value: 'not_equals', label: 'Non è uguale a', type: 'text' },
   { value: 'contains', label: 'Contiene', type: 'text' },
+  { value: 'not_contains', label: 'Non contiene', type: 'text' },
   { value: 'starts_with', label: 'Inizia con', type: 'text' },
   { value: 'is_empty', label: 'È vuoto', type: 'text' },
   { value: 'is_not_empty', label: 'Non è vuoto', type: 'text' },

@@ -83,7 +83,9 @@ export type TablePreferencesResponse = {
 // Nuovi tipi per il sistema di filtri avanzato
 export type FilterCondition = 
   | 'equals'
+  | 'not_equals'
   | 'contains'
+  | 'not_contains'
   | 'starts_with'
   | 'is_empty'
   | 'is_not_empty';

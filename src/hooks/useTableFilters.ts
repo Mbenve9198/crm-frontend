@@ -49,8 +49,12 @@ export function useTableFilters({ contacts, dynamicProperties }: UseTableFilters
       switch (type) {
         case 'equals':
           return value === filterValue;
+        case 'not_equals':
+          return value !== filterValue;
         case 'contains':
           return value.toLowerCase().includes(String(filterValue).toLowerCase());
+        case 'not_contains':
+          return !value.toLowerCase().includes(String(filterValue).toLowerCase());
         case 'starts_with':
           return value.toLowerCase().startsWith(String(filterValue).toLowerCase());
         case 'is_empty':

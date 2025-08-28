@@ -1946,11 +1946,17 @@ function CampaignsContent() {
                           if (messageSearch.trim()) {
                             const searchLower = messageSearch.toLowerCase().trim();
                             filteredMessages = filteredMessages.filter(message => {
+                              // Debug log per capire il problema
+                              if (!message.contactId) {
+                                console.warn('⚠️ Message without contactId found:', message);
+                              }
+                              
                               const contact = allContacts.find(c => c._id === message.contactId);
+                              const contactIdStr = message.contactId ? message.contactId.toString() : '';
                               return (
                                 contact?.name?.toLowerCase().includes(searchLower) ||
-                                message.phoneNumber.includes(searchLower) ||
-                                message.contactId.toString().toLowerCase().includes(searchLower)
+                                message.phoneNumber?.includes(searchLower) ||
+                                contactIdStr.toLowerCase().includes(searchLower)
                               );
                             });
                           }
@@ -1972,7 +1978,7 @@ function CampaignsContent() {
                                     {message.phoneNumber}
                                   </span>
                                   <span className="text-xs text-gray-500">
-                                    ID: {message.contactId.slice(-4)}
+                                    ID: {message.contactId ? message.contactId.toString().slice(-4) : 'N/A'}
                                   </span>
                                 </div>
                                 {message.sequenceIndex && message.sequenceIndex > 0 && (
@@ -2099,10 +2105,11 @@ function CampaignsContent() {
                           const searchLower = messageSearch.toLowerCase().trim();
                           filteredMessages = filteredMessages.filter(message => {
                             const contact = allContacts.find(c => c._id === message.contactId);
+                            const contactIdStr = message.contactId ? message.contactId.toString() : '';
                             return (
                               contact?.name?.toLowerCase().includes(searchLower) ||
-                              message.phoneNumber.includes(searchLower) ||
-                              message.contactId.toString().toLowerCase().includes(searchLower)
+                              message.phoneNumber?.includes(searchLower) ||
+                              contactIdStr.toLowerCase().includes(searchLower)
                             );
                           });
                           return filteredMessages.length === 0;

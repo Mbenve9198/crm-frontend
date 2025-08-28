@@ -36,7 +36,8 @@ import {
   CampaignPreviewResponse,
   UploadAttachmentsResponse,
   CampaignFilters,
-  UpdateMessageStatusResponse
+  UpdateMessageStatusResponse,
+  UpdateMessageStatusRequest
 } from '@/types/whatsapp';
 
 // Tipi per statistiche e paginazione
@@ -1041,13 +1042,14 @@ class ApiClient {
     });
   }
 
-  async updateMessageStatus(campaignId: string, messageId: string, status: string, data?: { messageId?: string; errorMessage?: string }): Promise<ApiResponse<UpdateMessageStatusResponse>> {
+  /**
+   * Aggiorna lo status di un messaggio specifico in una campagna
+   */
+  async updateMessageStatus(campaignId: string, messageId: string, request: UpdateMessageStatusRequest): Promise<ApiResponse<UpdateMessageStatusResponse>> {
     return this.request<UpdateMessageStatusResponse>(`/whatsapp-campaigns/${campaignId}/messages/${messageId}/status`, {
       method: 'PUT',
-      body: JSON.stringify({
-        status,
-        ...data
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
     });
   }
 }

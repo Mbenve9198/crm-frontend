@@ -18,7 +18,9 @@ import {
   RefreshCw,
   UserX,
   Ban,
-  Clock
+  Clock,
+  CheckCircle,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -120,7 +122,7 @@ function CampaignsContent() {
   const [selectedCampaign, setSelectedCampaign] = useState<WhatsappCampaign | null>(null);
   const [showCampaignDetails, setShowCampaignDetails] = useState(false);
   const [showAllMessages, setShowAllMessages] = useState(false);
-  const [messageFilter, setMessageFilter] = useState<'all' | 'pending' | 'sent' | 'failed' | 'no_whatsapp'>('all');
+  const [messageFilter, setMessageFilter] = useState<'all' | 'pending' | 'sent' | 'failed' | 'no_whatsapp' | 'replied' | 'not_interested'>('all');
   const [messageSearch, setMessageSearch] = useState('');
   
   // Stati per cambio stato messaggio
@@ -136,8 +138,10 @@ function CampaignsContent() {
       const response = await apiClient.updateMessageStatus(
         selectedCampaign._id, 
         messageId, 
-        newStatus, 
-        additionalData
+        {
+          status: newStatus as 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'replied' | 'not_interested',
+          additionalData
+        }
       );
       
       if (response.success && response.data) {
@@ -150,10 +154,20 @@ function CampaignsContent() {
         // Ricarica anche la lista delle campagne per aggiornare le statistiche
         await loadCampaigns();
         
+        // Mostra notifica specifica per i nuovi stati
+        if (newStatus === 'replied') {
+          toast.success('✅ Contatto marcato come "Ha risposto" - follow-up cancellati');
+        } else if (newStatus === 'not_interested') {
+          toast.success('🚫 Contatto marcato come "Non interessato" - follow-up cancellati');
+        } else {
+          toast.success(`✅ Stato messaggio aggiornato: ${response.data.oldStatus} → ${response.data.newStatus}`);
+        }
+        
         console.log(`✅ Stato messaggio aggiornato: ${response.data.oldStatus} → ${response.data.newStatus}`);
       }
     } catch (error) {
       console.error('Errore aggiornamento stato messaggio:', error);
+      toast.error('❌ Errore aggiornamento stato messaggio');
     } finally {
       setUpdatingMessageId(null);
     }
@@ -1700,18 +1714,54 @@ function CampaignsContent() {
                     </Card>
                     <Card>
                       <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-yellow-600">
-                          {selectedCampaign.stats.repliesReceived}
-                        </div>
-                        <div className="text-sm text-gray-600">Risposte</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4 text-center">
                         <div className="text-2xl font-bold text-red-600">
                           {selectedCampaign.stats.errors}
                         </div>
                         <div className="text-sm text-gray-600">Errori</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {selectedCampaign.stats.replyRate || 0}%
+                        </div>
+                        <div className="text-sm text-gray-600">Reply Rate</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Statistiche Dettagliate */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {selectedCampaign.stats.replied || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Ha Risposto</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {selectedCampaign.stats.notInterested || 0}
+                        </div>
+                        <div className="text-sm text-gray-600">Non Interessati</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-teal-600">
+                          {selectedCampaign.stats.conversionRate || 0}%
+                        </div>
+                        <div className="text-sm text-gray-600">Conversion Rate</div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {selectedCampaign.stats.repliesReceived}
+                        </div>
+                        <div className="text-sm text-gray-600">Risposte Auto</div>
                       </CardContent>
                     </Card>
                   </div>
@@ -1862,7 +1912,7 @@ function CampaignsContent() {
                                 className="text-sm"
                               />
                             </div>
-                            <Select value={messageFilter} onValueChange={(value: "all" | "pending" | "sent" | "failed" | "no_whatsapp") => setMessageFilter(value)}>
+                            <Select value={messageFilter} onValueChange={(value: "all" | "pending" | "sent" | "failed" | "no_whatsapp" | "replied" | "not_interested") => setMessageFilter(value)}>
                               <SelectTrigger className="w-40">
                                 <SelectValue />
                               </SelectTrigger>
@@ -1872,6 +1922,8 @@ function CampaignsContent() {
                                 <SelectItem value="sent">Inviati</SelectItem>
                                 <SelectItem value="failed">Falliti</SelectItem>
                                 <SelectItem value="no_whatsapp">No WhatsApp</SelectItem>
+                                <SelectItem value="replied">Ha risposto</SelectItem>
+                                <SelectItem value="not_interested">Non interessato</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1939,6 +1991,8 @@ function CampaignsContent() {
                                         message.status === 'read' ? 'default' :
                                         message.status === 'failed' ? 'destructive' :
                                         message.status === 'no_whatsapp' ? 'outline' :
+                                        message.status === 'replied' ? 'default' :
+                                        message.status === 'not_interested' ? 'outline' :
                                         'secondary'
                                       } className="capitalize cursor-pointer hover:opacity-80">
                                         {updatingMessageId === message._id ? (
@@ -1951,6 +2005,8 @@ function CampaignsContent() {
                                              message.status === 'failed' ? 'Fallito' :
                                              message.status === 'no_whatsapp' ? 'No WhatsApp' :
                                              message.status === 'pending' ? 'In Attesa' :
+                                             message.status === 'replied' ? 'Ha Risposto' :
+                                             message.status === 'not_interested' ? 'Non Interessato' :
                                              message.status}
                                           </>
                                         )}
@@ -1999,6 +2055,22 @@ function CampaignsContent() {
                                     >
                                       <Ban className="w-4 h-4 mr-2" />
                                       No WhatsApp
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'replied')}
+                                      disabled={updatingMessageId === message._id}
+                                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    >
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Ha Risposto
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                      onClick={() => updateMessageStatus(message._id, 'not_interested')}
+                                      disabled={updatingMessageId === message._id}
+                                      className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                    >
+                                      <UserX className="w-4 h-4 mr-2" />
+                                      Non Interessato
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>

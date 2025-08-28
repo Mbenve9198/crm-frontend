@@ -127,7 +127,7 @@ export interface MessageQueueItem {
   contactId: string;
   phoneNumber: string;
   compiledMessage: string;
-  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'no_whatsapp';
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'no_whatsapp' | 'replied' | 'not_interested';
   scheduledAt?: string;
   sentAt?: string;
   deliveredAt?: string;
@@ -153,6 +153,11 @@ export interface CampaignStats {
   repliesReceived: number;
   errors: number;
   noWhatsapp: number;
+  // ✅ Nuove statistiche per gestione manuale
+  replied: number;
+  notInterested: number;
+  replyRate: number; // Percentuale (replied + notInterested) / messagesSent
+  conversionRate: number; // Percentuale replied / messagesSent
 }
 
 export interface WhatsappCampaign {
@@ -373,4 +378,12 @@ export interface UpdateMessageStatusResponse {
   newStatus: string;
   updatedAt: string;
   stats: CampaignStats;
+}
+
+export interface UpdateMessageStatusRequest {
+  status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'replied' | 'not_interested';
+  additionalData?: {
+    messageId?: string;
+    errorMessage?: string;
+  };
 } 

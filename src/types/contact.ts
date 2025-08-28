@@ -1,4 +1,4 @@
-export type ContactStatus = 'da contattare' | 'contattato' | 'da richiamare' | 'interessato' | 'qr code inviato' | 'free trial iniziato' | 'won' | 'lost';
+export type ContactStatus = 'da contattare' | 'contattato' | 'da richiamare' | 'interessato' | 'non interessato' | 'qr code inviato' | 'free trial iniziato' | 'won' | 'lost';
 
 export type Contact = {
   _id: string;

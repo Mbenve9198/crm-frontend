@@ -1950,7 +1950,7 @@ function CampaignsContent() {
                               return (
                                 contact?.name?.toLowerCase().includes(searchLower) ||
                                 message.phoneNumber.includes(searchLower) ||
-                                message.contactId.toLowerCase().includes(searchLower)
+                                message.contactId.toString().toLowerCase().includes(searchLower)
                               );
                             });
                           }
@@ -2102,7 +2102,7 @@ function CampaignsContent() {
                             return (
                               contact?.name?.toLowerCase().includes(searchLower) ||
                               message.phoneNumber.includes(searchLower) ||
-                              message.contactId.toLowerCase().includes(searchLower)
+                              message.contactId.toString().toLowerCase().includes(searchLower)
                             );
                           });
                           return filteredMessages.length === 0;

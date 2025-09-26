@@ -45,7 +45,8 @@ import {
   X,
   Loader2,
   Tag,
-  Upload
+  Upload,
+  UserCheck
 } from "lucide-react";
 import { Contact, User } from "@/types/contact";
 import { apiClient } from "@/lib/api";
@@ -53,6 +54,7 @@ import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
 import { CsvImportDialog } from "./csv-import";
 import { CallDialog } from "./call-dialog";
+import { BulkChangeOwnerDialog } from "./bulk-change-owner-dialog";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 import { ColumnFilterComponent } from "./column-filter";
 import { useTableFilters } from "@/hooks/useTableFilters";
@@ -166,6 +168,7 @@ function ContactsTable({
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [showListDialog, setShowListDialog] = useState(false);
+  const [showChangeOwnerDialog, setShowChangeOwnerDialog] = useState(false);
   const [showPhoneDialog, setShowPhoneDialog] = useState(false);
   const [selectedContactForPhone, setSelectedContactForPhone] = useState<Contact | null>(null);
 
@@ -441,6 +444,15 @@ function ContactsTable({
 
   // Gestione completamento dialog liste
   const handleListManagementComplete = () => {
+    // Pulisce la selezione e ricarica i dati
+    clearSelection();
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  // Gestione completamento cambio owner
+  const handleChangeOwnerComplete = () => {
     // Pulisce la selezione e ricarica i dati
     clearSelection();
     if (onRefresh) {
@@ -1173,6 +1185,16 @@ function ContactsTable({
               </Button>
               
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowChangeOwnerDialog(true)}
+                disabled={isBulkDeleting}
+              >
+                <UserCheck className="h-4 w-4 mr-1" />
+                Cambia Proprietario
+              </Button>
+              
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
@@ -1201,6 +1223,14 @@ function ContactsTable({
         onOpenChange={setShowListDialog}
         selectedContacts={selectedContacts}
         onComplete={handleListManagementComplete}
+      />
+
+      {/* Dialog cambio proprietario */}
+      <BulkChangeOwnerDialog
+        open={showChangeOwnerDialog}
+        onOpenChange={setShowChangeOwnerDialog}
+        selectedContacts={selectedContacts}
+        onComplete={handleChangeOwnerComplete}
       />
 
       {/* Dialog per azioni telefono */}

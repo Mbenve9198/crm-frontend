@@ -28,6 +28,7 @@ export interface WhatsappSession {
     autoRefresh: boolean;
     qrTimeout: number;
     authTimeout: number;
+    licenseKey?: string; // Licenza OpenWA specifica per questa sessione
   };
   eventLogs: Array<{
     event: string;
@@ -331,6 +332,7 @@ export interface SessionFormData {
     autoRefresh?: boolean;
     qrTimeout?: number;
     authTimeout?: number;
+    licenseKey?: string; // Licenza OpenWA per questa sessione
   };
 }
 

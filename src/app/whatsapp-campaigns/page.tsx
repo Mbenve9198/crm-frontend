@@ -505,21 +505,78 @@ function CampaignsContent() {
   const handleShowQrCode = async (sessionId: string) => {
     try {
       console.log('🔍 Richiesta QR code per sessione:', sessionId);
-      const response = await apiClient.getWhatsAppSessionQrCode(sessionId);
-      console.log('📱 Risposta API QR code:', response);
+      console.log('🔍 URL API:', process.env.NEXT_PUBLIC_API_URL);
+      console.log('🔍 Token presente:', !!apiClient.getToken());
       
-      if (response.success && response.data) {
+      const response = await apiClient.getWhatsAppSessionQrCode(sessionId);
+      console.log('📱 Risposta API QR code completa:', {
+        success: response.success,
+        data: response.data ? {
+          qrCode: response.data.qrCode ? `${response.data.qrCode.substring(0, 50)}...` : 'null',
+          generatedAt: response.data.generatedAt,
+          expiresAt: response.data.expiresAt
+        } : null,
+        message: response.message
+      });
+      
+      if (response.success && response.data && response.data.qrCode) {
         console.log('✅ QR code ricevuto, apertura dialog...');
-        setQrCodeData(response.data.qrCode);
-        setSelectedQrSession(sessionId);
+        console.log('🔍 Lunghezza QR code:', response.data.qrCode.length);
+        console.log('🔍 Formato QR code:', response.data.qrCode.startsWith('data:image') ? 'Data URL' : 'Raw string');
+        
+        // Reset stato precedente
+        setQrCodeData(null);
+        setSelectedQrSession(null);
+        
+                 // Imposta nuovo stato
+         setTimeout(() => {
+           setQrCodeData(response.data?.qrCode || null);
+           setSelectedQrSession(sessionId);
+         }, 100);
+        
         toast.success('QR code caricato!');
+        console.log('✅ Dialog dovrebbe aprirsi ora...');
       } else {
-        console.warn('⚠️ QR code non disponibile:', response.message || 'Nessun dato');
-        toast.warning(response.message || 'QR code non disponibile al momento');
+        console.warn('⚠️ QR code non disponibile:', {
+          success: response.success,
+          hasData: !!response.data,
+          hasQrCode: response.data?.qrCode ? true : false,
+          message: response.message
+        });
+        
+        // Mostra messaggio specifico in base al tipo di errore
+        if (response.message?.includes('scaduto')) {
+          toast.warning('QR code scaduto. Clicca "Riconnetti" per generare un nuovo QR code.');
+        } else if (response.message?.includes('non disponibile')) {
+          toast.warning('QR code non ancora generato. Attendi qualche secondo e riprova.');
+        } else {
+          toast.warning(response.message || 'QR code non disponibile al momento');
+        }
       }
     } catch (error) {
       console.error('❌ Errore ottenimento QR:', error);
-      toast.error('Errore nel ottenere il QR code: ' + (error instanceof Error ? error.message : 'Errore sconosciuto'));
+      console.error('❌ Dettagli errore:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      // Gestione errori specifici
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+          toast.error('Sessione scaduta. Effettua nuovamente il login.');
+        } else if (error.message.includes('404')) {
+          toast.error('Sessione non trovata. Verifica che la sessione esista.');
+        } else if (error.message.includes('410')) {
+          toast.error('QR code scaduto. Usa il pulsante "Riconnetti".');
+        } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+          toast.error('Errore di connessione. Verifica che il backend sia online.');
+        } else {
+          toast.error('Errore nel ottenere il QR code: ' + error.message);
+        }
+      } else {
+        toast.error('Errore sconosciuto nel ottenere il QR code');
+      }
     }
   };
 

@@ -383,6 +383,30 @@ class ApiClient {
     });
   }
 
+  async bulkChangeContactOwner(contactIds: string[], newOwnerId: string): Promise<ApiResponse<{
+    requestedCount: number;
+    updatedCount: number;
+    newOwner: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    changedBy: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    changedAt: string;
+  }>> {
+    return this.request('/contacts/bulk-change-owner', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ contactIds, newOwnerId }),
+    });
+  }
+
   // Metodi per la gestione liste
   async getContactLists(): Promise<ApiResponse<Array<{ name: string; count: number }>>> {
     return this.request('/contacts/lists');

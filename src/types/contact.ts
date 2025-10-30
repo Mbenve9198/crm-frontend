@@ -1,5 +1,26 @@
 export type ContactStatus = 'da contattare' | 'contattato' | 'da richiamare' | 'interessato' | 'non interessato' | 'qr code inviato' | 'free trial iniziato' | 'won' | 'lost';
 
+export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api';
+
+export type RankCheckerData = {
+  placeId?: string;
+  keyword?: string;
+  ranking?: {
+    mainRank?: number | string;
+    competitorsAhead?: number;
+    estimatedLostCustomers?: number;
+    totalResultsFound?: number;
+    strategicResults?: any[];
+    fullResults?: any;
+  };
+  hasDigitalMenu?: boolean;
+  willingToAdoptMenu?: boolean;
+  dailyCovers?: number;
+  estimatedMonthlyReviews?: number;
+  qualifiedAt?: string;
+  leadCapturedAt?: string;
+};
+
 export type Contact = {
   _id: string;
   name: string;
@@ -9,6 +30,8 @@ export type Contact = {
   properties: Record<string, string | number | boolean>;
   status: ContactStatus;
   mrr?: number;
+  source?: ContactSource;
+  rankCheckerData?: RankCheckerData;
   owner: {
     _id: string;
     firstName: string;

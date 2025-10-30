@@ -533,6 +533,91 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     )}
                   </div>
 
+                  {/* Dati Rank Checker (solo se inbound) */}
+                  {contact.source === 'inbound_rank_checker' && contact.rankCheckerData && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-lg">🎯</span>
+                        <h4 className="font-medium text-gray-900">Dati Rank Checker</h4>
+                      </div>
+                      
+                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 space-y-3">
+                        {/* Ranking */}
+                        {contact.rankCheckerData.ranking && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white rounded-lg p-3 shadow-sm">
+                              <div className="text-xs text-gray-500 mb-1">Posizione</div>
+                              <div className="text-2xl font-black text-blue-600">
+                                {typeof contact.rankCheckerData.ranking.mainRank === 'number' 
+                                  ? `#${contact.rankCheckerData.ranking.mainRank}` 
+                                  : contact.rankCheckerData.ranking.mainRank || 'N/A'}
+                              </div>
+                            </div>
+                            <div className="bg-white rounded-lg p-3 shadow-sm">
+                              <div className="text-xs text-gray-500 mb-1">Competitor Avanti</div>
+                              <div className="text-2xl font-black text-red-600">
+                                {contact.rankCheckerData.ranking.competitorsAhead || 0}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Keyword */}
+                        {contact.rankCheckerData.keyword && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">🔍 Keyword Cercata</div>
+                            <div className="font-bold text-gray-900">{contact.rankCheckerData.keyword}</div>
+                          </div>
+                        )}
+                        
+                        {/* Qualificazione */}
+                        {contact.rankCheckerData.dailyCovers !== undefined && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
+                            <div className="text-xs font-bold text-gray-700 mb-2">📊 Qualificazione</div>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-gray-500">Menu Digitale:</span>
+                                <div className="font-bold">
+                                  {contact.rankCheckerData.hasDigitalMenu ? '✅ Sì' : '❌ No'}
+                                </div>
+                              </div>
+                              {!contact.rankCheckerData.hasDigitalMenu && (
+                                <div>
+                                  <span className="text-gray-500">Disposto:</span>
+                                  <div className="font-bold">
+                                    {contact.rankCheckerData.willingToAdoptMenu ? '✅ Sì' : '❌ No'}
+                                  </div>
+                                </div>
+                              )}
+                              <div>
+                                <span className="text-gray-500">Coperti/giorno:</span>
+                                <div className="font-bold text-blue-600">{contact.rankCheckerData.dailyCovers}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Potenziale:</span>
+                                <div className="font-bold text-green-600">
+                                  {contact.rankCheckerData.estimatedMonthlyReviews} rec/mese
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Link Google Maps */}
+                        {contact.rankCheckerData.placeId && (
+                          <a
+                            href={`https://www.google.com/maps/place/?q=place_id:${contact.rankCheckerData.placeId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm"
+                          >
+                            🗺️ Vedi su Google Maps
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Proprietà dinamiche */}
                   {contact.properties && Object.keys(contact.properties).length > 0 && (
                     <div className="border-t pt-4">

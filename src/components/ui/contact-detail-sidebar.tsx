@@ -542,6 +542,34 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       </div>
                       
                       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 space-y-3">
+                        {/* Dati Ristorante */}
+                        {contact.rankCheckerData.restaurantData && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
+                            <div className="text-xs font-bold text-gray-700 mb-2">🏪 Dati Ristorante</div>
+                            
+                            {/* Rating e Recensioni */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-yellow-500">⭐</span>
+                                <span className="font-bold text-lg">
+                                  {contact.rankCheckerData.restaurantData.rating?.toFixed(1) || 'N/A'}
+                                </span>
+                                <span className="text-gray-500 text-sm">
+                                  ({contact.rankCheckerData.restaurantData.reviewCount || 0} recensioni)
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Indirizzo */}
+                            {contact.rankCheckerData.restaurantData.address && (
+                              <div className="text-sm">
+                                <div className="text-xs text-gray-500 mb-1">📍 Indirizzo</div>
+                                <div className="text-gray-900">{contact.rankCheckerData.restaurantData.address}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Ranking */}
                         {contact.rankCheckerData.ranking && (
                           <div className="grid grid-cols-2 gap-3">

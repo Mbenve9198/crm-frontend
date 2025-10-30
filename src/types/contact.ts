@@ -13,6 +13,15 @@ export type RankCheckerData = {
     strategicResults?: any[];
     fullResults?: any;
   };
+  restaurantData?: {
+    address?: string;
+    rating?: number;
+    reviewCount?: number;
+    coordinates?: {
+      lat?: number;
+      lng?: number;
+    };
+  };
   hasDigitalMenu?: boolean;
   willingToAdoptMenu?: boolean;
   dailyCovers?: number;

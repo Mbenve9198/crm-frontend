@@ -565,12 +565,18 @@ class ApiClient {
   async importCsvExecute(
     file: File, 
     mapping: Record<string, string>, 
-    duplicateStrategy: 'skip' | 'update' = 'skip'
+    duplicateStrategy: 'skip' | 'update' = 'skip',
+    targetList?: string // 📋 NUOVO: Lista dove aggiungere tutti i contatti importati
   ): Promise<ApiResponse<CsvImportResult>> {
     const formData = new FormData();
     formData.append('csvFile', file);
     formData.append('mapping', JSON.stringify(mapping));
     formData.append('duplicateStrategy', duplicateStrategy);
+    
+    // 📋 Aggiungi targetList se specificata
+    if (targetList && targetList.trim()) {
+      formData.append('targetList', targetList.trim());
+    }
 
     // Se non abbiamo il token, prova a ricaricarlo
     if (!this.token) {

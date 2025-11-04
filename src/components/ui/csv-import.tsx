@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -78,6 +78,30 @@ export function CsvImportDialog({
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [isTestingAuth, setIsTestingAuth] = useState(false);
+  
+  // 📋 NUOVO: Gestione lista target per import
+  const [availableLists, setAvailableLists] = useState<Array<{ name: string; count: number }>>([]);
+  const [targetList, setTargetList] = useState<string>("");
+  const [isCreatingNewList, setIsCreatingNewList] = useState(false);
+  const [newListName, setNewListName] = useState("");
+
+  // 📋 Carica le liste disponibili quando il dialog si apre
+  useEffect(() => {
+    if (isOpen) {
+      loadAvailableLists();
+    }
+  }, [isOpen]);
+
+  const loadAvailableLists = async () => {
+    try {
+      const response = await apiClient.getContactLists();
+      if (response.success && response.data) {
+        setAvailableLists(response.data);
+      }
+    } catch (error) {
+      console.error('Errore caricamento liste:', error);
+    }
+  };
 
   // Costruisce le opzioni di mappatura dai dati del backend
   const buildMappingOptions = (result: CsvAnalysisResult): MappingOption[] => {
@@ -391,11 +415,19 @@ export function CsvImportDialog({
   const handleImport = async () => {
     if (!csvFile || !analysisResult) return;
 
+    // 📋 Determina la lista target
+    const listToUse = isCreatingNewList ? newListName.trim() : targetList;
+
     setIsLoading(true);
     setCurrentStep("importing");
 
     try {
-      const response = await apiClient.importCsvExecute(csvFile, columnMapping, duplicateStrategy);
+      const response = await apiClient.importCsvExecute(
+        csvFile, 
+        columnMapping, 
+        duplicateStrategy,
+        listToUse || undefined // 📋 Passa la lista target se specificata
+      );
       
       if (response.success && response.data) {
         setImportResult(response.data);
@@ -427,6 +459,10 @@ export function CsvImportDialog({
     setImportResult(null);
     setError(null);
     setDebugInfo("");
+    // 📋 Reset campi lista
+    setTargetList("");
+    setIsCreatingNewList(false);
+    setNewListName("");
   };
 
   const handleClose = () => {
@@ -667,6 +703,58 @@ export function CsvImportDialog({
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 📋 NUOVO: Selezione Lista Target */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Aggiungi a Lista (Opzionale)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-gray-600">
+            Tutti i contatti importati verranno aggiunti automaticamente alla lista selezionata.
+          </p>
+          
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="createNewList"
+              checked={isCreatingNewList}
+              onChange={(e) => {
+                setIsCreatingNewList(e.target.checked);
+                if (e.target.checked) {
+                  setTargetList("");
+                }
+              }}
+              className="rounded"
+            />
+            <label htmlFor="createNewList" className="text-sm font-medium">
+              Crea nuova lista
+            </label>
+          </div>
+
+          {isCreatingNewList ? (
+            <Input
+              placeholder="Nome nuova lista"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+            />
+          ) : (
+            <Select value={targetList} onValueChange={setTargetList}>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleziona lista esistente (opzionale)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nessuna lista</SelectItem>
+                {availableLists.map((list) => (
+                  <SelectItem key={list.name} value={list.name}>
+                    {list.name} ({list.count})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </CardContent>
       </Card>
 

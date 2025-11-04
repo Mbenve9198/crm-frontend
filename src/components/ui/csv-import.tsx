@@ -81,7 +81,7 @@ export function CsvImportDialog({
   
   // 📋 NUOVO: Gestione lista target per import
   const [availableLists, setAvailableLists] = useState<Array<{ name: string; count: number }>>([]);
-  const [targetList, setTargetList] = useState<string>("");
+  const [targetList, setTargetList] = useState<string>("__none__"); // Inizializza con valore speciale
   const [isCreatingNewList, setIsCreatingNewList] = useState(false);
   const [newListName, setNewListName] = useState("");
 
@@ -416,7 +416,12 @@ export function CsvImportDialog({
     if (!csvFile || !analysisResult) return;
 
     // 📋 Determina la lista target
-    const listToUse = isCreatingNewList ? newListName.trim() : targetList;
+    let listToUse = isCreatingNewList ? newListName.trim() : targetList;
+    
+    // Ignora il valore speciale "__none__"
+    if (listToUse === "__none__") {
+      listToUse = "";
+    }
 
     setIsLoading(true);
     setCurrentStep("importing");
@@ -460,7 +465,7 @@ export function CsvImportDialog({
     setError(null);
     setDebugInfo("");
     // 📋 Reset campi lista
-    setTargetList("");
+    setTargetList("__none__");
     setIsCreatingNewList(false);
     setNewListName("");
   };
@@ -724,7 +729,7 @@ export function CsvImportDialog({
               onChange={(e) => {
                 setIsCreatingNewList(e.target.checked);
                 if (e.target.checked) {
-                  setTargetList("");
+                  setTargetList("__none__");
                 }
               }}
               className="rounded"
@@ -746,7 +751,7 @@ export function CsvImportDialog({
                 <SelectValue placeholder="Seleziona lista esistente (opzionale)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nessuna lista</SelectItem>
+                <SelectItem value="__none__">Nessuna lista</SelectItem>
                 {availableLists.map((list) => (
                   <SelectItem key={list.name} value={list.name}>
                     {list.name} ({list.count})

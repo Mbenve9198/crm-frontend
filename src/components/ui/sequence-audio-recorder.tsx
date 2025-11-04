@@ -24,6 +24,14 @@ interface SequenceAudioRecorderProps {
   }) => void;
   onAudioRemoved?: () => void;
   disabled?: boolean;
+  // 🎤 NUOVO: Callback per audio locale (prima di salvare campagna)
+  onAudioReady?: (audioData: {
+    blob: Blob;
+    dataUrl: string;
+    filename: string;
+    size: number;
+    duration?: number;
+  }) => void;
 }
 
 export function SequenceAudioRecorder({
@@ -32,7 +40,8 @@ export function SequenceAudioRecorder({
   existingAudio,
   onAudioUploaded,
   onAudioRemoved,
-  disabled = false
+  disabled = false,
+  onAudioReady
 }: SequenceAudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -75,12 +84,15 @@ export function SequenceAudioRecorder({
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
+        
+        // 🎤 NUOVO: Converti in Base64 e notifica il parent
+        await convertAndNotify(blob, 'vocale.webm');
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -138,7 +150,7 @@ export function SequenceAudioRecorder({
     chunksRef.current = [];
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -158,6 +170,9 @@ export function SequenceAudioRecorder({
     setAudioBlob(file);
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
+    
+    // 🎤 NUOVO: Converti in Base64 e notifica il parent
+    await convertAndNotify(file, file.name);
     
     toast.success(`📁 File caricato: ${file.name}`);
   };
@@ -261,6 +276,43 @@ export function SequenceAudioRecorder({
   const formatSize = (bytes?: number) => {
     if (!bytes) return '';
     return (bytes / 1024).toFixed(1) + ' KB';
+  };
+
+  // 🎤 Converte Blob in Base64 DataURL e notifica il parent
+  const convertAndNotify = async (blob: Blob, filename: string) => {
+    return new Promise<void>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const dataUrl = reader.result as string;
+        
+        // Calcola durata se possibile
+        let duration: number | undefined;
+        if (audioUrl) {
+          const audio = new Audio(audioUrl);
+          await new Promise<void>((res) => {
+            audio.addEventListener('loadedmetadata', () => {
+              if (audio.duration && isFinite(audio.duration)) {
+                duration = Math.round(audio.duration);
+              }
+              res();
+            });
+            audio.addEventListener('error', () => res());
+          });
+        }
+
+        // Notifica il parent con i dati audio
+        onAudioReady?.({
+          blob,
+          dataUrl,
+          filename,
+          size: blob.size,
+          duration
+        });
+
+        resolve();
+      };
+      reader.readAsDataURL(blob);
+    });
   };
 
   // Se c'è un audio esistente, mostra quello
@@ -385,7 +437,7 @@ export function SequenceAudioRecorder({
             </Button>
           </div>
 
-          {campaignId && (
+          {campaignId ? (
             <Button
               type="button"
               onClick={uploadAudio}
@@ -401,15 +453,13 @@ export function SequenceAudioRecorder({
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2" />
-                  Salva Vocale
+                  Salva Vocale su Server
                 </>
               )}
             </Button>
-          )}
-          
-          {!campaignId && (
-            <p className="text-xs text-amber-600 text-center">
-              ⚠️ Salva prima la campagna per caricare il vocale
+          ) : (
+            <p className="text-xs text-green-600 text-center">
+              ✅ Vocale pronto! Verrà salvato quando crei la campagna
             </p>
           )}
         </div>

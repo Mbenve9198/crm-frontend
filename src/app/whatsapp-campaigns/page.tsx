@@ -1298,6 +1298,19 @@ function CampaignsContent() {
                                   campaignId={undefined} // Non ancora salvata
                                   sequenceId={sequence.id}
                                   existingAudio={sequence.attachment}
+                                  onAudioReady={(audioData) => {
+                                    // 🎤 Audio locale pronto - salva nello stato con DataURL
+                                    updateMessageSequence(sequence.id, { 
+                                      attachment: {
+                                        type: 'voice' as const,
+                                        filename: audioData.filename,
+                                        url: audioData.dataUrl, // Base64 DataURL temporaneo
+                                        size: audioData.size,
+                                        duration: audioData.duration
+                                      }
+                                    });
+                                    toast.success('🎤 Vocale pronto per il salvataggio!');
+                                  }}
                                   onAudioUploaded={(attachment) => {
                                     updateMessageSequence(sequence.id, { attachment });
                                     toast.success('🎤 Vocale caricato!');

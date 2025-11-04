@@ -91,8 +91,8 @@ export function SequenceAudioRecorder({
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         
-        // 🎤 NUOVO: Converti in Base64 e notifica il parent
-        await convertAndNotify(blob, 'vocale.webm');
+        // 🎤 NUOVO: Upload immediato su ImageKit
+        await uploadToImageKit(blob, 'vocale.webm');
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -171,10 +171,10 @@ export function SequenceAudioRecorder({
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
     
-    // 🎤 NUOVO: Converti in Base64 e notifica il parent
-    await convertAndNotify(file, file.name);
-    
     toast.success(`📁 File caricato: ${file.name}`);
+    
+    // 🎤 NUOVO: Upload immediato su ImageKit
+    await uploadToImageKit(file, file.name);
   };
 
   const uploadAudio = async () => {
@@ -278,41 +278,65 @@ export function SequenceAudioRecorder({
     return (bytes / 1024).toFixed(1) + ' KB';
   };
 
-  // 🎤 Converte Blob in Base64 DataURL e notifica il parent
-  const convertAndNotify = async (blob: Blob, filename: string) => {
-    return new Promise<void>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const dataUrl = reader.result as string;
-        
-        // Calcola durata se possibile
-        let duration: number | undefined;
-        if (audioUrl) {
-          const audio = new Audio(audioUrl);
-          await new Promise<void>((res) => {
-            audio.addEventListener('loadedmetadata', () => {
-              if (audio.duration && isFinite(audio.duration)) {
-                duration = Math.round(audio.duration);
-              }
-              res();
-            });
-            audio.addEventListener('error', () => res());
+  // 🎤 Upload diretto su ImageKit (senza campaignId)
+  const uploadToImageKit = async (blob: Blob, filename: string) => {
+    try {
+      setIsUploading(true);
+      
+      const formData = new FormData();
+      formData.append('audio', blob, filename);
+      
+      // Calcola durata
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        await new Promise<void>((resolve) => {
+          audio.addEventListener('loadedmetadata', () => {
+            if (audio.duration && isFinite(audio.duration)) {
+              formData.append('duration', Math.round(audio.duration).toString());
+            }
+            resolve();
           });
-        }
+          audio.addEventListener('error', () => resolve());
+        });
+      }
 
-        // Notifica il parent con i dati audio
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/whatsapp-campaigns/upload-audio`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('🎤 Vocale caricato su ImageKit!');
+        
+        // Notifica il parent con l'attachment (URL ImageKit pubblico)
         onAudioReady?.({
           blob,
-          dataUrl,
-          filename,
-          size: blob.size,
-          duration
+          dataUrl: data.data.attachment.url, // URL ImageKit (non Base64!)
+          filename: data.data.attachment.filename,
+          size: data.data.attachment.size,
+          duration: data.data.attachment.duration
         });
-
-        resolve();
-      };
-      reader.readAsDataURL(blob);
-    });
+        
+        // Pulisci lo stato locale dopo upload
+        deleteRecording();
+      } else {
+        throw new Error(data.message || 'Errore upload audio');
+      }
+    } catch (error) {
+      console.error('Errore upload ImageKit:', error);
+      toast.error('Errore durante il caricamento del vocale');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   // Se c'è un audio esistente, mostra quello
@@ -406,62 +430,20 @@ export function SequenceAudioRecorder({
         </div>
       )}
 
-      {audioBlob && audioUrl && (
+      {(audioBlob && audioUrl && !isUploading) && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <audio
-              ref={audioRef}
-              src={audioUrl}
-              onEnded={() => setIsPlaying(false)}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={playAudio}
-            >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <div className="flex-1">
-              <audio controls className="w-full h-8" src={audioUrl} />
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={deleteRecording}
-              disabled={isUploading}
-            >
-              <Trash2 className="h-4 w-4 text-red-600" />
-            </Button>
+          <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
+            ⏳ Upload in corso su ImageKit...
           </div>
-
-          {campaignId ? (
-            <Button
-              type="button"
-              onClick={uploadAudio}
-              disabled={isUploading || disabled}
-              className="w-full"
-              size="sm"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Caricamento...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Salva Vocale su Server
-                </>
-              )}
-            </Button>
-          ) : (
-            <p className="text-xs text-green-600 text-center">
-              ✅ Vocale pronto! Verrà salvato quando crei la campagna
-            </p>
-          )}
+        </div>
+      )}
+      
+      {isUploading && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-center gap-2 text-blue-600">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Caricamento su ImageKit...</span>
+          </div>
         </div>
       )}
 

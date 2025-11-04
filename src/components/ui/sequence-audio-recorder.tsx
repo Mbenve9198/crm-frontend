@@ -9,13 +9,14 @@ interface SequenceAudioRecorderProps {
   campaignId?: string;
   sequenceId: string;
   existingAudio?: {
+    type?: 'voice' | 'image' | 'video' | 'document';
     filename: string;
     url: string;
     size?: number;
     duration?: number;
   } | null;
   onAudioUploaded?: (attachment: {
-    type: string;
+    type: 'voice' | 'image' | 'video' | 'document';
     filename: string;
     url: string;
     size: number;
@@ -204,7 +205,12 @@ export function SequenceAudioRecorder({
 
       if (data.success) {
         toast.success('🎤 Vocale caricato con successo!');
-        onAudioUploaded?.(data.data.attachment);
+        // Assicura che il tipo sia corretto
+        const attachment = {
+          ...data.data.attachment,
+          type: 'voice' as const
+        };
+        onAudioUploaded?.(attachment);
         deleteRecording();
       } else {
         throw new Error(data.message || 'Errore upload audio');

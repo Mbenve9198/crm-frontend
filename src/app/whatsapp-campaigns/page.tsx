@@ -20,7 +20,8 @@ import {
   Ban,
   Clock,
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  Mic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import { apiClient } from '@/lib/api';
 import { ModernSidebar } from '@/components/ui/modern-sidebar';
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/ui/login-form';
+import { SequenceAudioRecorder } from '@/components/ui/sequence-audio-recorder';
 import { 
   WhatsappCampaign, 
   WhatsappSession, 
@@ -1290,6 +1292,24 @@ function CampaignsContent() {
                                 </div>
                                 )}
                               </div>
+
+                              {/* 🎤 NUOVO: Componente Audio/Vocale */}
+                              <div className="mt-3">
+                                <SequenceAudioRecorder
+                                  campaignId={undefined} // Non ancora salvata
+                                  sequenceId={sequence.id}
+                                  existingAudio={sequence.attachment}
+                                  onAudioUploaded={(attachment) => {
+                                    updateMessageSequence(sequence.id, { attachment });
+                                    toast.success('🎤 Vocale caricato!');
+                                  }}
+                                  onAudioRemoved={() => {
+                                    updateMessageSequence(sequence.id, { attachment: undefined });
+                                    toast.success('🗑️ Vocale rimosso');
+                                  }}
+                                  disabled={false}
+                                />
+                              </div>
                             </div>
                           ))}
 
@@ -1926,6 +1946,22 @@ function CampaignsContent() {
                               <div className="bg-gray-50 p-2 rounded text-sm font-mono">
                                 {sequence.messageTemplate}
                               </div>
+                              
+                              {/* 🎤 Mostra vocale se presente */}
+                              {sequence.attachment && sequence.attachment.type === 'voice' && (
+                                <div className="mt-2 border border-green-200 bg-green-50 rounded-lg p-2">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Mic className="h-4 w-4 text-green-600" />
+                                    <span className="text-xs font-medium text-green-900">Messaggio Vocale</span>
+                                  </div>
+                                  <p className="text-xs text-green-600 mb-1">
+                                    {sequence.attachment.filename}
+                                    {sequence.attachment.duration && ` • ${sequence.attachment.duration}s`}
+                                    {sequence.attachment.size && ` • ${(sequence.attachment.size / 1024).toFixed(1)} KB`}
+                                  </p>
+                                  <audio controls className="w-full h-8" src={sequence.attachment.url} />
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

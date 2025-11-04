@@ -215,6 +215,15 @@ export interface MessageSequence {
   condition: 'no_response' | 'always'; // Condizione per inviare il messaggio
   isActive: boolean;
   templateVariables?: string[]; // ✅ Aggiunto supporto per variabili template
+  // 🎤 NUOVO: Supporto allegato audio/vocale
+  attachment?: {
+    type: 'voice' | 'image' | 'video' | 'document';
+    filename: string;
+    url: string;
+    size?: number;
+    duration?: number; // Durata in secondi (per audio)
+    caption?: string;
+  };
 }
 
 export interface CreateCampaignRequest {

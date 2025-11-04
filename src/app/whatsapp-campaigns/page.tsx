@@ -1252,7 +1252,7 @@ function CampaignsContent() {
                                   onChange={(e) => 
                                     updateMessageSequence(sequence.id, { messageTemplate: e.target.value })
                                   }
-                                  placeholder="Messaggio di follow-up..."
+                                  placeholder={sequence.attachment ? "Messaggio di testo (opzionale, hai già un vocale)" : "Messaggio di follow-up..."}
                                   rows={3}
                                   className="mt-1"
                                 />

@@ -110,10 +110,10 @@ function PipelinePage() {
     try {
       setIsLoading(true);
       
-      // Carica contatti
+      // Carica contatti (solo quelli in pipeline)
       const contactsResponse = await apiClient.getContacts({
         page: 1,
-        limit: 1000,
+        limit: 10000, // 🚀 Alto limite ma solo per contatti pipeline (pochi)
         owner: selectedOwner !== "all" ? selectedOwner : undefined
       });
 

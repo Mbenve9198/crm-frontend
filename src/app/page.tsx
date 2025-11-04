@@ -27,6 +27,7 @@ function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
   const [contactsError, setContactsError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1); // 🚀 Stato separato per evitare loop
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -65,16 +66,16 @@ function Dashboard() {
     loadUserPreferences();
   }, []); // Carica solo una volta al montaggio
 
-  // Carica TUTTI i contatti (senza paginazione per permettere filtri completi)
+  // Carica contatti con paginazione server-side (ottimizzato per grandi dataset)
   const loadContacts = useCallback(async (listFilter: string | null = selectedList, searchQuery?: string) => {
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
       
-      console.log(`🔄 Caricamento TUTTI i contatti: lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
+      console.log(`🔄 Caricamento contatti pagina ${currentPage}: lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
       const response = await apiClient.getContacts({
-        page: 1,
-        limit: 10000, // Carica tutto per permettere filtri lato client
+        page: currentPage,
+        limit: currentLimit, // 🚀 Usa paginazione vera invece di caricare tutto
         list: listFilter || undefined,
         search: searchQuery || undefined
       });
@@ -82,14 +83,10 @@ function Dashboard() {
       if (response.success && response.data) {
         console.log('✅ Contatti caricati:', response.data.contacts.length);
         setContacts(response.data.contacts);
-        // Aggiorna la paginazione per riflettere i dati completi
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          totalContacts: response.data.contacts.length,
-          hasNext: false,
-          hasPrev: false
-        });
+        // 🚀 Usa la paginazione dal backend invece di caricare tutto
+        if (response.data.pagination) {
+          setPagination(response.data.pagination);
+        }
       } else {
         throw new Error('Errore nel caricamento contatti');
       }
@@ -99,7 +96,7 @@ function Dashboard() {
     } finally {
       setIsLoadingContacts(false);
     }
-  }, [selectedList]);
+  }, [selectedList, currentPage, currentLimit]); // 🚀 Aggiornate dipendenze
 
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
@@ -114,22 +111,21 @@ function Dashboard() {
     loadContacts(selectedList, query);
   };
 
-  // Gestione cambio pagina - ora gestita lato client
+  // 🚀 Gestione cambio pagina - server-side
   const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, currentPage: newPage }));
+    setCurrentPage(newPage);
   };
 
-  // Gestione cambio limite per pagina - ora gestita lato client
+  // 🚀 Gestione cambio limite per pagina - server-side
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
-    setPagination(prev => ({ ...prev, currentPage: 1 })); // Torna alla prima pagina
+    setCurrentPage(1); // Torna alla prima pagina
   };
 
   // Gestione selezione lista dalla sidebar
   const handleListSelect = (listName: string | null) => {
     setSelectedList(listName);
-    // Reset alla prima pagina quando si cambia lista
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setCurrentPage(1); // Reset alla prima pagina quando si cambia lista
   };
 
   const handleEditContact = (contact: Contact) => {

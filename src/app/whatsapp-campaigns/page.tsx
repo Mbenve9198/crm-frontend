@@ -249,7 +249,7 @@ function CampaignsContent() {
 
   const loadAllContacts = useCallback(async () => {
     try {
-      const response = await apiClient.getContacts({ page: 1, limit: 1000 });
+      const response = await apiClient.getContacts({ page: 1, limit: 100 }); // 🚀 Ridotto per performance
       if (response.success && response.data) {
         setAllContacts(response.data.contacts.map(c => ({ 
           _id: c._id, 

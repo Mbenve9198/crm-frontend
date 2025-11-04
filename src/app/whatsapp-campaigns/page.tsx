@@ -20,7 +20,6 @@ import {
   Ban,
   Clock,
   CheckCircle,
-  MessageSquare,
   Mic
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

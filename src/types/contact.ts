@@ -10,8 +10,8 @@ export type RankCheckerData = {
     competitorsAhead?: number;
     estimatedLostCustomers?: number;
     totalResultsFound?: number;
-    strategicResults?: any[];
-    fullResults?: any;
+    strategicResults?: Record<string, unknown>[];
+    fullResults?: Record<string, unknown>;
   };
   restaurantData?: {
     address?: string;

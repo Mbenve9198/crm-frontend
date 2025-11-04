@@ -147,6 +147,32 @@ function ContactsTable({
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  
+  // 📋 NUOVO: Stato per tutte le liste disponibili (caricato da API separata)
+  const [allAvailableLists, setAllAvailableLists] = useState<string[]>([]);
+  const [isLoadingLists, setIsLoadingLists] = useState(false);
+
+  // Carica tutte le liste disponibili (una sola volta)
+  useEffect(() => {
+    const loadAllLists = async () => {
+      try {
+        setIsLoadingLists(true);
+        const response = await apiClient.getContactLists();
+        
+        if (response.success && response.data) {
+          const listNames = response.data.map((list: { name: string; count: number }) => list.name);
+          setAllAvailableLists(listNames);
+          console.log('✅ Liste caricate:', listNames.length);
+        }
+      } catch (error) {
+        console.error('❌ Errore caricamento liste:', error);
+      } finally {
+        setIsLoadingLists(false);
+      }
+    };
+
+    loadAllLists();
+  }, []);
 
   // Hook per gestire filtri e ordinamento locali
   const {
@@ -275,16 +301,33 @@ function ContactsTable({
   // Paginazione lato client sui dati filtrati
   const startIndex = ((pagination?.currentPage || 1) - 1) * currentLimit;
   const endIndex = startIndex + currentLimit;
-  const filteredContacts = allFilteredContacts.slice(startIndex, endIndex);
-
-  // Aggiorna la paginazione per riflettere i dati filtrati
-  const calculatedPagination = {
-    currentPage: pagination?.currentPage || 1,
-    totalPages: Math.ceil(allFilteredContacts.length / currentLimit),
-    totalContacts: allFilteredContacts.length,
-    hasNext: endIndex < allFilteredContacts.length,
-    hasPrev: (pagination?.currentPage || 1) > 1
-  };
+  // 🚀 NUOVO: Decidi se usare paginazione client (con filtri) o server (senza filtri)
+  const hasActiveFilters = activeFiltersCount > 0 || hasActiveSort || (ownerFilter && ownerFilter !== "all");
+  
+  let filteredContacts;
+  let calculatedPagination;
+  
+  if (hasActiveFilters) {
+    // CON FILTRI: Paginazione client-side sui contatti caricati
+    filteredContacts = allFilteredContacts.slice(startIndex, endIndex);
+    calculatedPagination = {
+      currentPage: pagination?.currentPage || 1,
+      totalPages: Math.ceil(allFilteredContacts.length / currentLimit),
+      totalContacts: allFilteredContacts.length,
+      hasNext: endIndex < allFilteredContacts.length,
+      hasPrev: (pagination?.currentPage || 1) > 1
+    };
+  } else {
+    // SENZA FILTRI: Usa paginazione dal backend
+    filteredContacts = allFilteredContacts; // Nessun slice, già paginati dal server
+    calculatedPagination = pagination || {
+      currentPage: 1,
+      totalPages: 1,
+      totalContacts: contacts.length,
+      hasNext: false,
+      hasPrev: false
+    };
+  }
 
   const toggleColumn = async (col: string) => {
     const newVisibleColumns = visibleColumns.includes(col)
@@ -752,7 +795,7 @@ function ContactsTable({
                   <ColumnFilterComponent
                     column="Lists"
                     columnDisplayName="Liste"
-                    values={columnValues['Lists'] || []}
+                    values={allAvailableLists.length > 0 ? allAvailableLists : (columnValues['Lists'] || [])} 
                     filter={columnFilters['Lists']}
                     onFilterChange={(filter) => handleFilterChange('Lists', filter)}
                     sortDirection={sorting?.column === 'Lists' ? sorting.direction : null}
@@ -1079,6 +1122,16 @@ function ContactsTable({
         </TableBody>
       </Table>
       </div>
+
+      {/* Banner informativo per filtri con grandi dataset */}
+      {hasActiveFilters && pagination && pagination.totalContacts > currentLimit && (
+        <div className="px-2 py-2 bg-amber-50 border border-amber-200 rounded-lg mx-2 mb-2">
+          <p className="text-xs text-amber-800">
+            ⚠️ I filtri funzionano solo sui contatti caricati in questa pagina ({contacts.length}/{pagination.totalContacts} totali).
+            Usa la <strong>ricerca</strong> per cercare in tutto il database.
+          </p>
+        </div>
+      )}
 
       {/* Controlli di paginazione */}
       {calculatedPagination && (

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Upload, Trash2, Play, Library } from 'lucide-react';
+import { Mic, Square, Upload, Trash2, Play, Pause } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api';
 
 interface SequenceAudioRecorderProps {
+  campaignId?: string;
+  sequenceId: string;
   existingAudio?: {
     type?: 'voice' | 'image' | 'video' | 'document';
     filename: string;
@@ -14,11 +15,18 @@ interface SequenceAudioRecorderProps {
     size?: number;
     duration?: number;
   } | null;
+  onAudioUploaded?: (attachment: {
+    type: 'voice' | 'image' | 'video' | 'document';
+    filename: string;
+    url: string;
+    size: number;
+    duration?: number;
+  }) => void;
   onAudioRemoved?: () => void;
   disabled?: boolean;
-  // 🎤 Callback per audio locale (prima di salvare campagna)
+  // 🎤 NUOVO: Callback per audio locale (prima di salvare campagna)
   onAudioReady?: (audioData: {
-    blob: Blob | null;
+    blob: Blob;
     dataUrl: string;
     filename: string;
     size: number;
@@ -27,7 +35,10 @@ interface SequenceAudioRecorderProps {
 }
 
 export function SequenceAudioRecorder({
+  campaignId,
+  sequenceId,
   existingAudio,
+  onAudioUploaded,
   onAudioRemoved,
   disabled = false,
   onAudioReady
@@ -35,21 +46,11 @@ export function SequenceAudioRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   
-  // 📚 NUOVO: Libreria vocali
-  const [audioLibrary, setAudioLibrary] = useState<Array<{
-    id: string;
-    campaignName: string;
-    filename: string;
-    url: string;
-    size?: number;
-    duration?: number;
-  }>>([]);
-  const [showLibrary, setShowLibrary] = useState(false);
-  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
-  
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -65,42 +66,6 @@ export function SequenceAudioRecorder({
       }
     };
   }, [audioUrl]);
-
-  // 📚 Carica libreria vocali quando si apre
-  const loadAudioLibrary = async () => {
-    try {
-      setIsLoadingLibrary(true);
-      const response = await apiClient.getAudioLibrary();
-      
-      if (response.success && response.data) {
-        setAudioLibrary(response.data.audios);
-        console.log(`📚 Caricati ${response.data.total} vocali dalla libreria`);
-      }
-    } catch (error) {
-      console.error('Errore caricamento libreria vocali:', error);
-      toast.error('Errore caricamento vocali salvati');
-    } finally {
-      setIsLoadingLibrary(false);
-    }
-  };
-
-  // 📚 Seleziona vocale dalla libreria
-  const selectFromLibrary = (audioId: string) => {
-    const selected = audioLibrary.find(a => a.id === audioId);
-    if (!selected) return;
-
-    // Notifica parent con il vocale selezionato
-    onAudioReady?.({
-      blob: null,
-      dataUrl: selected.url,
-      filename: selected.filename,
-      size: selected.size || 0,
-      duration: selected.duration
-    });
-
-    toast.success(`📚 Vocale "${selected.filename}" selezionato da "${selected.campaignName}"`);
-    setShowLibrary(false);
-  };
 
   const startRecording = async () => {
     try {
@@ -324,132 +289,60 @@ export function SequenceAudioRecorder({
         <span className="text-sm font-medium text-gray-700">Messaggio Vocale (opzionale)</span>
       </div>
 
-      {!audioBlob && !showLibrary && (
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            {!isRecording ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={startRecording}
-                  disabled={disabled}
-                  className="flex-1"
-                >
-                  <Mic className="h-4 w-4 mr-2" />
-                  Registra
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={disabled}
-                  className="flex-1"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Carica
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setShowLibrary(true);
-                    loadAudioLibrary();
-                  }}
-                  disabled={disabled}
-                  className="flex-1"
-                >
-                  <Library className="h-4 w-4 mr-2" />
-                  Libreria
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </>
-            ) : (
-              <div className="flex items-center gap-3 w-full">
-                <div className="flex-1 flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-sm font-mono text-gray-700">{formatTime(recordingTime)}</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  onClick={stopRecording}
-                >
-                  <Square className="h-4 w-4 mr-2" />
-                  Stop
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 📚 NUOVO: Libreria vocali salvati */}
-      {showLibrary && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Vocali Salvati</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLibrary(false)}
-            >
-              ← Indietro
-            </Button>
-          </div>
-
-          {isLoadingLibrary ? (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              Caricamento...
-            </div>
-          ) : audioLibrary.length === 0 ? (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              Nessun vocale salvato. Registra il primo!
-            </div>
+      {!audioBlob && (
+        <div className="flex gap-2">
+          {!isRecording ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={startRecording}
+                disabled={disabled}
+                className="flex-1"
+              >
+                <Mic className="h-4 w-4 mr-2" />
+                Registra Vocale
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={disabled}
+                className="flex-1"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Carica File
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </>
           ) : (
-            <div className="max-h-64 overflow-y-auto space-y-2">
-              {audioLibrary.map((audio) => (
-                <div
-                  key={audio.id}
-                  className="border rounded-lg p-2 hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => selectFromLibrary(audio.id)}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <div>
-                      <p className="text-sm font-medium">{audio.filename}</p>
-                      <p className="text-xs text-gray-500">
-                        da &quot;{audio.campaignName}&quot;
-                      </p>
-                    </div>
-                    <Play className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-600">
-                    {audio.duration && <span>{audio.duration}s</span>}
-                    {audio.size && <span>• {(audio.size / 1024).toFixed(1)} KB</span>}
-                  </div>
-                  <audio 
-                    controls 
-                    className="w-full h-6 mt-1" 
-                    src={audio.url}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              ))}
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex-1 flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-sm font-mono text-gray-700">{formatTime(recordingTime)}</span>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={stopRecording}
+              >
+                <Square className="h-4 w-4 mr-2" />
+                Stop
+              </Button>
             </div>
           )}
         </div>
       )}
+
 
       <p className="text-xs text-gray-500">
         Formati supportati: MP3, OGG, WAV, M4A, WebM • Max 10 MB

@@ -150,11 +150,13 @@ function ContactsTable({
   
   // 📋 NUOVO: Stato per tutte le liste disponibili (caricato da API separata)
   const [allAvailableLists, setAllAvailableLists] = useState<string[]>([]);
+  const [isLoadingLists, setIsLoadingLists] = useState(false);
 
   // Carica tutte le liste disponibili (una sola volta)
   useEffect(() => {
     const loadAllLists = async () => {
       try {
+        setIsLoadingLists(true);
         const response = await apiClient.getContactLists();
         
         if (response.success && response.data) {
@@ -164,6 +166,8 @@ function ContactsTable({
         }
       } catch (error) {
         console.error('❌ Errore caricamento liste:', error);
+      } finally {
+        setIsLoadingLists(false);
       }
     };
 

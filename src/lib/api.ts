@@ -562,24 +562,6 @@ class ApiClient {
     }
   }
 
-  // 🎤 NUOVO: Ottieni libreria vocali salvati
-  async getAudioLibrary(): Promise<ApiResponse<{
-    audios: Array<{
-      id: string;
-      campaignName: string;
-      filename: string;
-      url: string;
-      size?: number;
-      duration?: number;
-      type: string;
-    }>;
-    total: number;
-  }>> {
-    return this.request('/whatsapp-campaigns/audio-library', {
-      method: 'GET'
-    });
-  }
-
   // 🎤 NUOVO: Upload audio diretto su ImageKit
   async uploadAudioDirect(
     audioBlob: Blob, 

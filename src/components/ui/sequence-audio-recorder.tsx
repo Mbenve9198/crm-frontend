@@ -72,9 +72,15 @@ export function SequenceAudioRecorder({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
-      });
+      // 🎤 Prova MP3 se supportato, altrimenti WebM
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4'; // M4A/AAC - ImageKit non lo trasforma
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
 
       chunksRef.current = [];
       mediaRecorderRef.current = mediaRecorder;
@@ -86,14 +92,15 @@ export function SequenceAudioRecorder({
       };
 
       mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
         
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         
-        // 🎤 NUOVO: Upload immediato su ImageKit
-        await uploadToImageKit(blob, 'vocale.webm');
+        // 🎤 NUOVO: Upload immediato su ImageKit con estensione corretta
+        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+        await uploadToImageKit(blob, `vocale.${ext}`);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());

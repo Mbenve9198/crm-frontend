@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Upload, Trash2, Play, Pause, Loader2 } from 'lucide-react';
+import { Mic, Square, Upload, Trash2, Play, Pause } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
-import { apiClient } from '@/lib/api';
 
 interface SequenceAudioRecorderProps {
   campaignId?: string;
@@ -48,7 +47,6 @@ export function SequenceAudioRecorder({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -98,9 +96,36 @@ export function SequenceAudioRecorder({
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         
-        // 🎤 NUOVO: Upload immediato su ImageKit con estensione corretta
-        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
-        await uploadToImageKit(blob, `vocale.${ext}`);
+        // 🎤 Converti in DataURL e notifica parent
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const dataUrl = reader.result as string;
+          
+          // Calcola durata
+          let duration: number | undefined;
+          const audio = new Audio(url);
+          await new Promise<void>((resolve) => {
+            audio.addEventListener('loadedmetadata', () => {
+              if (audio.duration && isFinite(audio.duration)) {
+                duration = Math.round(audio.duration);
+              }
+              resolve();
+            });
+            audio.addEventListener('error', () => resolve());
+          });
+          
+          // Notifica parent con DataURL (no ImageKit!)
+          onAudioReady?.({
+            blob,
+            dataUrl, // Base64 DataURL
+            filename: `vocale.${mimeType.includes('mp4') ? 'm4a' : 'webm'}`,
+            size: blob.size,
+            duration
+          });
+          
+          toast.success('🎤 Vocale pronto!');
+        };
+        reader.readAsDataURL(blob);
         
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -179,101 +204,38 @@ export function SequenceAudioRecorder({
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
     
-    toast.success(`📁 File caricato: ${file.name}`);
-    
-    // 🎤 NUOVO: Upload immediato su ImageKit
-    await uploadToImageKit(file, file.name);
-  };
-
-  const uploadAudio = async () => {
-    if (!audioBlob || !campaignId) {
-      toast.error('Salva prima la campagna per caricare l\'audio');
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-
-      const formData = new FormData();
-      const filename = audioBlob instanceof File ? audioBlob.name : `vocale-${Date.now()}.webm`;
-      formData.append('audio', audioBlob, filename);
-
-      // Calcola durata (se possibile)
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        await new Promise((resolve) => {
-          audio.addEventListener('loadedmetadata', () => {
-            if (audio.duration && isFinite(audio.duration)) {
-              formData.append('duration', Math.round(audio.duration).toString());
-            }
-            resolve(true);
-          });
-          audio.addEventListener('error', () => resolve(true));
-        });
-      }
-
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/whatsapp-campaigns/${campaignId}/sequences/${sequenceId}/audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('🎤 Vocale caricato con successo!');
-        // Assicura che il tipo sia corretto
-        const attachment = {
-          ...data.data.attachment,
-          type: 'voice' as const
-        };
-        onAudioUploaded?.(attachment);
-        deleteRecording();
-      } else {
-        throw new Error(data.message || 'Errore upload audio');
-      }
-    } catch (error) {
-      console.error('Errore upload audio:', error);
-      toast.error('Errore durante il caricamento dell\'audio');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const removeExistingAudio = async () => {
-    if (!campaignId || !existingAudio) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/whatsapp-campaigns/${campaignId}/sequences/${sequenceId}/audio`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`
+    // 🎤 Converti in DataURL e notifica parent
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const dataUrl = reader.result as string;
+      
+      // Calcola durata
+      let duration: number | undefined;
+      const audio = new Audio(url);
+      await new Promise<void>((resolve) => {
+        audio.addEventListener('loadedmetadata', () => {
+          if (audio.duration && isFinite(audio.duration)) {
+            duration = Math.round(audio.duration);
           }
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success('🗑️ Vocale rimosso');
-        onAudioRemoved?.();
-      } else {
-        throw new Error(data.message || 'Errore rimozione audio');
-      }
-    } catch (error) {
-      console.error('Errore rimozione audio:', error);
-      toast.error('Errore durante la rimozione dell\'audio');
-    }
+          resolve();
+        });
+        audio.addEventListener('error', () => resolve());
+      });
+      
+      // Notifica parent con DataURL
+      onAudioReady?.({
+        blob: file,
+        dataUrl,
+        filename: file.name,
+        size: file.size,
+        duration
+      });
+      
+      toast.success(`📁 File caricato: ${file.name}`);
+    };
+    reader.readAsDataURL(file);
   };
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -286,53 +248,6 @@ export function SequenceAudioRecorder({
     return (bytes / 1024).toFixed(1) + ' KB';
   };
 
-  // 🎤 Upload diretto su ImageKit (senza campaignId)
-  const uploadToImageKit = async (blob: Blob, filename: string) => {
-    try {
-      setIsUploading(true);
-      
-      // Calcola durata
-      let duration: number | undefined;
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        await new Promise<void>((resolve) => {
-          audio.addEventListener('loadedmetadata', () => {
-            if (audio.duration && isFinite(audio.duration)) {
-              duration = Math.round(audio.duration);
-            }
-            resolve();
-          });
-          audio.addEventListener('error', () => resolve());
-        });
-      }
-
-      // Usa apiClient invece di fetch diretto
-      const response = await apiClient.uploadAudioDirect(blob, filename, duration);
-
-      if (response.success && response.data) {
-        toast.success('🎤 Vocale caricato su ImageKit!');
-        
-        // Notifica il parent con l'attachment (URL ImageKit pubblico)
-        onAudioReady?.({
-          blob,
-          dataUrl: response.data.attachment.url, // URL ImageKit (non Base64!)
-          filename: response.data.attachment.filename,
-          size: response.data.attachment.size,
-          duration: response.data.attachment.duration
-        });
-        
-        // Pulisci lo stato locale dopo upload
-        deleteRecording();
-      } else {
-        throw new Error(response.message || 'Errore upload audio');
-      }
-    } catch (error) {
-      console.error('Errore upload ImageKit:', error);
-      toast.error('Errore durante il caricamento del vocale');
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   // Se c'è un audio esistente, mostra quello
   if (existingAudio) {
@@ -352,7 +267,10 @@ export function SequenceAudioRecorder({
           <Button
             variant="ghost"
             size="sm"
-            onClick={removeExistingAudio}
+            onClick={() => {
+              onAudioRemoved?.();
+              toast.success('🗑️ Vocale rimosso');
+            }}
             disabled={disabled}
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
@@ -425,22 +343,6 @@ export function SequenceAudioRecorder({
         </div>
       )}
 
-      {(audioBlob && audioUrl && !isUploading) && (
-        <div className="space-y-2">
-          <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded p-2">
-            ⏳ Upload in corso su ImageKit...
-          </div>
-        </div>
-      )}
-      
-      {isUploading && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-center gap-2 text-blue-600">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Caricamento su ImageKit...</span>
-          </div>
-        </div>
-      )}
 
       <p className="text-xs text-gray-500">
         Formati supportati: MP3, OGG, WAV, M4A, WebM • Max 10 MB

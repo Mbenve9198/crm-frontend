@@ -1295,8 +1295,6 @@ function CampaignsContent() {
                               {/* 🎤 NUOVO: Componente Audio/Vocale */}
                               <div className="mt-3">
                                 <SequenceAudioRecorder
-                                  campaignId={undefined} // Non ancora salvata
-                                  sequenceId={sequence.id}
                                   existingAudio={sequence.attachment}
                                   onAudioReady={(audioData) => {
                                     // 🎤 Audio locale pronto - salva nello stato con DataURL
@@ -1310,10 +1308,6 @@ function CampaignsContent() {
                                       }
                                     });
                                     toast.success('🎤 Vocale pronto per il salvataggio!');
-                                  }}
-                                  onAudioUploaded={(attachment) => {
-                                    updateMessageSequence(sequence.id, { attachment });
-                                    toast.success('🎤 Vocale caricato!');
                                   }}
                                   onAudioRemoved={() => {
                                     updateMessageSequence(sequence.id, { attachment: undefined });

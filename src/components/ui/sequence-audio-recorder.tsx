@@ -1,15 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Upload, Trash2, Play, Pause, Library } from 'lucide-react';
+import { Mic, Square, Upload, Trash2, Play, Library } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
 interface SequenceAudioRecorderProps {
-  campaignId?: string;
-  sequenceId: string;
   existingAudio?: {
     type?: 'voice' | 'image' | 'video' | 'document';
     filename: string;
@@ -17,18 +14,11 @@ interface SequenceAudioRecorderProps {
     size?: number;
     duration?: number;
   } | null;
-  onAudioUploaded?: (attachment: {
-    type: 'voice' | 'image' | 'video' | 'document';
-    filename: string;
-    url: string;
-    size: number;
-    duration?: number;
-  }) => void;
   onAudioRemoved?: () => void;
   disabled?: boolean;
-  // 🎤 NUOVO: Callback per audio locale (prima di salvare campagna)
+  // 🎤 Callback per audio locale (prima di salvare campagna)
   onAudioReady?: (audioData: {
-    blob: Blob;
+    blob: Blob | null;
     dataUrl: string;
     filename: string;
     size: number;
@@ -37,10 +27,7 @@ interface SequenceAudioRecorderProps {
 }
 
 export function SequenceAudioRecorder({
-  campaignId,
-  sequenceId,
   existingAudio,
-  onAudioUploaded,
   onAudioRemoved,
   disabled = false,
   onAudioReady
@@ -48,7 +35,6 @@ export function SequenceAudioRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   
   // 📚 NUOVO: Libreria vocali
@@ -64,7 +50,6 @@ export function SequenceAudioRecorder({
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -106,7 +91,7 @@ export function SequenceAudioRecorder({
 
     // Notifica parent con il vocale selezionato
     onAudioReady?.({
-      blob: null as any, // Non serve il blob per vocali esistenti
+      blob: null,
       dataUrl: selected.url,
       filename: selected.filename,
       size: selected.size || 0,
@@ -444,7 +429,7 @@ export function SequenceAudioRecorder({
                     <div>
                       <p className="text-sm font-medium">{audio.filename}</p>
                       <p className="text-xs text-gray-500">
-                        da "{audio.campaignName}"
+                        da &quot;{audio.campaignName}&quot;
                       </p>
                     </div>
                     <Play className="h-4 w-4 text-blue-600" />

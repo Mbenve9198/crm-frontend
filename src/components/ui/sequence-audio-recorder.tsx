@@ -389,22 +389,23 @@ export function SequenceAudioRecorder({
                 />
               </>
             ) : (
-            <div className="flex items-center gap-3 w-full">
-              <div className="flex-1 flex items-center gap-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-sm font-mono text-gray-700">{formatTime(recordingTime)}</span>
+              <div className="flex items-center gap-3 w-full">
+                <div className="flex-1 flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-sm font-mono text-gray-700">{formatTime(recordingTime)}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={stopRecording}
+                >
+                  <Square className="h-4 w-4 mr-2" />
+                  Stop
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                onClick={stopRecording}
-              >
-                <Square className="h-4 w-4 mr-2" />
-                Stop
-              </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

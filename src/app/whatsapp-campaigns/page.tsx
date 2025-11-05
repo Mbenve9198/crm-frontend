@@ -98,6 +98,7 @@ function CampaignsContent() {
     whatsappSessionId: '',
     targetList: '',
     messageTemplate: '',
+    attachments: [], // 🎤 NUOVO: Per vocali messaggio principale
     messageSequences: [],
     priority: 'media', // ✅ Default priorità media
     contactFilters: {
@@ -464,8 +465,17 @@ function CampaignsContent() {
   };
 
   const handleCreateCampaign = async () => {
-    if (!newCampaignData.name || !newCampaignData.whatsappSessionId || newCampaignData.whatsappSessionId === 'no-sessions' || !newCampaignData.targetList || !newCampaignData.messageTemplate) {
-      toast.error('Tutti i campi obbligatori devono essere compilati');
+    // 🎤 Validazione: messaggio principale deve avere testo O vocale
+    const hasMainText = newCampaignData.messageTemplate && newCampaignData.messageTemplate.trim();
+    const hasMainVoice = newCampaignData.attachments?.some(a => a.type === 'voice');
+    
+    if (!newCampaignData.name || !newCampaignData.whatsappSessionId || newCampaignData.whatsappSessionId === 'no-sessions' || !newCampaignData.targetList) {
+      toast.error('Nome, sessione e lista sono obbligatori');
+      return;
+    }
+    
+    if (!hasMainText && !hasMainVoice) {
+      toast.error('Il messaggio principale deve avere almeno un testo o un vocale');
       return;
     }
 
@@ -480,6 +490,7 @@ function CampaignsContent() {
           whatsappSessionId: '',
           targetList: '',
           messageTemplate: '',
+          attachments: [], // 🎤 Reset attachments
           messageSequences: [],
           contactFilters: {
             excludeContacts: [],
@@ -1128,11 +1139,11 @@ function CampaignsContent() {
                       </div>
 
                       <div>
-                        <label className="text-sm font-medium">Template Messaggio Principale</label>
+                        <label className="text-sm font-medium">Template Messaggio Principale (opzionale se aggiungi vocale)</label>
                         <Textarea
                           value={newCampaignData.messageTemplate}
                           onChange={(e) => setNewCampaignData(prev => ({ ...prev, messageTemplate: e.target.value }))}
-                          placeholder="Ciao {nome}, sono {utente} di MenuChatCRM..."
+                          placeholder={newCampaignData.attachments?.some(a => a.type === 'voice') ? "Testo opzionale (hai già un vocale)" : "Ciao {nome}, sono {utente} di MenuChatCRM..."}
                           rows={6}
                         />
                         
@@ -1184,6 +1195,38 @@ function CampaignsContent() {
                         <p className="text-xs text-gray-500 mt-2">
                           💡 Le variabili verranno sostituite automaticamente con i dati dei contatti
                         </p>
+                      </div>
+
+                      {/* 🎤 NUOVO: Vocale per Messaggio Principale */}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Vocale per Messaggio Principale (opzionale)</label>
+                        <SequenceAudioRecorder
+                          campaignId={undefined}
+                          sequenceId="main-message"
+                          existingAudio={newCampaignData.attachments?.find(a => a.type === 'voice')}
+                          onAudioReady={(audioData) => {
+                            const voiceAttachment = {
+                              type: 'voice' as const,
+                              filename: audioData.filename,
+                              url: audioData.dataUrl,
+                              size: audioData.size,
+                              duration: audioData.duration
+                            };
+                            
+                            setNewCampaignData(prev => ({
+                              ...prev,
+                              attachments: [voiceAttachment]
+                            }));
+                            toast.success('🎤 Vocale pronto per il messaggio principale!');
+                          }}
+                          onAudioRemoved={() => {
+                            setNewCampaignData(prev => ({
+                              ...prev,
+                              attachments: prev.attachments?.filter(a => a.type !== 'voice') || []
+                            }));
+                          }}
+                          disabled={false}
+                        />
                       </div>
 
                       {/* Sequenze di Follow-up */}

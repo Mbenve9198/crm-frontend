@@ -94,7 +94,7 @@ export interface SessionStatsResponse {
 // Tipi per Campagne WhatsApp
 export type CampaignStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CampaignPriority = 'alta' | 'media' | 'bassa';
-export type AttachmentType = 'image' | 'audio' | 'video' | 'document';
+export type AttachmentType = 'image' | 'audio' | 'video' | 'document' | 'voice'; // 🎤 Aggiunto voice
 
 export interface CampaignAttachment {
   type: AttachmentType;
@@ -232,7 +232,8 @@ export interface CreateCampaignRequest {
   whatsappSessionId: string;
   targetList: string;
   contactFilters?: CampaignContactFilters;
-  messageTemplate: string; // Primo messaggio
+  messageTemplate: string; // Primo messaggio (opzionale se c'è vocale)
+  attachments?: CampaignAttachment[]; // 🎤 NUOVO: Attachments inclusi vocali per messaggio principale
   messageSequences?: MessageSequence[]; // Messaggi di follow-up
   priority: CampaignPriority; // ✅ Sistema priorità invece di timing manuale
   timing: CampaignTiming;

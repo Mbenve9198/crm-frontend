@@ -562,6 +562,55 @@ class ApiClient {
     }
   }
 
+  // 🎤 NUOVO: Upload audio diretto su ImageKit
+  async uploadAudioDirect(
+    audioBlob: Blob, 
+    filename: string,
+    duration?: number
+  ): Promise<ApiResponse<{
+    attachment: {
+      type: string;
+      filename: string;
+      url: string;
+      fileId: string;
+      size: number;
+      duration?: number;
+    }
+  }>> {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, filename);
+    
+    if (duration) {
+      formData.append('duration', duration.toString());
+    }
+
+    // Non usa this.baseURL perché deve andare a /api/whatsapp-campaigns direttamente
+    const headers: HeadersInit = {};
+    if (this.token) {
+      headers.Authorization = `Bearer ${this.token}`;
+    }
+
+    try {
+      const response = await fetch(`${this.baseURL}/whatsapp-campaigns/upload-audio`, {
+        method: 'POST',
+        headers,
+        body: formData,
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Upload audio error:', error);
+      throw error;
+    }
+  }
+
   async importCsvExecute(
     file: File, 
     mapping: Record<string, string>, 

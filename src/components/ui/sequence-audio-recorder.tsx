@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Upload, Trash2, Play, Pause, Loader2 } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api';
 
 interface SequenceAudioRecorderProps {
   campaignId?: string;
@@ -283,16 +284,14 @@ export function SequenceAudioRecorder({
     try {
       setIsUploading(true);
       
-      const formData = new FormData();
-      formData.append('audio', blob, filename);
-      
       // Calcola durata
+      let duration: number | undefined;
       if (audioUrl) {
         const audio = new Audio(audioUrl);
         await new Promise<void>((resolve) => {
           audio.addEventListener('loadedmetadata', () => {
             if (audio.duration && isFinite(audio.duration)) {
-              formData.append('duration', Math.round(audio.duration).toString());
+              duration = Math.round(audio.duration);
             }
             resolve();
           });
@@ -300,36 +299,25 @@ export function SequenceAudioRecorder({
         });
       }
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/whatsapp-campaigns/upload-audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
-          body: formData
-        }
-      );
+      // Usa apiClient invece di fetch diretto
+      const response = await apiClient.uploadAudioDirect(blob, filename, duration);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success && response.data) {
         toast.success('🎤 Vocale caricato su ImageKit!');
         
         // Notifica il parent con l'attachment (URL ImageKit pubblico)
         onAudioReady?.({
           blob,
-          dataUrl: data.data.attachment.url, // URL ImageKit (non Base64!)
-          filename: data.data.attachment.filename,
-          size: data.data.attachment.size,
-          duration: data.data.attachment.duration
+          dataUrl: response.data.attachment.url, // URL ImageKit (non Base64!)
+          filename: response.data.attachment.filename,
+          size: response.data.attachment.size,
+          duration: response.data.attachment.duration
         });
         
         // Pulisci lo stato locale dopo upload
         deleteRecording();
       } else {
-        throw new Error(data.message || 'Errore upload audio');
+        throw new Error(response.message || 'Errore upload audio');
       }
     } catch (error) {
       console.error('Errore upload ImageKit:', error);

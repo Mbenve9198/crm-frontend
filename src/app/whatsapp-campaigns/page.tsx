@@ -1201,8 +1201,6 @@ function CampaignsContent() {
                       <div>
                         <label className="text-sm font-medium mb-2 block">Vocale per Messaggio Principale (opzionale)</label>
                         <SequenceAudioRecorder
-                          campaignId={undefined}
-                          sequenceId="main-message"
                           existingAudio={newCampaignData.attachments?.find(a => a.type === 'voice')}
                           onAudioReady={(audioData) => {
                             const voiceAttachment = {
@@ -1338,8 +1336,6 @@ function CampaignsContent() {
                               {/* 🎤 NUOVO: Componente Audio/Vocale */}
                               <div className="mt-3">
                                 <SequenceAudioRecorder
-                                  campaignId={undefined} // Non ancora salvata
-                                  sequenceId={sequence.id}
                                   existingAudio={sequence.attachment}
                                   onAudioReady={(audioData) => {
                                     // 🎤 Audio locale pronto - salva nello stato con DataURL

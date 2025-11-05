@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Upload, Trash2, Play, Pause } from 'lucide-react';
+import { Mic, Square, Upload, Trash2 } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
 
 interface SequenceAudioRecorderProps {
-  campaignId?: string;
-  sequenceId: string;
   existingAudio?: {
-    type?: 'voice' | 'image' | 'video' | 'document';
+    type?: 'voice' | 'image' | 'video' | 'document' | 'audio'; // Include tutti i tipi
     filename: string;
     url: string;
     size?: number;
@@ -32,13 +30,17 @@ interface SequenceAudioRecorderProps {
     size: number;
     duration?: number;
   }) => void;
+  onAudioUploaded?: (attachment: {
+    type: 'voice' | 'image' | 'video' | 'document' | 'audio';
+    filename: string;
+    url: string;
+    size: number;
+    duration?: number;
+  }) => void;
 }
 
 export function SequenceAudioRecorder({
-  campaignId,
-  sequenceId,
   existingAudio,
-  onAudioUploaded,
   onAudioRemoved,
   disabled = false,
   onAudioReady
@@ -46,11 +48,9 @@ export function SequenceAudioRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -161,27 +161,6 @@ export function SequenceAudioRecorder({
     }
   };
 
-  const playAudio = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-    }
-  };
-
-  const deleteRecording = () => {
-    setAudioBlob(null);
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-      setAudioUrl(null);
-    }
-    setRecordingTime(0);
-    chunksRef.current = [];
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -1343,16 +1343,12 @@ function CampaignsContent() {
                                       attachment: {
                                         type: 'voice' as const,
                                         filename: audioData.filename,
-                                        url: audioData.dataUrl, // Base64 DataURL temporaneo
+                                        url: audioData.dataUrl, // Base64 DataURL
                                         size: audioData.size,
                                         duration: audioData.duration
                                       }
                                     });
-                                    toast.success('🎤 Vocale pronto per il salvataggio!');
-                                  }}
-                                  onAudioUploaded={(attachment) => {
-                                    updateMessageSequence(sequence.id, { attachment });
-                                    toast.success('🎤 Vocale caricato!');
+                                    toast.success('🎤 Vocale pronto!');
                                   }}
                                   onAudioRemoved={() => {
                                     updateMessageSequence(sequence.id, { attachment: undefined });

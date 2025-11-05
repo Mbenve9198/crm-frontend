@@ -13,27 +13,13 @@ interface SequenceAudioRecorderProps {
     size?: number;
     duration?: number;
   } | null;
-  onAudioUploaded?: (attachment: {
-    type: 'voice' | 'image' | 'video' | 'document';
-    filename: string;
-    url: string;
-    size: number;
-    duration?: number;
-  }) => void;
   onAudioRemoved?: () => void;
   disabled?: boolean;
-  // 🎤 NUOVO: Callback per audio locale (prima di salvare campagna)
+  // 🎤 Callback per audio locale (prima di salvare campagna)
   onAudioReady?: (audioData: {
     blob: Blob;
     dataUrl: string;
     filename: string;
-    size: number;
-    duration?: number;
-  }) => void;
-  onAudioUploaded?: (attachment: {
-    type: 'voice' | 'image' | 'video' | 'document' | 'audio';
-    filename: string;
-    url: string;
     size: number;
     duration?: number;
   }) => void;

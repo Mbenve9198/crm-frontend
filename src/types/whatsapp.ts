@@ -100,7 +100,9 @@ export interface CampaignAttachment {
   type: AttachmentType;
   filename: string;
   url: string;
+  voiceFileId?: string; // 🎤 ID VoiceFile collezione separata (per type='voice')
   size?: number;
+  duration?: number; // 🎤 Durata vocali
   caption?: string;
 }
 
@@ -220,6 +222,7 @@ export interface MessageSequence {
     type: 'voice' | 'image' | 'video' | 'document';
     filename: string;
     url: string;
+    voiceFileId?: string; // 🎤 ID VoiceFile collezione
     size?: number;
     duration?: number; // Durata in secondi (per audio)
     caption?: string;

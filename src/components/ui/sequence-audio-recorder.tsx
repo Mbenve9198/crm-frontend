@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Upload, Trash2 } from 'lucide-react';
+import { Mic, Square, Upload, Trash2, Loader2 } from 'lucide-react';
 import { Button } from './button';
 import { toast } from 'sonner';
+import { apiClient } from '@/lib/api';
 
 interface SequenceAudioRecorderProps {
   existingAudio?: {
@@ -17,11 +18,11 @@ interface SequenceAudioRecorderProps {
   disabled?: boolean;
   // 🎤 Callback per audio locale (prima di salvare campagna)
   onAudioReady?: (audioData: {
-    blob: Blob;
-    dataUrl: string;
+    voiceFileId: string; // 🎤 ID del VoiceFile salvato
     filename: string;
     size: number;
     duration?: number;
+    publicUrl: string; // URL pubblico per accesso
   }) => void;
 }
 
@@ -35,6 +36,7 @@ export function SequenceAudioRecorder({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [isUploading, setIsUploading] = useState(false); // 🎤 Stato upload
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -82,39 +84,11 @@ export function SequenceAudioRecorder({
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
         
-        // 🎤 Converti in DataURL e notifica parent
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const dataUrl = reader.result as string;
-          
-          // Calcola durata
-          let duration: number | undefined;
-          const audio = new Audio(url);
-          await new Promise<void>((resolve) => {
-            audio.addEventListener('loadedmetadata', () => {
-              if (audio.duration && isFinite(audio.duration)) {
-                duration = Math.round(audio.duration);
-              }
-              resolve();
-            });
-            audio.addEventListener('error', () => resolve());
-          });
-          
-          // Notifica parent con DataURL (no ImageKit!)
-          onAudioReady?.({
-            blob,
-            dataUrl, // Base64 DataURL
-            filename: `vocale.${mimeType.includes('ogg') ? 'ogg' : 'webm'}`,
-            size: blob.size,
-            duration
-          });
-          
-          toast.success('🎤 Vocale pronto!');
-        };
-        reader.readAsDataURL(blob);
-        
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
+        
+        // 🎤 Upload automatico su VoiceFile collezione
+        uploadVoiceFile(blob, `vocale.${mimeType.includes('ogg') ? 'ogg' : 'webm'}`);
       };
 
       mediaRecorder.start();
@@ -148,6 +122,63 @@ export function SequenceAudioRecorder({
   };
 
 
+  // 🎤 Upload su VoiceFile collezione
+  const uploadVoiceFile = async (blob: Blob, filename: string) => {
+    try {
+      setIsUploading(true);
+      
+      // Converti in DataURL
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      
+      // Calcola durata
+      let duration: number | undefined;
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        await new Promise<void>((resolve) => {
+          audio.addEventListener('loadedmetadata', () => {
+            if (audio.duration && isFinite(audio.duration)) {
+              duration = Math.round(audio.duration);
+            }
+            resolve();
+          });
+          audio.addEventListener('error', () => resolve());
+        });
+      }
+      
+      // Upload su collezione VoiceFile
+      const response = await apiClient.uploadVoiceFile(dataUrl, filename, blob.size, duration);
+      
+      if (response.success && response.data) {
+        toast.success('🎤 Vocale salvato!');
+        
+        // Notifica parent con voiceFileId e URL pubblico
+        onAudioReady?.({
+          voiceFileId: response.data.voiceFileId,
+          filename: response.data.filename,
+          size: response.data.size,
+          duration: response.data.duration,
+          publicUrl: response.data.publicUrl
+        });
+        
+        // Reset locale
+        setAudioBlob(null);
+        if (audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+          setAudioUrl(null);
+        }
+      }
+    } catch (error) {
+      console.error('Errore upload voice file:', error);
+      toast.error('Errore caricamento vocale');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -169,36 +200,10 @@ export function SequenceAudioRecorder({
     const url = URL.createObjectURL(file);
     setAudioUrl(url);
     
-    // 🎤 Converti in DataURL e notifica parent
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = reader.result as string;
-      
-      // Calcola durata
-      let duration: number | undefined;
-      const audio = new Audio(url);
-      await new Promise<void>((resolve) => {
-        audio.addEventListener('loadedmetadata', () => {
-          if (audio.duration && isFinite(audio.duration)) {
-            duration = Math.round(audio.duration);
-          }
-          resolve();
-        });
-        audio.addEventListener('error', () => resolve());
-      });
-      
-      // Notifica parent con DataURL
-      onAudioReady?.({
-        blob: file,
-        dataUrl,
-        filename: file.name,
-        size: file.size,
-        duration
-      });
-      
-      toast.success(`📁 File caricato: ${file.name}`);
-    };
-    reader.readAsDataURL(file);
+    toast.success(`📁 File caricato: ${file.name}`);
+    
+    // 🎤 Upload automatico su VoiceFile collezione
+    await uploadVoiceFile(file, file.name);
   };
 
 
@@ -254,7 +259,14 @@ export function SequenceAudioRecorder({
         <span className="text-sm font-medium text-gray-700">Messaggio Vocale (opzionale)</span>
       </div>
 
-      {!audioBlob && (
+      {isUploading && (
+        <div className="flex items-center gap-2 text-blue-600 p-2 bg-blue-50 rounded">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">Caricamento vocale...</span>
+        </div>
+      )}
+
+      {!audioBlob && !isUploading && (
         <div className="flex gap-2">
           {!isRecording ? (
             <>

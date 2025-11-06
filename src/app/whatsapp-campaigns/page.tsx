@@ -1206,7 +1206,8 @@ function CampaignsContent() {
                             const voiceAttachment = {
                               type: 'voice' as const,
                               filename: audioData.filename,
-                              url: audioData.dataUrl,
+                              voiceFileId: audioData.voiceFileId, // 🎤 ID collezione separata
+                              url: audioData.publicUrl, // URL pubblico
                               size: audioData.size,
                               duration: audioData.duration
                             };
@@ -1215,7 +1216,7 @@ function CampaignsContent() {
                               ...prev,
                               attachments: [voiceAttachment]
                             }));
-                            toast.success('🎤 Vocale pronto per il messaggio principale!');
+                            toast.success('🎤 Vocale salvato e pronto!');
                           }}
                           onAudioRemoved={() => {
                             setNewCampaignData(prev => ({
@@ -1338,17 +1339,18 @@ function CampaignsContent() {
                                 <SequenceAudioRecorder
                                   existingAudio={sequence.attachment}
                                   onAudioReady={(audioData) => {
-                                    // 🎤 Audio locale pronto - salva nello stato con DataURL
+                                    // 🎤 Vocale salvato in VoiceFile collezione
                                     updateMessageSequence(sequence.id, { 
                                       attachment: {
                                         type: 'voice' as const,
                                         filename: audioData.filename,
-                                        url: audioData.dataUrl, // Base64 DataURL
+                                        voiceFileId: audioData.voiceFileId, // 🎤 ID collezione
+                                        url: audioData.publicUrl, // URL pubblico
                                         size: audioData.size,
                                         duration: audioData.duration
                                       }
                                     });
-                                    toast.success('🎤 Vocale pronto!');
+                                    toast.success('🎤 Vocale salvato!');
                                   }}
                                   onAudioRemoved={() => {
                                     updateMessageSequence(sequence.id, { attachment: undefined });

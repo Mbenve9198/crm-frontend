@@ -58,13 +58,17 @@ export function SequenceAudioRecorder({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // 🎤 Usa OGG Opus (migliore compatibilità WhatsApp)
-      let mimeType = 'audio/webm'; // Fallback
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus'; // Opus è il codec di WhatsApp
-      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-        mimeType = 'audio/ogg;codecs=opus';
+      // 🎤 CRITICO: WhatsApp PTT richiede OGG Opus (non WebM!)
+      let mimeType = 'audio/ogg'; // Fallback
+      if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        mimeType = 'audio/ogg;codecs=opus'; // Formato nativo WhatsApp PTT ✅
+      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+        mimeType = 'audio/ogg';
+      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus'; // Fallback se OGG non supportato
       }
+      
+      console.log(`🎤 Formato registrazione: ${mimeType}`);
       
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
 

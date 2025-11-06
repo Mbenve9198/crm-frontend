@@ -56,12 +56,12 @@ export function SequenceAudioRecorder({
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // 🎤 Prova MP3 se supportato, altrimenti WebM
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4'; // M4A/AAC - ImageKit non lo trasforma
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
+      // 🎤 Usa OGG Opus (migliore compatibilità WhatsApp)
+      let mimeType = 'audio/webm'; // Fallback
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus'; // Opus è il codec di WhatsApp
+      } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+        mimeType = 'audio/ogg;codecs=opus';
       }
       
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -104,7 +104,7 @@ export function SequenceAudioRecorder({
           onAudioReady?.({
             blob,
             dataUrl, // Base64 DataURL
-            filename: `vocale.${mimeType.includes('mp4') ? 'm4a' : 'webm'}`,
+            filename: `vocale.${mimeType.includes('ogg') ? 'ogg' : 'webm'}`,
             size: blob.size,
             duration
           });

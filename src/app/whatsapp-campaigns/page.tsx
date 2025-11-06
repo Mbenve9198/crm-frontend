@@ -37,7 +37,7 @@ import { apiClient } from '@/lib/api';
 import { ModernSidebar } from '@/components/ui/modern-sidebar';
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/ui/login-form';
-import { SequenceAudioRecorder } from '@/components/ui/sequence-audio-recorder';
+import { VoiceMp3Uploader } from '@/components/ui/voice-mp3-uploader';
 import { 
   WhatsappCampaign, 
   WhatsappSession, 
@@ -1200,14 +1200,14 @@ function CampaignsContent() {
                       {/* 🎤 NUOVO: Vocale per Messaggio Principale */}
                       <div>
                         <label className="text-sm font-medium mb-2 block">Vocale per Messaggio Principale (opzionale)</label>
-                        <SequenceAudioRecorder
+                        <VoiceMp3Uploader
                           existingAudio={newCampaignData.attachments?.find(a => a.type === 'voice')}
                           onAudioReady={(audioData) => {
                             const voiceAttachment = {
                               type: 'voice' as const,
                               filename: audioData.filename,
-                              voiceFileId: audioData.voiceFileId, // 🎤 ID collezione separata
-                              url: audioData.publicUrl, // URL pubblico
+                              voiceFileId: audioData.voiceFileId,
+                              url: audioData.publicUrl,
                               size: audioData.size,
                               duration: audioData.duration
                             };
@@ -1216,7 +1216,6 @@ function CampaignsContent() {
                               ...prev,
                               attachments: [voiceAttachment]
                             }));
-                            toast.success('🎤 Vocale salvato e pronto!');
                           }}
                           onAudioRemoved={() => {
                             setNewCampaignData(prev => ({
@@ -1336,25 +1335,22 @@ function CampaignsContent() {
 
                               {/* 🎤 NUOVO: Componente Audio/Vocale */}
                               <div className="mt-3">
-                                <SequenceAudioRecorder
+                                <VoiceMp3Uploader
                                   existingAudio={sequence.attachment}
                                   onAudioReady={(audioData) => {
-                                    // 🎤 Vocale salvato in VoiceFile collezione
                                     updateMessageSequence(sequence.id, { 
                                       attachment: {
                                         type: 'voice' as const,
                                         filename: audioData.filename,
-                                        voiceFileId: audioData.voiceFileId, // 🎤 ID collezione
-                                        url: audioData.publicUrl, // URL pubblico
+                                        voiceFileId: audioData.voiceFileId,
+                                        url: audioData.publicUrl,
                                         size: audioData.size,
                                         duration: audioData.duration
                                       }
                                     });
-                                    toast.success('🎤 Vocale salvato!');
                                   }}
                                   onAudioRemoved={() => {
                                     updateMessageSequence(sequence.id, { attachment: undefined });
-                                    toast.success('🗑️ Vocale rimosso');
                                   }}
                                   disabled={false}
                                 />

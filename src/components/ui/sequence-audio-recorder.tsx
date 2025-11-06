@@ -32,28 +32,8 @@ export function SequenceAudioRecorder({
   disabled = false,
   onAudioReady
 }: SequenceAudioRecorderProps) {
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isUploading, setIsUploading] = useState(false); // 🎤 Stato upload
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    return () => {
-      // Cleanup
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
-      }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [audioUrl]);
 
   const startRecording = async () => {
     try {

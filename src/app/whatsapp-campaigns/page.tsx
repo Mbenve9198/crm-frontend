@@ -1201,7 +1201,7 @@ function CampaignsContent() {
                       <div>
                         <label className="text-sm font-medium mb-2 block">Vocale per Messaggio Principale (opzionale)</label>
                         <VoiceMp3Uploader
-                          existingAudio={newCampaignData.attachments?.find(a => a.type === 'voice') as any}
+                          existingAudio={newCampaignData.attachments?.find(a => a.type === 'voice')}
                           onAudioReady={(audioData) => {
                             const voiceAttachment = {
                               type: 'voice' as const,
@@ -1336,7 +1336,7 @@ function CampaignsContent() {
                               {/* 🎤 NUOVO: Componente Audio/Vocale */}
                               <div className="mt-3">
                                 <VoiceMp3Uploader
-                                  existingAudio={sequence.attachment as any}
+                                  existingAudio={sequence.attachment}
                                   onAudioReady={(audioData) => {
                                     updateMessageSequence(sequence.id, { 
                                       attachment: {

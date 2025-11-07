@@ -8,12 +8,13 @@ import { apiClient } from '@/lib/api';
 
 interface VoiceMp3UploaderProps {
   existingAudio?: {
-    type?: 'voice';
+    type?: 'voice' | 'image' | 'video' | 'document' | 'audio';
     filename: string;
     url: string;
     voiceFileId?: string;
     size?: number;
     duration?: number;
+    caption?: string;
   } | null;
   onAudioRemoved?: () => void;
   disabled?: boolean;
@@ -186,4 +187,5 @@ export function VoiceMp3Uploader({
     </div>
   );
 }
+
 

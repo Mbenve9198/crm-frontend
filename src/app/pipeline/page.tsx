@@ -110,18 +110,22 @@ function PipelinePage() {
     try {
       setIsLoading(true);
       
-      // Carica contatti (solo quelli in pipeline)
+      // Carica contatti (solo quelli in pipeline) - FILTRO LATO SERVER per performance
       const contactsResponse = await apiClient.getContacts({
         page: 1,
-        limit: 10000, // 🚀 Alto limite ma solo per contatti pipeline (pochi)
-        owner: selectedOwner !== "all" ? selectedOwner : undefined
+        limit: 1000, // Limite ragionevole - filtrato lato server
+        owner: selectedOwner !== "all" ? selectedOwner : undefined,
+        column_filters: {
+          Status: {
+            type: 'value',
+            values: getPipelineStatuses() // Filtra solo status pipeline
+          }
+        }
       });
 
       if (contactsResponse.success) {
-        const pipelineContacts = contactsResponse.data.contacts.filter(contact => 
-          getPipelineStatuses().includes(contact.status)
-        );
-        setContacts(pipelineContacts);
+        // I contatti sono già filtrati lato server
+        setContacts(contactsResponse.data.contacts);
       }
 
       // Carica utenti

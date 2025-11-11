@@ -2030,8 +2030,8 @@ function CampaignsContent() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>Stato Messaggi ({selectedCampaign.messageQueue.length})</span>
-                        {selectedCampaign.messageQueue.length > 20 && (
+                        <span>Stato Messaggi ({selectedCampaign.messageQueue?.length || 0})</span>
+                        {(selectedCampaign.messageQueue?.length || 0) > 20 && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -2044,14 +2044,14 @@ function CampaignsContent() {
                       </CardTitle>
                       <div className="text-sm text-gray-600">
                         {showAllMessages 
-                          ? `Visualizzati tutti i ${selectedCampaign.messageQueue.length} messaggi`
-                          : `Visualizzati primi ${Math.min(20, selectedCampaign.messageQueue.length)} messaggi`
+                          ? `Visualizzati tutti i ${selectedCampaign.messageQueue?.length || 0} messaggi`
+                          : `Visualizzati primi ${Math.min(20, selectedCampaign.messageQueue?.length || 0)} messaggi`
                         } • Ordinati per data di invio
                       </div>
                     </CardHeader>
                     <CardContent>
                       {/* Filtri e Ricerca (visibili solo quando si mostrano tutti) */}
-                      {showAllMessages && selectedCampaign.messageQueue.length > 10 && (
+                      {showAllMessages && (selectedCampaign.messageQueue?.length || 0) > 10 && (
                         <div className="mb-4 p-3 bg-gray-50 rounded-lg space-y-3">
                           <div className="flex flex-col sm:flex-row gap-3">
                             <div className="flex-1">
@@ -2083,9 +2083,10 @@ function CampaignsContent() {
                       <div className={`space-y-2 overflow-y-auto ${showAllMessages ? 'max-h-96' : 'max-h-60'}`}>
                         {(() => {
                           // Logica di filtraggio e ricerca
+                          const messageQueue = selectedCampaign.messageQueue || [];
                           let filteredMessages = showAllMessages 
-                            ? selectedCampaign.messageQueue 
-                            : selectedCampaign.messageQueue.slice(0, 20);
+                            ? messageQueue 
+                            : messageQueue.slice(0, 20);
 
                           // Applica filtro stato
                           if (messageFilter !== 'all') {
@@ -2269,9 +2270,9 @@ function CampaignsContent() {
                           </div>
                         )}
 
-                        {!showAllMessages && selectedCampaign.messageQueue.length > 20 && (
+                        {!showAllMessages && (selectedCampaign.messageQueue?.length || 0) > 20 && (
                           <div className="text-center text-sm text-gray-500 py-3 border-t">
-                            💬 Altri {selectedCampaign.messageQueue.length - 20} messaggi nascosti
+                            💬 Altri {(selectedCampaign.messageQueue?.length || 0) - 20} messaggi nascosti
                             <br />
                             <Button
                               variant="link"
@@ -2283,7 +2284,7 @@ function CampaignsContent() {
                             </Button>
                           </div>
                         )}
-                        {selectedCampaign.messageQueue.length === 0 && (
+                        {(selectedCampaign.messageQueue?.length || 0) === 0 && (
                           <div className="text-center text-gray-500 py-8">
                             📭 Nessun messaggio in coda
                           </div>

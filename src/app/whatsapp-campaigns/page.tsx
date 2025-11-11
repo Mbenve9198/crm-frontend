@@ -38,6 +38,7 @@ import { ModernSidebar } from '@/components/ui/modern-sidebar';
 import { useAuth } from '@/context/AuthContext';
 import LoginForm from '@/components/ui/login-form';
 import { VoiceMp3Uploader } from '@/components/ui/voice-mp3-uploader';
+import { ChangeSessionDialog } from '@/components/ui/change-session-dialog';
 import { 
   WhatsappCampaign, 
   WhatsappSession, 
@@ -1507,6 +1508,17 @@ function CampaignsContent() {
                                       <Eye className="h-4 w-4 mr-2" />
                                   Dettagli
                                 </DropdownMenuItem>
+                                {/* 🔄 Opzione per cambiare sessione (disponibile per tutte le campagne) */}
+                                <ChangeSessionDialog
+                                  campaign={campaign}
+                                  sessions={sessions}
+                                  onSessionChanged={(updatedCampaign) => {
+                                    // Aggiorna la campagna nella lista
+                                    setCampaigns(prev => prev.map(c => 
+                                      c._id === updatedCampaign._id ? updatedCampaign : c
+                                    ));
+                                  }}
+                                />
                                 {campaign.status === 'draft' && (
                                   <DropdownMenuItem onClick={() => handleCampaignAction(campaign._id, 'start')}>
                                     <Play className="h-4 w-4 mr-2" />

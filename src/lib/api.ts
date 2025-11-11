@@ -1097,6 +1097,31 @@ class ApiClient {
   }
 
   /**
+   * 🔄 Cambia la sessione WhatsApp di una campagna (anche se in corso)
+   */
+  async changeWhatsAppCampaignSession(
+    campaignId: string, 
+    newWhatsappSessionId: string
+  ): Promise<ApiResponse<{
+    data: WhatsappCampaign;
+    changes: {
+      oldSessionId: string;
+      oldNumber: string;
+      newSessionId: string;
+      newNumber: string;
+      campaignStatus: string;
+      pendingMessages: number;
+      sentMessages: number;
+    };
+  }>> {
+    return this.request(`/whatsapp-campaigns/${campaignId}/change-session`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newWhatsappSessionId }),
+    });
+  }
+
+  /**
    * Aggiorna lo status di un messaggio specifico in una campagna
    */
   async updateMessageStatus(campaignId: string, messageId: string, request: UpdateMessageStatusRequest): Promise<ApiResponse<UpdateMessageStatusResponse>> {

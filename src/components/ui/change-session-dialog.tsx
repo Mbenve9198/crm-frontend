@@ -55,15 +55,16 @@ export function ChangeSessionDialog({
       );
 
       if (response.success && response.data) {
-        const { changes } = response;
+        // Accesso corretto alla struttura: response.data contiene { data, changes }
+        const { changes, data: campaignData } = response.data;
         
         toast.success('✅ Sessione cambiata con successo!', {
           description: `Da: ${changes.oldNumber}\nA: ${changes.newNumber}\nPending: ${changes.pendingMessages} messaggi`
         });
 
         // Chiama il callback con la campagna aggiornata
-        if (onSessionChanged && response.data.data) {
-          onSessionChanged(response.data.data);
+        if (onSessionChanged && campaignData) {
+          onSessionChanged(campaignData);
         }
 
         setOpen(false);

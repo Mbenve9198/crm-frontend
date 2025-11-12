@@ -131,10 +131,14 @@ export interface AutopilotConfig {
   useContactKeyword?: boolean;
   // Campi necessari nei contatti per autopilot
   requiredContactFields?: {
-    nameField?: string; // es. "properties.restaurant_name"
-    latField?: string; // es. "properties.latitude"
-    lngField?: string; // es. "properties.longitude"
-    keywordField?: string; // es. "properties.keyword"
+    nameField?: string; // es. "name" - Nome del ristorante
+    addressField?: string; // es. "properties.Indirizzo" - Indirizzo per geocoding
+    cityField?: string; // es. "properties.Città" - Città per geocoding
+    latField?: string; // es. "properties.latitude" - Opzionale
+    lngField?: string; // es. "properties.longitude" - Opzionale
+    keywordField?: string; // es. "properties.keyword" - Opzionale
+    reviewsField?: string; // es. "properties.Recensioni" - Recensioni attuali
+    ratingField?: string; // es. "properties.Rating" - Rating attuale
   };
   // Salva i dati di analisi nel contatto dopo l'invio
   saveAnalysisToContact?: boolean;

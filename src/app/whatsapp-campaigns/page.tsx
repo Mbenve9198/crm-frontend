@@ -20,7 +20,9 @@ import {
   Ban,
   Clock,
   CheckCircle,
-  Mic
+  Mic,
+  Bot, // 🤖 NUOVO: Icona per autopilot
+  Sparkles // 🤖 NUOVO: Icona decorativa
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +49,9 @@ import {
   SESSION_STATUSES,
   CreateSessionRequest,
   CreateCampaignRequest,
-  MessageSequence
+  MessageSequence,
+  CampaignMode, // 🤖 NUOVO
+  AutopilotConfig // 🤖 NUOVO
 } from '@/types/whatsapp';
 
 function LoadingSpinner() {
@@ -93,11 +97,30 @@ function CampaignsContent() {
 
   // Stati per nuova campagna
   const [showNewCampaignDialog, setShowNewCampaignDialog] = useState(false);
+  const [campaignMode, setCampaignMode] = useState<CampaignMode>('standard'); // 🤖 NUOVO: Mode toggle
   const [newCampaignData, setNewCampaignData] = useState<CreateCampaignRequest>({
     name: '',
     description: '',
     whatsappSessionId: '',
     targetList: '',
+    mode: 'standard', // 🤖 NUOVO
+    autopilotConfig: { // 🤖 NUOVO
+      claudeSettings: {
+        tone: 'colloquiale e amichevole',
+        maxLength: 280,
+        focusPoint: 'visibilità su Google',
+        cta: 'offrire tool gratuito'
+      },
+      searchKeyword: 'ristorante',
+      useContactKeyword: true,
+      saveAnalysisToContact: true,
+      requiredContactFields: {
+        nameField: 'properties.restaurant_name',
+        latField: 'properties.latitude',
+        lngField: 'properties.longitude',
+        keywordField: 'properties.keyword'
+      }
+    },
     messageTemplate: '',
     attachments: [], // 🎤 NUOVO: Per vocali messaggio principale
     messageSequences: [],
@@ -466,30 +489,72 @@ function CampaignsContent() {
   };
 
   const handleCreateCampaign = async () => {
-    // 🎤 Validazione: messaggio principale deve avere testo O vocale
-    const hasMainText = newCampaignData.messageTemplate && newCampaignData.messageTemplate.trim();
-    const hasMainVoice = newCampaignData.attachments?.some(a => a.type === 'voice');
-    
+    // Validazione campi base
     if (!newCampaignData.name || !newCampaignData.whatsappSessionId || newCampaignData.whatsappSessionId === 'no-sessions' || !newCampaignData.targetList) {
       toast.error('Nome, sessione e lista sono obbligatori');
       return;
     }
     
-    if (!hasMainText && !hasMainVoice) {
-      toast.error('Il messaggio principale deve avere almeno un testo o un vocale');
-      return;
+    // 🤖 Validazione specifica per mode
+    if (campaignMode === 'standard') {
+      // Mode standard: messaggio principale deve avere testo O vocale
+      const hasMainText = newCampaignData.messageTemplate && newCampaignData.messageTemplate.trim();
+      const hasMainVoice = newCampaignData.attachments?.some(a => a.type === 'voice');
+      
+      if (!hasMainText && !hasMainVoice) {
+        toast.error('Il messaggio principale deve avere almeno un testo o un vocale');
+        return;
+      }
+    } else if (campaignMode === 'autopilot') {
+      // Mode autopilot: keyword obbligatoria
+      if (!newCampaignData.autopilotConfig?.searchKeyword?.trim()) {
+        toast.error('La keyword di ricerca è obbligatoria per campagne autopilot');
+        return;
+      }
     }
 
     try {
-      const response = await apiClient.createWhatsAppCampaign(newCampaignData);
+      // Prepara payload con mode corretto
+      const payload = {
+        ...newCampaignData,
+        mode: campaignMode,
+        // Se autopilot, messaggio template deve essere vuoto
+        messageTemplate: campaignMode === 'autopilot' ? '' : newCampaignData.messageTemplate
+      };
+
+      const response = await apiClient.createWhatsAppCampaign(payload);
       if (response.success) {
-        toast.success('Campagna creata con successo');
+        const successMessage = campaignMode === 'autopilot' 
+          ? '🤖 Campagna Autopilot creata! I messaggi verranno generati con AI'
+          : 'Campagna creata con successo';
+        toast.success(successMessage);
         setShowNewCampaignDialog(false);
+        
+        // Reset form
+        setCampaignMode('standard');
         setNewCampaignData({
           name: '',
           description: '',
           whatsappSessionId: '',
           targetList: '',
+          mode: 'standard', // 🤖 Reset mode
+          autopilotConfig: { // 🤖 Reset config
+            claudeSettings: {
+              tone: 'colloquiale e amichevole',
+              maxLength: 280,
+              focusPoint: 'visibilità su Google',
+              cta: 'offrire tool gratuito'
+            },
+            searchKeyword: 'ristorante',
+            useContactKeyword: true,
+            saveAnalysisToContact: true,
+            requiredContactFields: {
+              nameField: 'properties.restaurant_name',
+              latField: 'properties.latitude',
+              lngField: 'properties.longitude',
+              keywordField: 'properties.keyword'
+            }
+          },
           messageTemplate: '',
           attachments: [], // 🎤 Reset attachments
           messageSequences: [],
@@ -977,6 +1042,38 @@ function CampaignsContent() {
                         </Select>
                       </div>
 
+                      {/* 🤖 NUOVO: TOGGLE MODE CAMPAGNA */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Modalità Campagna</label>
+                        <Select
+                          value={campaignMode}
+                          onValueChange={(value: CampaignMode) => {
+                            setCampaignMode(value);
+                            setNewCampaignData(prev => ({ ...prev, mode: value }));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="standard">
+                              📝 Standard - Template Manuale
+                            </SelectItem>
+                            <SelectItem value="autopilot">
+                              🤖 Autopilot - Generazione AI
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {campaignMode === 'autopilot' && (
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800 flex items-center gap-2">
+                              <Sparkles className="h-4 w-4" />
+                              I messaggi verranno generati automaticamente con AI basandosi sui competitor Google Maps
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
                       {/* ✅ NUOVI FILTRI DI ESCLUSIONE */}
                       <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                         <h4 className="text-sm font-medium flex items-center gap-2">
@@ -1139,43 +1236,160 @@ function CampaignsContent() {
                         </div>
                       </div>
 
-                      <div>
-                        <label className="text-sm font-medium">Template Messaggio Principale (opzionale se aggiungi vocale)</label>
-                        <Textarea
-                          value={newCampaignData.messageTemplate}
-                          onChange={(e) => setNewCampaignData(prev => ({ ...prev, messageTemplate: e.target.value }))}
-                          placeholder={newCampaignData.attachments?.some(a => a.type === 'voice') ? "Testo opzionale (hai già un vocale)" : "Ciao {nome}, sono {utente} di MenuChatCRM..."}
-                          rows={6}
-                        />
-                        
-                        {/* Variabili disponibili */}
-                        {availableVariables && (
-                        <div className="mt-3">
-                            {/* Variabili Fisse */}
-                            <div className="mb-3">
-                          <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
-                          <div className="flex flex-wrap gap-2">
-                                {availableVariables.fixed.map((variable) => (
-                                  <Button 
-                                    key={variable.key}
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => insertTemplateVariable(variable.key)}
-                                    title={variable.description}
-                                  >
-                                    +{variable.key}
-                            </Button>
-                                ))}
+                      {/* 🤖 FORM CONDIZIONALE BASATO SU MODE */}
+                      {campaignMode === 'autopilot' ? (
+                        // ========== FORM AUTOPILOT ==========
+                        <div className="space-y-4 p-4 border-2 border-blue-300 rounded-lg bg-gradient-to-br from-blue-50 to-purple-50">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Bot className="h-5 w-5 text-blue-600" />
+                            <h3 className="font-semibold text-blue-900">Configurazione Autopilot AI</h3>
+                          </div>
+
+                          {/* Keyword Ricerca */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Keyword Ricerca Google Maps</label>
+                            <Input
+                              placeholder="es. ristorante italiano, pizzeria, trattoria..."
+                              value={newCampaignData.autopilotConfig?.searchKeyword || ''}
+                              onChange={(e) => setNewCampaignData(prev => ({
+                                ...prev,
+                                autopilotConfig: {
+                                  ...prev.autopilotConfig,
+                                  searchKeyword: e.target.value
+                                }
+                              }))}
+                            />
+                            <p className="text-xs text-gray-600">
+                              Keyword generica per cercare competitor su Google Maps
+                            </p>
+                          </div>
+
+                          {/* Tono Messaggio */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Tono del Messaggio</label>
+                            <Select
+                              value={newCampaignData.autopilotConfig?.claudeSettings?.tone || 'colloquiale e amichevole'}
+                              onValueChange={(value) => setNewCampaignData(prev => ({
+                                ...prev,
+                                autopilotConfig: {
+                                  ...prev.autopilotConfig,
+                                  claudeSettings: {
+                                    ...prev.autopilotConfig?.claudeSettings,
+                                    tone: value
+                                  }
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="colloquiale e amichevole">
+                                  Colloquiale e Amichevole
+                                </SelectItem>
+                                <SelectItem value="professionale e diretto">
+                                  Professionale e Diretto
+                                </SelectItem>
+                                <SelectItem value="amichevole e informale">
+                                  Amichevole e Informale
+                                </SelectItem>
+                                <SelectItem value="urgente ma rispettoso">
+                                  Urgente ma Rispettoso
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Lunghezza Massima */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Lunghezza Massima Messaggio</label>
+                            <Input
+                              type="number"
+                              min="100"
+                              max="350"
+                              placeholder="280"
+                              value={newCampaignData.autopilotConfig?.claudeSettings?.maxLength || 280}
+                              onChange={(e) => setNewCampaignData(prev => ({
+                                ...prev,
+                                autopilotConfig: {
+                                  ...prev.autopilotConfig,
+                                  claudeSettings: {
+                                    ...prev.autopilotConfig?.claudeSettings,
+                                    maxLength: parseInt(e.target.value) || 280
+                                  }
+                                }
+                              }))}
+                            />
+                            <p className="text-xs text-gray-600">
+                              Numero massimo di caratteri (consigliato: 250-300)
+                            </p>
+                          </div>
+
+                          {/* Salva Analisi */}
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="saveAnalysis"
+                              checked={newCampaignData.autopilotConfig?.saveAnalysisToContact !== false}
+                              onChange={(e) => setNewCampaignData(prev => ({
+                                ...prev,
+                                autopilotConfig: {
+                                  ...prev.autopilotConfig,
+                                  saveAnalysisToContact: e.target.checked
+                                }
+                              }))}
+                              className="rounded"
+                            />
+                            <label htmlFor="saveAnalysis" className="text-sm font-medium cursor-pointer">
+                              Salva dati competitor nel contatto
+                            </label>
+                          </div>
+
+                          {/* Info Requisiti */}
+                          <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                            <p className="text-sm text-yellow-900 font-medium mb-2 flex items-center gap-2">
+                              ⚠️ Requisiti Contatti
+                            </p>
+                            <p className="text-xs text-yellow-800">
+                              I contatti devono avere nelle properties:
+                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">restaurant_name</code> - Nome del ristorante
+                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">latitude</code> - Coordinata GPS
+                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">longitude</code> - Coordinata GPS
+                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">keyword</code> - Opzionale (usa searchKeyword se mancante)
+                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">city</code> - Opzionale ma consigliato
+                            </p>
+                          </div>
+
+                          {/* Anteprima Output */}
+                          <div className="p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                            <p className="text-xs font-medium text-gray-700 mb-2">📝 Esempio Output AI:</p>
+                            <p className="text-xs text-gray-600 italic">
+                              "Ciao ragazzi, ho fatto una ricerca su google maps a [Città] e il vostro ristorante [Nome] esce 
+                              alla posizione [X] con [Y recensioni], mentre i competitor tipo [Comp1] è secondo con [Z recensioni]. 
+                              Stanno letteralmente prendendo i vostri clienti. Ho un tool gratuito per apparire nei primi risultati, 
+                              te lo giro? È gratis"
+                            </p>
                           </div>
                         </div>
-
-                        {/* Variabili Dinamiche */}
-                            {availableVariables.dynamic.length > 0 && (
-                              <div>
-                                <p className="text-xs font-medium text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
-                                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                                  {availableVariables.dynamic.map((variable) => (
+                      ) : (
+                        // ========== FORM STANDARD ==========
+                        <div>
+                          <label className="text-sm font-medium">Template Messaggio Principale (opzionale se aggiungi vocale)</label>
+                          <Textarea
+                            value={newCampaignData.messageTemplate}
+                            onChange={(e) => setNewCampaignData(prev => ({ ...prev, messageTemplate: e.target.value }))}
+                            placeholder={newCampaignData.attachments?.some(a => a.type === 'voice') ? "Testo opzionale (hai già un vocale)" : "Ciao {nome}, sono {utente} di MenuChatCRM..."}
+                            rows={6}
+                          />
+                          
+                          {/* Variabili disponibili */}
+                          {availableVariables && (
+                          <div className="mt-3">
+                              {/* Variabili Fisse */}
+                              <div className="mb-3">
+                            <p className="text-xs font-medium text-gray-600 mb-2">Variabili Fisse:</p>
+                            <div className="flex flex-wrap gap-2">
+                                  {availableVariables.fixed.map((variable) => (
                                     <Button 
                                       key={variable.key}
                                       type="button" 
@@ -1185,18 +1399,39 @@ function CampaignsContent() {
                                       title={variable.description}
                                     >
                                       +{variable.key}
-                            </Button>
+                              </Button>
                                   ))}
+                            </div>
                           </div>
-                        </div>
-                            )}
-                          </div>
-                        )}
 
-                        <p className="text-xs text-gray-500 mt-2">
-                          💡 Le variabili verranno sostituite automaticamente con i dati dei contatti
-                        </p>
-                      </div>
+                          {/* Variabili Dinamiche */}
+                              {availableVariables.dynamic.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-medium text-gray-600 mb-2">Proprietà Dinamiche dei Contatti:</p>
+                                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                                    {availableVariables.dynamic.map((variable) => (
+                                      <Button 
+                                        key={variable.key}
+                                        type="button" 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => insertTemplateVariable(variable.key)}
+                                        title={variable.description}
+                                      >
+                                        +{variable.key}
+                              </Button>
+                                    ))}
+                            </div>
+                          </div>
+                              )}
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gray-500 mt-2">
+                            💡 Le variabili verranno sostituite automaticamente con i dati dei contatti
+                          </p>
+                        </div>
+                      )}
 
                       {/* 🎤 NUOVO: Vocale per Messaggio Principale */}
                       <div>
@@ -1463,7 +1698,15 @@ function CampaignsContent() {
                         <TableRow key={campaign._id}>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{campaign.name}</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {campaign.name}
+                                {campaign.mode === 'autopilot' && (
+                                  <Badge className="bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xs">
+                                    <Bot className="h-3 w-3 mr-1" />
+                                    Autopilot
+                                  </Badge>
+                                )}
+                              </div>
                               {campaign.description && (
                                 <div className="text-sm text-gray-500">{campaign.description}</div>
                               )}

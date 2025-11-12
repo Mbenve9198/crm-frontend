@@ -95,6 +95,7 @@ export interface SessionStatsResponse {
 export type CampaignStatus = 'draft' | 'scheduled' | 'running' | 'paused' | 'completed' | 'cancelled';
 export type CampaignPriority = 'alta' | 'media' | 'bassa';
 export type AttachmentType = 'image' | 'audio' | 'video' | 'document' | 'voice'; // 🎤 Aggiunto voice
+export type CampaignMode = 'standard' | 'autopilot'; // 🤖 NUOVO: Mode campagna
 
 export interface CampaignAttachment {
   type: AttachmentType;
@@ -112,6 +113,51 @@ export interface CampaignTiming {
     endTime: string;   // HH:MM - fascia oraria di fine  
     timezone: string;  // timezone (default: Europe/Rome)
     daysOfWeek?: string[]; // giorni della settimana (opzionale)
+  };
+}
+
+// 🤖 Configurazione Autopilot
+export interface AutopilotConfig {
+  // Impostazioni Claude per generazione messaggi
+  claudeSettings?: {
+    tone?: string; // es. "professionale e amichevole"
+    maxLength?: number; // max caratteri (default: 280)
+    focusPoint?: string; // es. "visibilità su Google"
+    cta?: string; // es. "chiedere se sono interessati a migliorare"
+  };
+  // Keyword per ricerca Serper (es. "ristorante italiano", "pizzeria")
+  searchKeyword?: string;
+  // Se true, usa la keyword dal contatto (properties.keyword) se disponibile
+  useContactKeyword?: boolean;
+  // Campi necessari nei contatti per autopilot
+  requiredContactFields?: {
+    nameField?: string; // es. "properties.restaurant_name"
+    latField?: string; // es. "properties.latitude"
+    lngField?: string; // es. "properties.longitude"
+    keywordField?: string; // es. "properties.keyword"
+  };
+  // Salva i dati di analisi nel contatto dopo l'invio
+  saveAnalysisToContact?: boolean;
+}
+
+// 🤖 Dati autopilot salvati nei messaggi
+export interface AutopilotMessageData {
+  competitors: Array<{
+    rank: number;
+    name: string;
+    rating: number;
+    reviews: number;
+    address: string;
+  }>;
+  userRank: number | string; // Può essere numero o "Fuori Top 20"
+  userReviews: number;
+  userRating: number;
+  generatedByAI: boolean;
+  aiModel: string; // es. "claude-3-5-sonnet-20241022"
+  generatedAt: string;
+  messageValidation: {
+    score: number;
+    issues: string[];
   };
 }
 
@@ -146,6 +192,9 @@ export interface MessageQueueItem {
   hasReceivedResponse?: boolean;
   responseReceivedAt?: string;
   condition?: 'no_response' | 'always';
+  
+  // 🤖 NUOVO: Dati autopilot
+  autopilotData?: AutopilotMessageData;
 }
 
 export interface CampaignStats {
@@ -171,6 +220,8 @@ export interface WhatsappCampaign {
   whatsappNumber: string;
   targetList: string;
   contactFilters?: CampaignContactFilters;
+  mode: CampaignMode; // 🤖 NUOVO: 'standard' o 'autopilot'
+  autopilotConfig?: AutopilotConfig; // 🤖 NUOVO: Configurazione autopilot
   messageTemplate: string;
   templateVariables: string[];
   messageSequences?: MessageSequence[];  // ✅ Aggiunto supporto per sequenze
@@ -235,7 +286,9 @@ export interface CreateCampaignRequest {
   whatsappSessionId: string;
   targetList: string;
   contactFilters?: CampaignContactFilters;
-  messageTemplate: string; // Primo messaggio (opzionale se c'è vocale)
+  mode?: CampaignMode; // 🤖 NUOVO: 'standard' o 'autopilot' (default: 'standard')
+  autopilotConfig?: AutopilotConfig; // 🤖 NUOVO: Config autopilot (richiesto se mode='autopilot')
+  messageTemplate: string; // Primo messaggio (opzionale se c'è vocale o se mode='autopilot')
   attachments?: CampaignAttachment[]; // 🎤 NUOVO: Attachments inclusi vocali per messaggio principale
   messageSequences?: MessageSequence[]; // Messaggi di follow-up
   priority: CampaignPriority; // ✅ Sistema priorità invece di timing manuale

@@ -50,8 +50,7 @@ import {
   CreateSessionRequest,
   CreateCampaignRequest,
   MessageSequence,
-  CampaignMode, // 🤖 NUOVO
-  AutopilotConfig // 🤖 NUOVO
+  CampaignMode // 🤖 NUOVO
 } from '@/types/whatsapp';
 
 function LoadingSpinner() {
@@ -1364,10 +1363,10 @@ function CampaignsContent() {
                           <div className="p-3 bg-gray-50 border border-gray-300 rounded-lg">
                             <p className="text-xs font-medium text-gray-700 mb-2">📝 Esempio Output AI:</p>
                             <p className="text-xs text-gray-600 italic">
-                              "Ciao ragazzi, ho fatto una ricerca su google maps a [Città] e il vostro ristorante [Nome] esce 
+                              &quot;Ciao ragazzi, ho fatto una ricerca su google maps a [Città] e il vostro ristorante [Nome] esce 
                               alla posizione [X] con [Y recensioni], mentre i competitor tipo [Comp1] è secondo con [Z recensioni]. 
                               Stanno letteralmente prendendo i vostri clienti. Ho un tool gratuito per apparire nei primi risultati, 
-                              te lo giro? È gratis"
+                              te lo giro? È gratis&quot;
                             </p>
                           </div>
                         </div>

@@ -1345,17 +1345,18 @@ function CampaignsContent() {
                           </div>
 
                           {/* Info Requisiti */}
-                          <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
-                            <p className="text-sm text-yellow-900 font-medium mb-2 flex items-center gap-2">
-                              ⚠️ Requisiti Contatti
+                          <div className="p-3 bg-green-50 border border-green-300 rounded-lg">
+                            <p className="text-sm text-green-900 font-medium mb-2 flex items-center gap-2">
+                              ✅ Requisiti Contatti
                             </p>
-                            <p className="text-xs text-yellow-800">
-                              I contatti devono avere nelle properties:
-                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">restaurant_name</code> - Nome del ristorante
-                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">latitude</code> - Coordinata GPS
-                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">longitude</code> - Coordinata GPS
-                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">keyword</code> - Opzionale (usa searchKeyword se mancante)
-                              <br />• <code className="bg-yellow-100 px-1 py-0.5 rounded">city</code> - Opzionale ma consigliato
+                            <p className="text-xs text-green-800">
+                              I contatti devono avere:
+                              <br />• <code className="bg-green-100 px-1 py-0.5 rounded">name</code> - Nome del ristorante
+                              <br />• <code className="bg-green-100 px-1 py-0.5 rounded">properties.Città</code> - Città (con C maiuscola)
+                              <br />• <code className="bg-green-100 px-1 py-0.5 rounded">properties.Indirizzo</code> - Indirizzo (con I maiuscola)
+                              <br />• <code className="bg-green-100 px-1 py-0.5 rounded">properties.keyword</code> - Opzionale
+                              <br /><br />
+                              <strong>💡 Il sistema trova automaticamente le coordinate GPS!</strong>
                             </p>
                           </div>
 

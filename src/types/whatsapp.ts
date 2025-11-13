@@ -118,10 +118,12 @@ export interface CampaignTiming {
 
 // 🤖 Configurazione Autopilot
 export interface AutopilotConfig {
+  // Stile del messaggio (determina quale prompt usare)
+  messageStyle?: 'direct' | 'case-study'; // 'direct' = tool gratuito, 'case-study' = Il Porto + call
   // Impostazioni Claude per generazione messaggi
   claudeSettings?: {
     tone?: string; // es. "professionale e amichevole"
-    maxLength?: number; // max caratteri (default: 280)
+    maxLength?: number; // max caratteri (default: 350)
     focusPoint?: string; // es. "visibilità su Google"
     cta?: string; // es. "chiedere se sono interessati a migliorare"
   };

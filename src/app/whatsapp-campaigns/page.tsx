@@ -104,9 +104,10 @@ function CampaignsContent() {
     targetList: '',
     mode: 'standard', // 🤖 NUOVO
     autopilotConfig: { // 🤖 NUOVO
+      messageStyle: 'direct', // 🆕 NUOVO: Stile messaggio
       claudeSettings: {
         tone: 'colloquiale e amichevole',
-        maxLength: 280,
+        maxLength: 350,
         focusPoint: 'visibilità su Google',
         cta: 'offrire tool gratuito'
       },
@@ -540,9 +541,10 @@ function CampaignsContent() {
           targetList: '',
           mode: 'standard', // 🤖 Reset mode
           autopilotConfig: { // 🤖 Reset config
+            messageStyle: 'direct', // 🆕 Reset style
             claudeSettings: {
               tone: 'colloquiale e amichevole',
-              maxLength: 280,
+              maxLength: 350,
               focusPoint: 'visibilità su Google',
               cta: 'offrire tool gratuito'
             },
@@ -1267,6 +1269,38 @@ function CampaignsContent() {
                             </p>
                           </div>
 
+                          {/* Stile Messaggio */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Stile Messaggio</label>
+                            <Select
+                              value={newCampaignData.autopilotConfig?.messageStyle || 'direct'}
+                              onValueChange={(value) => setNewCampaignData(prev => ({
+                                ...prev,
+                                autopilotConfig: {
+                                  ...prev.autopilotConfig,
+                                  messageStyle: value
+                                }
+                              }))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="direct">
+                                  🎯 Direct - Tool Gratuito (~400 caratteri)
+                                </SelectItem>
+                                <SelectItem value="case-study">
+                                  📊 Case Study - Il Porto di Livorno (~650 caratteri)
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-600">
+                              {newCampaignData.autopilotConfig?.messageStyle === 'case-study' 
+                                ? 'Include caso successo reale + call telefonica' 
+                                : 'Messaggio diretto con offerta tool gratuito'}
+                            </p>
+                          </div>
+
                           {/* Tono Messaggio */}
                           <div className="space-y-2">
                             <label className="text-sm font-medium">Tono del Messaggio</label>
@@ -1368,12 +1402,25 @@ function CampaignsContent() {
                           {/* Anteprima Output */}
                           <div className="p-3 bg-gray-50 border border-gray-300 rounded-lg">
                             <p className="text-xs font-medium text-gray-700 mb-2">📝 Esempio Output AI:</p>
-                            <p className="text-xs text-gray-600 italic">
-                              &quot;Ciao ragazzi, ho fatto una ricerca su google maps a [Città] e il vostro ristorante [Nome] esce 
-                              alla posizione [X] con [Y recensioni], mentre i competitor tipo [Comp1] è secondo con [Z recensioni]. 
-                              Stanno letteralmente prendendo i vostri clienti. Ho un tool gratuito per apparire nei primi risultati, 
-                              te lo giro? È gratis&quot;
-                            </p>
+                            {newCampaignData.autopilotConfig?.messageStyle === 'case-study' ? (
+                              <p className="text-xs text-gray-600 italic">
+                                &quot;Ciao ragazzi, ho fatto una ricerca su Google Maps a [Città] e [Nome] esce alla posizione [X] con [Y recensioni], 
+                                mentre i competitor tipo [Comp1] sono primo con [Z recensioni]. Vuol dire che una persona che cerca un ristorante 
+                                su Google ha già scelto dove andare ancora prima di scoprire che esistete.
+                                <br /><br />
+                                Abbiamo aiutato un altro ristorante, Il Porto di Livorno, a risolvere esattamente questo problema: sono passati 
+                                da 1.108 a 5.389 recensioni in un anno, e ora ne raccolgono oltre 100 al mese in modo automatico.
+                                <br /><br />
+                                Vi interessa sapere come abbiamo fatto e se è replicabile per voi? Bastano 5 minuti al telefono&quot;
+                              </p>
+                            ) : (
+                              <p className="text-xs text-gray-600 italic">
+                                &quot;Ciao ragazzi, ho fatto una ricerca su google maps a [Città] e il vostro ristorante [Nome] esce 
+                                alla posizione [X] con [Y recensioni], mentre i competitor tipo [Comp1] è secondo con [Z recensioni]. 
+                                Stanno letteralmente prendendo i vostri clienti. Ho un tool gratuito per apparire nei primi risultati, 
+                                te lo giro? È gratis&quot;
+                              </p>
+                            )}
                           </div>
                         </div>
                       ) : (

@@ -1274,7 +1274,7 @@ function CampaignsContent() {
                             <label className="text-sm font-medium">Stile Messaggio</label>
                             <Select
                               value={newCampaignData.autopilotConfig?.messageStyle || 'direct'}
-                              onValueChange={(value) => setNewCampaignData(prev => ({
+                              onValueChange={(value: 'direct' | 'case-study') => setNewCampaignData(prev => ({
                                 ...prev,
                                 autopilotConfig: {
                                   ...prev.autopilotConfig,

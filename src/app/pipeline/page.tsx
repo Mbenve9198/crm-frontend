@@ -262,10 +262,10 @@ function PipelinePage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-5 gap-4 mb-6">
+            <div className="flex items-center gap-6 mb-6">
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Opportunità</p>
                       <p className="text-2xl font-bold">{totalStats.count}</p>
@@ -275,69 +275,81 @@ function PipelinePage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-green-200 bg-green-50/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">MRR Won</p>
-                      <p className="text-2xl font-bold text-green-600">{formatMRR(mrrWon)}</p>
-                      <p className="text-xs text-green-500 mt-1">100% confermato</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <Euro className="h-6 w-6 text-green-600" />
-                      <span className="text-xs font-medium text-green-600 mt-1">✓</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-emerald-200 bg-emerald-50/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">MRR Trial</p>
-                      <p className="text-2xl font-bold text-emerald-600">{formatMRR(mrrTrialWeighted)}</p>
-                      <p className="text-xs text-emerald-500 mt-1">80% prob. ({formatMRR(mrrTrial)} totale)</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <Euro className="h-6 w-6 text-emerald-500" />
-                      <span className="text-xs font-medium text-emerald-600 mt-1">80%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-purple-200 bg-purple-50/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">MRR QR Inviato</p>
-                      <p className="text-2xl font-bold text-purple-600">{formatMRR(mrrQrCodeWeighted)}</p>
-                      <p className="text-xs text-purple-500 mt-1">25% prob. ({formatMRR(mrrQrCode)} totale)</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <Euro className="h-6 w-6 text-purple-500" />
-                      <span className="text-xs font-medium text-purple-600 mt-1">25%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-sm text-gray-600 font-medium">MRR Totale Pesato</p>
                       <p className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                         {formatMRR(mrrTotalWeighted)}
                       </p>
-                      <p className="text-xs text-blue-500 mt-1">Won + Trial + QR</p>
+                      <p className="text-xs text-blue-500 mt-1">Won + Trial(80%) + QR(25%)</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-blue-500" />
                   </div>
                 </CardContent>
               </Card>
             </div>
+          </div>
+
+          {/* Card MRR sopra le colonne specifiche */}
+          <div className="grid grid-cols-5 gap-8 mb-3">
+            {/* Interessato - nessuna card */}
+            <div></div>
+            
+            {/* QR Code Inviato - 25% */}
+            <Card className="border-purple-200 bg-purple-50/50">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">MRR QR Code</p>
+                    <p className="text-lg font-bold text-purple-600">{formatMRR(mrrQrCodeWeighted)}</p>
+                    <p className="text-xs text-purple-500">25% di {formatMRR(mrrQrCode)}</p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <Euro className="h-5 w-5 text-purple-500" />
+                    <span className="text-xs font-medium text-purple-600">25%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Free Trial - 80% */}
+            <Card className="border-emerald-200 bg-emerald-50/50">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">MRR Trial</p>
+                    <p className="text-lg font-bold text-emerald-600">{formatMRR(mrrTrialWeighted)}</p>
+                    <p className="text-xs text-emerald-500">80% di {formatMRR(mrrTrial)}</p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <Euro className="h-5 w-5 text-emerald-500" />
+                    <span className="text-xs font-medium text-emerald-600">80%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Won - 100% */}
+            <Card className="border-green-200 bg-green-50/50">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-600">MRR Won</p>
+                    <p className="text-lg font-bold text-green-600">{formatMRR(mrrWon)}</p>
+                    <p className="text-xs text-green-500">100% confermato</p>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <Euro className="h-5 w-5 text-green-600" />
+                    <span className="text-xs font-medium text-green-600">✓</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Lost - nessuna card */}
+            <div></div>
           </div>
 
           <div className="grid grid-cols-5 gap-8">

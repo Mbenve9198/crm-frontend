@@ -12,6 +12,7 @@ import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/ty
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
 import { CallDialog } from "./call-dialog";
+import { CallScriptDialog } from "./call-script-dialog";
 
 interface ContactDetailSidebarProps {
   contact: Contact | null;
@@ -397,6 +398,11 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     ))}
                   </SelectContent>
                 </Select>
+                
+                {/* Bottone Script Chiamata - solo per contatti inbound con rankCheckerData */}
+                {contact.source === 'inbound_rank_checker' && contact.rankCheckerData && (
+                  <CallScriptDialog contact={contact} />
+                )}
               </div>
             </div>
             

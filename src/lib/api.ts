@@ -822,6 +822,17 @@ class ApiClient {
     }) as Promise<StatusUpdateResponse>;
   }
 
+  // 📞 Genera script di chiamata personalizzato con AI
+  async generateCallScript(contactId: string): Promise<ApiResponse<{
+    script: string;
+    contactId: string;
+    contactName: string;
+    generatedAt: string;
+    hasCompleteReport: boolean;
+  }>> {
+    return this.request(`/contacts/${contactId}/call-script`);
+  }
+
   // === METODI PER LE CHIAMATE ===
 
   async initiateCall(request: InitiateCallRequest): Promise<ApiResponse<InitiateCallResponse>> {

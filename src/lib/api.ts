@@ -823,14 +823,19 @@ class ApiClient {
   }
 
   // 📞 Genera script di chiamata personalizzato con AI
-  async generateCallScript(contactId: string): Promise<ApiResponse<{
+  // Se regenerate=true, forza una nuova generazione invece di usare la cache
+  async generateCallScript(contactId: string, regenerate: boolean = false): Promise<ApiResponse<{
     script: string;
     contactId: string;
     contactName: string;
     generatedAt: string;
     hasCompleteReport: boolean;
+    fromCache: boolean;
   }>> {
-    return this.request(`/contacts/${contactId}/call-script`);
+    const url = regenerate 
+      ? `/contacts/${contactId}/call-script?regenerate=true`
+      : `/contacts/${contactId}/call-script`;
+    return this.request(url);
   }
 
   // === METODI PER LE CHIAMATE ===

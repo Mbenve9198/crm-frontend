@@ -25,6 +25,8 @@ export function CallScriptDialog({ contact, trigger }: CallScriptDialogProps) {
   const [script, setScript] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
 
   // Verifica se il contatto ha i requisiti
   const isInbound = contact.source === 'inbound_rank_checker';
@@ -39,15 +41,17 @@ export function CallScriptDialog({ contact, trigger }: CallScriptDialogProps) {
     }
   };
 
-  const generateScript = async () => {
+  const generateScript = async (regenerate: boolean = false) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiClient.generateCallScript(contact._id);
+      const response = await apiClient.generateCallScript(contact._id, regenerate);
       
       if (response.success && response.data) {
         setScript(response.data.script);
+        setFromCache(response.data.fromCache || false);
+        setGeneratedAt(response.data.generatedAt || null);
       } else {
         setError(response.message || 'Errore durante la generazione dello script');
       }
@@ -73,7 +77,8 @@ export function CallScriptDialog({ contact, trigger }: CallScriptDialogProps) {
 
   const handleRegenerate = () => {
     setScript(null);
-    generateScript();
+    setFromCache(false);
+    generateScript(true); // Forza rigenerazione
   };
 
   // Formatta lo script per una migliore visualizzazione
@@ -195,7 +200,18 @@ export function CallScriptDialog({ contact, trigger }: CallScriptDialogProps) {
               <div className="flex items-center justify-between bg-gray-50 px-4 py-2 rounded-lg sticky top-0 z-10">
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <FileText className="h-4 w-4" />
-                  <span>Script generato con AI</span>
+                  <span>
+                    {fromCache ? (
+                      <>Script salvato {generatedAt && `il ${new Date(generatedAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}`}</>
+                    ) : (
+                      'Script generato con AI'
+                    )}
+                  </span>
+                  {fromCache && (
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                      dalla cache
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

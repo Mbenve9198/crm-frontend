@@ -162,8 +162,13 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    // Timeout più alto per endpoint delle sessioni WhatsApp
-    const timeoutMs = endpoint.includes('/whatsapp-sessions') ? 60000 : 30000;
+    // Timeout più alto per endpoint lenti (WhatsApp sessions, generazione AI)
+    let timeoutMs = 30000; // Default 30s
+    if (endpoint.includes('/whatsapp-sessions')) {
+      timeoutMs = 60000; // 60s per WhatsApp
+    } else if (endpoint.includes('/call-script')) {
+      timeoutMs = 120000; // 120s per generazione script AI (Claude può essere lento)
+    }
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

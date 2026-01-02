@@ -100,7 +100,9 @@ function ContactCard({
 function PipelinePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [lists, setLists] = useState<Array<{ name: string; count: number }>>([]);
   const [selectedOwner, setSelectedOwner] = useState<string>("all");
+  const [selectedList, setSelectedList] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
@@ -115,6 +117,7 @@ function PipelinePage() {
         page: 1,
         limit: 1000, // Limite ragionevole - filtrato lato server
         owner: selectedOwner !== "all" ? selectedOwner : undefined,
+        list: selectedList !== "all" ? selectedList : undefined,
         column_filters: {
           Status: {
             type: 'value',
@@ -135,12 +138,20 @@ function PipelinePage() {
           setUsers(usersResponse.data.users);
         }
       }
+
+      // Carica liste
+      if (lists.length === 0) {
+        const listsResponse = await apiClient.getContactLists();
+        if (listsResponse.success && listsResponse.data) {
+          setLists(listsResponse.data);
+        }
+      }
     } catch (error) {
       console.error('Errore caricamento pipeline:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedOwner, users.length]); // Aggiungo loadData alle dipendenze
+  }, [selectedOwner, selectedList, users.length, lists.length]); // Aggiungo loadData alle dipendenze
 
   useEffect(() => {
     loadData();
@@ -245,21 +256,40 @@ function PipelinePage() {
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6">Pipeline Vendite</h1>
             
-            <div className="flex items-center gap-4 mb-6">
-              <label className="text-sm font-medium">Proprietario:</label>
-              <Select value={selectedOwner} onValueChange={setSelectedOwner}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  {users.map((user) => (
-                    <SelectItem key={user._id} value={user._id}>
-                      {user.firstName} {user.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center gap-6 mb-6">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Proprietario:</label>
+                <Select value={selectedOwner} onValueChange={setSelectedOwner}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user._id} value={user._id}>
+                        {user.firstName} {user.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium">Lista:</label>
+                <Select value={selectedList} onValueChange={setSelectedList}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutte le liste</SelectItem>
+                    {lists.map((list) => (
+                      <SelectItem key={list.name} value={list.name}>
+                        {list.name} ({list.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex items-center gap-6 mb-6">

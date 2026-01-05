@@ -649,30 +649,44 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           </a>
                         )}
 
-                        {/* 🆕 Link ai Report Rank Checker */}
-                        {(contact.properties?.rankCheckerBaseReport || contact.properties?.rankCheckerCompleteReport) && (
-                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 space-y-3 border border-blue-200">
-                            <div className="text-xs font-bold text-gray-700 mb-2">📊 Report Rank Checker</div>
-                            <div className="grid grid-cols-2 gap-2">
-                              {contact.properties?.rankCheckerBaseReport && (
-                                <a
-                                  href={contact.properties.rankCheckerBaseReport as string}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center gap-1 bg-white hover:bg-blue-50 text-blue-700 font-semibold py-2 px-3 rounded-lg transition-colors text-xs border border-blue-300 shadow-sm"
-                                >
-                                  📄 Report Base
-                                </a>
-                              )}
-                              {contact.properties?.rankCheckerCompleteReport && (
-                                <a
-                                  href={contact.properties.rankCheckerCompleteReport as string}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="flex items-center justify-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-2 px-3 rounded-lg transition-colors text-xs shadow-md"
-                                >
-                                  ⭐ Report Completo
-                                </a>
+                        {/* 🆕 Link al Report Rank Checker */}
+                        {(contact.properties?.rankCheckerReport || contact.properties?.rankCheckerBaseReport) && (
+                          <a
+                            href={(contact.properties.rankCheckerReport || contact.properties.rankCheckerBaseReport) as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-colors text-sm shadow-lg"
+                          >
+                            📊 Apri Report Rank Checker
+                          </a>
+                        )}
+
+                        {/* 🆕 Info Richiesta Chiamata */}
+                        {contact.properties?.callRequested && (
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">📞</span>
+                              <span className="text-xs font-bold text-green-800">CHIAMATA RICHIESTA</span>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600">Preferenza:</span>
+                                <span className="text-sm font-bold text-green-700 capitalize">
+                                  {contact.properties.callPreference as string || 'Non specificata'}
+                                </span>
+                              </div>
+                              {contact.properties.callRequestedAt && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-600">Richiesta il:</span>
+                                  <span className="text-xs text-gray-700">
+                                    {new Date(contact.properties.callRequestedAt as string).toLocaleString('it-IT', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
                               )}
                             </div>
                           </div>

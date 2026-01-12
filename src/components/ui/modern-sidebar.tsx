@@ -87,7 +87,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
     <>
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 h-full bg-white shadow-lg border-r transition-all duration-300 ease-in-out z-50 ${
+        className={`fixed left-0 top-0 h-full bg-white shadow-lg border-r transition-all duration-300 ease-in-out z-50 flex flex-col ${
           isExpanded ? "w-64" : "w-16"
         }`}
         onMouseEnter={() => setIsExpanded(true)}
@@ -109,7 +109,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
         </div>
 
         {/* Menu Items */}
-        <nav className="flex-1 py-4 overflow-y-auto">
+        <nav className="flex-1 py-4 overflow-y-auto min-h-0">
           <ul className="space-y-1 px-3">
             {menuItems.map((item, index) => {
               const IconComponent = item.icon;

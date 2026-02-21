@@ -16,7 +16,7 @@ Frontend moderno per **MenuChatCRM** - Sistema completo di gestione contatti con
 - ✅ **Design responsive** e moderno
 - ✅ **Tooltips informativi** per UX migliorata
 - ✅ **Integrazione API** completa con backend
-- ✅ **Credenziali test** pre-configurate
+- ✅ **Sistema di autenticazione** sicuro
 
 ## 🛠️ Tech Stack
 
@@ -92,22 +92,6 @@ npm start
 ```
 
 Il frontend sarà disponibile su: **http://localhost:3001**
-
-## 🔐 Credenziali di Test
-
-Il sistema include credenziali preconfigurate per il testing:
-
-### 👨‍💼 Admin
-- **Email**: `marco@menuchat.com`
-- **Password**: `Itpennywise9194!`
-- **Permessi**: Accesso completo al sistema
-
-### 👨‍💻 Manager
-- **Email**: `federico@menuchat.com`
-- **Password**: `Itpennywise9194!`
-- **Permessi**: Gestione utenti e contatti
-
-> 💡 **Tip**: Il form di login include pulsanti per auto-compilare le credenziali!
 
 ## 📊 Funzionalità UI
 

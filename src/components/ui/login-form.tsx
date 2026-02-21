@@ -37,17 +37,6 @@ export default function LoginForm() {
     }
   };
 
-  // Credenziali precompilate per test rapido
-  const fillTestCredentials = (userType: 'admin' | 'manager') => {
-    if (userType === 'admin') {
-      setEmail("marco@menuchat.com");
-      setPassword("Itpennywise9194!");
-    } else {
-      setEmail("federico@menuchat.com");
-      setPassword("Itpennywise9194!");
-    }
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -84,7 +73,7 @@ export default function LoginForm() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="mario@menuchat.com"
+                    placeholder="email@esempio.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
@@ -135,33 +124,6 @@ export default function LoginForm() {
                 )}
               </Button>
             </form>
-
-            {/* Credenziali di test */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <p className="text-sm text-gray-600 mb-3">Credenziali di test:</p>
-              <div className="space-y-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => fillTestCredentials('admin')}
-                  disabled={isLoading}
-                >
-                  Marco (Admin)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => fillTestCredentials('manager')}
-                  disabled={isLoading}
-                >
-                  Federico (Manager)
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
 

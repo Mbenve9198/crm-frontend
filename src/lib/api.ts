@@ -39,6 +39,7 @@ import {
   UpdateMessageStatusResponse,
   UpdateMessageStatusRequest
 } from '@/types/whatsapp';
+import { LeadAnalyticsData } from '@/types/analytics';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -504,6 +505,15 @@ class ApiClient {
 
   async getContactStats(): Promise<ApiResponse<ContactStats>> {
     return this.request('/contacts/stats');
+  }
+
+  async getLeadAnalytics(params?: { from?: string; to?: string }): Promise<ApiResponse<LeadAnalyticsData>> {
+    const searchParams = new URLSearchParams();
+    if (params?.from) searchParams.append('from', params.from);
+    if (params?.to) searchParams.append('to', params.to);
+    const queryString = searchParams.toString();
+    const endpoint = queryString ? `/contacts/analytics/leads?${queryString}` : '/contacts/analytics/leads';
+    return this.request(endpoint);
   }
 
   async getDynamicProperties(): Promise<ApiResponse<{ properties: string[]; count: number; lastUpdated: string }>> {

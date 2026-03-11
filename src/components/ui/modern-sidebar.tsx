@@ -42,6 +42,16 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       active: pathname === "/pipeline",
       href: "/pipeline",
     },
+    ...(user?.role === "admin"
+      ? [
+          {
+            icon: BarChart3,
+            label: "Analytics Lead",
+            active: pathname === "/analytics/leads",
+            href: "/analytics/leads",
+          } as const,
+        ]
+      : []),
     {
       icon: MessageCircle,
       label: "Campagne WhatsApp",

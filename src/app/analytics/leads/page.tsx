@@ -24,7 +24,7 @@ export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [from, setFrom] = useState<string>(() => {
     const d = new Date();
-    d.setDate(d.getDate() - 30);
+    d.setDate(1);
     return formatDateInput(d);
   });
   const [to, setTo] = useState<string>(() => formatDateInput(new Date()));
@@ -92,7 +92,7 @@ export default function LeadAnalyticsPage() {
         from,
         to,
       });
-      if (response.success && response.data) {
+      if (response.success && response.data && response.data.contacts) {
         setWonContactsBySource((prev) => ({
           ...prev,
           [sourceKey]: response.data.contacts,
@@ -240,9 +240,9 @@ export default function LeadAnalyticsPage() {
                     onClick={() => {
                       const d = new Date();
                       const today = formatDateInput(d);
-                      d.setDate(d.getDate() - 30);
-                      const last30 = formatDateInput(d);
-                      setFrom(last30);
+                      d.setDate(1);
+                      const firstOfMonth = formatDateInput(d);
+                      setFrom(firstOfMonth);
                       setTo(today);
                       setExpandedSource(null);
                       setWonError(null);
@@ -251,7 +251,7 @@ export default function LeadAnalyticsPage() {
                     }}
                     disabled={isLoading}
                   >
-                    Ultimi 30 giorni
+                    Mese corrente
                   </Button>
                 </div>
               </form>

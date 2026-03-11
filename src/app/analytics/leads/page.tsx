@@ -1,9 +1,9 @@
-"use client";
+ "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { LeadAnalyticsData } from "@/types/analytics";
+import { LeadAnalyticsData, WonContact } from "@/types/analytics";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import {
   Card,
@@ -31,6 +31,13 @@ export default function LeadAnalyticsPage() {
   const [data, setData] = useState<LeadAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [expandedSource, setExpandedSource] = useState<string | null>(null);
+  const [wonLoadingSource, setWonLoadingSource] = useState<string | null>(null);
+  const [wonError, setWonError] = useState<string | null>(null);
+  const [wonContactsBySource, setWonContactsBySource] = useState<
+    Record<string, WonContact[]>
+  >({});
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
@@ -60,7 +67,52 @@ export default function LeadAnalyticsPage() {
 
   const handleApplyRange = (e: React.FormEvent) => {
     e.preventDefault();
+    setExpandedSource(null);
+    setWonError(null);
     loadAnalytics();
+  };
+
+  const handleToggleWonList = async (sourceKey: string) => {
+    if (expandedSource === sourceKey) {
+      setExpandedSource(null);
+      return;
+    }
+
+    setWonError(null);
+
+    if (wonContactsBySource[sourceKey]) {
+      setExpandedSource(sourceKey);
+      return;
+    }
+
+    try {
+      setWonLoadingSource(sourceKey);
+      const response = await apiClient.getWonContactsAnalytics({
+        source: sourceKey,
+        from,
+        to,
+      });
+      if (response.success && response.data) {
+        setWonContactsBySource((prev) => ({
+          ...prev,
+          [sourceKey]: response.data.contacts,
+        }));
+        setExpandedSource(sourceKey);
+      } else {
+        setWonError(
+          response.message ||
+            "Errore nel caricamento dei clienti chiusi per questa sorgente."
+        );
+      }
+    } catch (err) {
+      setWonError(
+        err instanceof Error
+          ? err.message
+          : "Errore sconosciuto nel caricamento dei clienti chiusi."
+      );
+    } finally {
+      setWonLoadingSource(null);
+    }
   };
 
   if (authLoading) {
@@ -90,7 +142,7 @@ export default function LeadAnalyticsPage() {
   if (!canAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-            <Alert className="max-w-md bg-white">
+        <Alert className="max-w-md bg-white">
           <AlertTitle>Accesso non autorizzato</AlertTitle>
           <AlertDescription>
             Solo utenti con ruolo <span className="font-semibold">admin</span>{" "}
@@ -192,6 +244,9 @@ export default function LeadAnalyticsPage() {
                       const last30 = formatDateInput(d);
                       setFrom(last30);
                       setTo(today);
+                      setExpandedSource(null);
+                      setWonError(null);
+                      setWonContactsBySource({});
                       loadAnalytics();
                     }}
                     disabled={isLoading}
@@ -357,38 +412,134 @@ export default function LeadAnalyticsPage() {
                           row.totalLeads > 0
                             ? (row.won / row.totalLeads) * 100
                             : 0;
+                        const isExpanded = expandedSource === key;
+                        const wonContacts = wonContactsBySource[key] || [];
+
                         return (
-                          <tr key={key} className="border-b last:border-0">
-                            <td className="px-4 py-2 font-medium text-gray-900">
-                              {key}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {row.totalLeads}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {row.qrCodeSent}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {row.freeTrialStarted}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {row.won}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {row.lost}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              €
-                              {row.mrrWon.toLocaleString("it-IT")}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              €
-                              {row.mrrFreeTrial.toLocaleString("it-IT")}
-                            </td>
-                            <td className="px-4 py-2 text-right">
-                              {conversion.toFixed(1)}%
-                            </td>
-                          </tr>
+                          <>
+                            <tr key={key} className="border-b last:border-0">
+                              <td className="px-4 py-2 font-medium text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <span>{key}</span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleToggleWonList(key)}
+                                    disabled={wonLoadingSource === key}
+                                  >
+                                    {wonLoadingSource === key && (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    )}
+                                    <span className="text-xs">
+                                      Clienti chiusi (won)
+                                    </span>
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.totalLeads}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.qrCodeSent}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.freeTrialStarted}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.won}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.lost}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                €
+                                {row.mrrWon.toLocaleString("it-IT")}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                €
+                                {row.mrrFreeTrial.toLocaleString("it-IT")}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {conversion.toFixed(1)}%
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr className="border-b last:border-0 bg-gray-50">
+                                <td
+                                  className="px-4 py-3 text-sm text-gray-700"
+                                  colSpan={9}
+                                >
+                                  {wonError && (
+                                    <div className="mb-2 text-red-700">
+                                      {wonError}
+                                    </div>
+                                  )}
+                                  {!wonError && wonLoadingSource === key && (
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <span>
+                                        Caricamento clienti chiusi per questa
+                                        sorgente...
+                                      </span>
+                                    </div>
+                                  )}
+                                  {!wonError &&
+                                    wonLoadingSource !== key &&
+                                    (wonContacts.length === 0 ? (
+                                      <div className="text-gray-600">
+                                        Nessun cliente chiuso (won) nel periodo
+                                        selezionato per questa sorgente.
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        <div className="font-semibold text-gray-800">
+                                          Clienti chiusi (won) per{" "}
+                                          <code>{key}</code> nel periodo
+                                          selezionato:
+                                        </div>
+                                        <ul className="space-y-1">
+                                          {wonContacts.map((contact) => (
+                                            <li
+                                              key={contact.id}
+                                              className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-1 last:border-b-0"
+                                            >
+                                              <div>
+                                                <span className="font-medium">
+                                                  {contact.name}
+                                                </span>
+                                                {contact.email && (
+                                                  <span className="ml-2 text-gray-600">
+                                                    {contact.email}
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-4 text-gray-700">
+                                                {typeof contact.mrr ===
+                                                  "number" && (
+                                                  <span>
+                                                    MRR: €
+                                                    {contact.mrr.toLocaleString(
+                                                      "it-IT"
+                                                    )}
+                                                  </span>
+                                                )}
+                                                <span className="text-xs text-gray-500">
+                                                  Won il{" "}
+                                                  {new Date(
+                                                    contact.wonAt
+                                                  ).toLocaleDateString("it-IT")}
+                                                </span>
+                                              </div>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    ))}
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         );
                       })}
                     </tbody>

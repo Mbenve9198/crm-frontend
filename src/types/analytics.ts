@@ -18,3 +18,21 @@ export type LeadAnalyticsData = {
   sources: Record<LeadSourceKey, LeadSourceAnalytics>;
 };
 
+export type WonContact = {
+  id: string;
+  name: string;
+  email: string;
+  mrr?: number;
+  source: string;
+  wonAt: string;
+};
+
+export type WonContactsAnalyticsData = {
+  source: string;
+  period: {
+    from: string;
+    to: string;
+  };
+  contacts: WonContact[];
+};
+

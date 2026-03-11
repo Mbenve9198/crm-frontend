@@ -92,10 +92,13 @@ export default function LeadAnalyticsPage() {
         from,
         to,
       });
-      if (response.success && response.data && response.data.contacts) {
+      const data = response.data;
+      const contacts = data?.contacts;
+
+      if (response.success && contacts) {
         setWonContactsBySource((prev) => ({
           ...prev,
-          [sourceKey]: response.data.contacts,
+          [sourceKey]: contacts,
         }));
         setExpandedSource(sourceKey);
       } else {

@@ -48,7 +48,7 @@ import {
   Upload,
   UserCheck
 } from "lucide-react";
-import { Contact, User, ColumnFilter } from "@/types/contact";
+import { Contact, User, ColumnFilter, SortingState } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
@@ -92,6 +92,10 @@ type ContactsTableProps = {
   onRefresh?: () => void;
   onImportComplete?: () => void;
   currentLimit?: number;
+  ownerFilter?: string;
+  onOwnerFilterChange?: (value: string) => void;
+  onServerColumnFiltersChange?: (filters: Record<string, ColumnFilter>) => void;
+  onServerSortingChange?: (sorting: SortingState | null) => void;
 };
 
 // Funzione per estrarre tutte le proprietà dinamiche disponibili
@@ -124,7 +128,11 @@ function ContactsTable({
   onLimitChange,
   onRefresh,
   onImportComplete,
-  currentLimit = 10
+  currentLimit = 10,
+  ownerFilter = "all",
+  onOwnerFilterChange,
+  onServerColumnFiltersChange,
+  onServerSortingChange,
 }: ContactsTableProps) {
   // Stato per le proprietà dinamiche caricate dal server
   const [allDynamicProperties, setAllDynamicProperties] = useState<string[]>([]);
@@ -140,7 +148,6 @@ function ContactsTable({
   const [, setIsLoadingPreferences] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   // Stati per ricerca
-  const [ownerFilter, setOwnerFilter] = useState("all");
   const [isSearching, setIsSearching] = useState(false);
   const [inputValue, setInputValue] = useState(searchQuery || "");
   
@@ -218,44 +225,15 @@ function ContactsTable({
             console.log('✅ Preferenze tabella caricate:', savedColumns);
           }
 
-          // Applica filtri salvati oppure filtro di default per Status
+          // Applica solo filtri salvati (nessun filtro di default)
           if (savedFilters && Object.keys(savedFilters).length > 0) {
             setExternalFilters(savedFilters);
-          } else {
-            const defaultStatusFilter: ColumnFilter = {
-              type: "value",
-              values: [
-                "da contattare",
-                "contattato",
-                "da richiamare",
-                "interessato",
-                "qr code inviato",
-                "free trial iniziato",
-                "won",
-              ],
-            };
-            setExternalFilters({ Status: defaultStatusFilter });
           }
 
           // Applica ordinamento salvato (se presente)
           if (savedSorting) {
             setExternalSorting(savedSorting);
           }
-        } else {
-          // Nessuna preferenza salvata: applica filtro di default per Status
-          const defaultStatusFilter: ColumnFilter = {
-            type: "value",
-            values: [
-              "da contattare",
-              "contattato",
-              "da richiamare",
-              "interessato",
-              "qr code inviato",
-              "free trial iniziato",
-              "won",
-            ],
-          };
-          setExternalFilters({ Status: defaultStatusFilter });
         }
         
         setPreferencesLoaded(true);
@@ -357,42 +335,36 @@ function ContactsTable({
     saveFiltersAndSorting();
   }, [columnFilters, sorting, preferencesLoaded, visibleColumns, currentLimit]);
 
+  // Propaga filtri e ordinamento verso il genitore per filtraggio lato server
+  useEffect(() => {
+    if (onServerColumnFiltersChange) {
+      onServerColumnFiltersChange(columnFilters);
+    }
+  }, [columnFilters, onServerColumnFiltersChange]);
+
+  useEffect(() => {
+    if (onServerSortingChange) {
+      onServerSortingChange(sorting);
+    }
+  }, [sorting, onServerSortingChange]);
+
   // Filtraggio combinato: owner filter + filtri locali
   const allFilteredContacts = localFilteredContacts.filter((contact) => {
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
     return matchesOwner;
   });
 
-  // Paginazione lato client sui dati filtrati
-  const startIndex = ((pagination?.currentPage || 1) - 1) * currentLimit;
-  const endIndex = startIndex + currentLimit;
-  // 🚀 NUOVO: Decidi se usare paginazione client (con filtri) o server (senza filtri)
+  // Paginazione: usa sempre i dati di paginazione dal backend
   const hasActiveFilters = activeFiltersCount > 0 || hasActiveSort || (ownerFilter && ownerFilter !== "all");
-  
-  let filteredContacts;
-  let calculatedPagination;
-  
-  if (hasActiveFilters) {
-    // CON FILTRI: Paginazione client-side sui contatti caricati
-    filteredContacts = allFilteredContacts.slice(startIndex, endIndex);
-    calculatedPagination = {
-      currentPage: pagination?.currentPage || 1,
-      totalPages: Math.ceil(allFilteredContacts.length / currentLimit),
-      totalContacts: allFilteredContacts.length,
-      hasNext: endIndex < allFilteredContacts.length,
-      hasPrev: (pagination?.currentPage || 1) > 1
-    };
-  } else {
-    // SENZA FILTRI: Usa paginazione dal backend
-    filteredContacts = allFilteredContacts; // Nessun slice, già paginati dal server
-    calculatedPagination = pagination || {
-      currentPage: 1,
-      totalPages: 1,
-      totalContacts: contacts.length,
-      hasNext: false,
-      hasPrev: false
-    };
-  }
+
+  const filteredContacts = allFilteredContacts;
+  const calculatedPagination = pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalContacts: contacts.length,
+    hasNext: false,
+    hasPrev: false
+  };
 
   const toggleColumn = async (col: string) => {
     const newVisibleColumns = visibleColumns.includes(col)
@@ -626,7 +598,7 @@ function ContactsTable({
             ) : null}
           </div>
 
-          <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+          <Select value={ownerFilter} onValueChange={onOwnerFilterChange}>
             <SelectTrigger className="w-52">
               <SelectValue placeholder="Filtra per proprietario..." />
             </SelectTrigger>

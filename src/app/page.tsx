@@ -7,7 +7,7 @@ import LoginForm from "@/components/ui/login-form";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Loader2 } from "lucide-react";
-import { Contact } from "@/types/contact";
+import { Contact, ColumnFilter, SortingState } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 
 function LoadingSpinner() {
@@ -42,6 +42,9 @@ function Dashboard() {
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
   const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: object } | undefined>();
   const [searchQuery] = useState<string>("");
+  const [ownerFilter, setOwnerFilter] = useState<string>("all");
+  const [serverColumnFilters, setServerColumnFilters] = useState<Record<string, ColumnFilter>>({});
+  const [serverSorting, setServerSorting] = useState<SortingState | null>(null);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
@@ -77,7 +80,11 @@ function Dashboard() {
         page: currentPage,
         limit: currentLimit, // 🚀 Usa paginazione vera invece di caricare tutto
         list: listFilter || undefined,
-        search: searchQuery || undefined
+        search: searchQuery || undefined,
+        owner: ownerFilter && ownerFilter !== 'all' ? ownerFilter : undefined,
+        sort_by: serverSorting?.column,
+        sort_direction: serverSorting?.direction,
+        column_filters: serverColumnFilters && Object.keys(serverColumnFilters).length > 0 ? serverColumnFilters : undefined,
       });
       
       if (response.success && response.data) {
@@ -96,7 +103,7 @@ function Dashboard() {
     } finally {
       setIsLoadingContacts(false);
     }
-  }, [selectedList, currentPage, currentLimit]); // 🚀 Aggiornate dipendenze
+  }, [selectedList, currentPage, currentLimit, ownerFilter, serverColumnFilters, serverSorting]); // 🚀 Aggiornate dipendenze
 
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
@@ -120,6 +127,24 @@ function Dashboard() {
   const handleLimitChange = (newLimit: number) => {
     setCurrentLimit(newLimit);
     setCurrentPage(1); // Torna alla prima pagina
+  };
+
+  // Cambio filtro proprietario (owner) lato server
+  const handleOwnerFilterChange = (value: string) => {
+    setOwnerFilter(value);
+    setCurrentPage(1);
+  };
+
+  // Cambio filtri di colonna lato server
+  const handleServerColumnFiltersChange = (filters: Record<string, ColumnFilter>) => {
+    setServerColumnFilters(filters);
+    setCurrentPage(1);
+  };
+
+  // Cambio ordinamento lato server
+  const handleServerSortingChange = (sorting: SortingState | null) => {
+    setServerSorting(sorting);
+    setCurrentPage(1);
   };
 
   // Gestione selezione lista dalla sidebar
@@ -233,6 +258,7 @@ function Dashboard() {
             isLoading={isLoadingContacts}
             pagination={pagination}
             currentLimit={currentLimit}
+            ownerFilter={ownerFilter}
             searchQuery={searchQuery}
             onSearchSubmit={performSearch}
             onEditContact={handleEditContact}
@@ -242,6 +268,9 @@ function Dashboard() {
             onPhoneClick={handlePhoneAction}
             onPageChange={handlePageChange}
             onLimitChange={handleLimitChange}
+            onOwnerFilterChange={handleOwnerFilterChange}
+            onServerColumnFiltersChange={handleServerColumnFiltersChange}
+            onServerSortingChange={handleServerSortingChange}
             onRefresh={() => setRefreshKey(prev => prev + 1)}
             onImportComplete={handleImportComplete}
           />

@@ -345,7 +345,7 @@ function ContactsTable({
             visibleColumns,
             pageSize: currentLimit,
             columnFilters,
-            sorting,
+            sorting: sorting || undefined,
           },
         });
         console.log("✅ Preferenze filtri/ordinamento salvate");
@@ -410,7 +410,7 @@ function ContactsTable({
             visibleColumns: newVisibleColumns,
             pageSize: currentLimit,
             columnFilters,
-            sorting,
+            sorting: sorting || undefined,
           },
         });
         console.log("✅ Preferenze colonne salvate:", newVisibleColumns);
@@ -452,7 +452,7 @@ function ContactsTable({
               visibleColumns,
               pageSize: currentLimit,
               columnFilters,
-              sorting,
+              sorting: sorting || undefined,
             }
           });
           console.log('✅ Preferenze pageSize salvate:', currentLimit);

@@ -48,7 +48,7 @@ import {
   Upload,
   UserCheck
 } from "lucide-react";
-import { Contact, User } from "@/types/contact";
+import { Contact, User, ColumnFilter } from "@/types/contact";
 import { apiClient } from "@/lib/api";
 import { ListManagementDialog } from "./list-management-dialog";
 import { PhoneActionDialog } from "./phone-action-dialog";
@@ -185,6 +185,8 @@ function ContactsTable({
     handleFilterChange,
     handleSortChange,
     clearAllFilters,
+    setExternalFilters,
+    setExternalSorting,
   } = useTableFilters({ 
     contacts: contacts, 
     dynamicProperties 
@@ -208,12 +210,52 @@ function ContactsTable({
         const response = await apiClient.getTablePreferences();
         
         if (response.success && response.data?.tablePreferences?.contacts) {
-          const { visibleColumns: savedColumns } = response.data.tablePreferences.contacts;
+          const { visibleColumns: savedColumns, columnFilters: savedFilters, sorting: savedSorting } =
+            response.data.tablePreferences.contacts;
           
           if (savedColumns && Array.isArray(savedColumns) && savedColumns.length > 0) {
             setVisibleColumns(savedColumns);
             console.log('✅ Preferenze tabella caricate:', savedColumns);
           }
+
+          // Applica filtri salvati oppure filtro di default per Status
+          if (savedFilters && Object.keys(savedFilters).length > 0) {
+            setExternalFilters(savedFilters);
+          } else {
+            const defaultStatusFilter: ColumnFilter = {
+              type: "value",
+              values: [
+                "da contattare",
+                "contattato",
+                "da richiamare",
+                "interessato",
+                "qr code inviato",
+                "free trial iniziato",
+                "won",
+              ],
+            };
+            setExternalFilters({ Status: defaultStatusFilter });
+          }
+
+          // Applica ordinamento salvato (se presente)
+          if (savedSorting) {
+            setExternalSorting(savedSorting);
+          }
+        } else {
+          // Nessuna preferenza salvata: applica filtro di default per Status
+          const defaultStatusFilter: ColumnFilter = {
+            type: "value",
+            values: [
+              "da contattare",
+              "contattato",
+              "da richiamare",
+              "interessato",
+              "qr code inviato",
+              "free trial iniziato",
+              "won",
+            ],
+          };
+          setExternalFilters({ Status: defaultStatusFilter });
         }
         
         setPreferencesLoaded(true);
@@ -292,6 +334,29 @@ function ContactsTable({
     }
   }, [contacts, isLoading, isSearching]);
 
+  // Salva automaticamente filtri e ordinamento quando cambiano
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+
+    const saveFiltersAndSorting = async () => {
+      try {
+        await apiClient.updateTablePreferences({
+          contacts: {
+            visibleColumns,
+            pageSize: currentLimit,
+            columnFilters,
+            sorting,
+          },
+        });
+        console.log("✅ Preferenze filtri/ordinamento salvate");
+      } catch (error) {
+        console.error("❌ Errore nel salvataggio preferenze filtri/ordinamento:", error);
+      }
+    };
+
+    saveFiltersAndSorting();
+  }, [columnFilters, sorting, preferencesLoaded, visibleColumns, currentLimit]);
+
   // Filtraggio combinato: owner filter + filtri locali
   const allFilteredContacts = localFilteredContacts.filter((contact) => {
     const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
@@ -343,13 +408,14 @@ function ContactsTable({
         await apiClient.updateTablePreferences({
           contacts: {
             visibleColumns: newVisibleColumns,
-            pageSize: currentLimit
-          }
+            pageSize: currentLimit,
+            columnFilters,
+            sorting,
+          },
         });
-        console.log('✅ Preferenze colonne salvate:', newVisibleColumns);
+        console.log("✅ Preferenze colonne salvate:", newVisibleColumns);
       } catch (error) {
-        console.error('❌ Errore nel salvataggio preferenze colonne:', error);
-        // Non interrompiamo l'UX per errori di salvataggio
+        console.error("❌ Errore nel salvataggio preferenze colonne:", error);
       }
     }
   };
@@ -384,7 +450,9 @@ function ContactsTable({
           await apiClient.updateTablePreferences({
             contacts: {
               visibleColumns,
-              pageSize: currentLimit
+              pageSize: currentLimit,
+              columnFilters,
+              sorting,
             }
           });
           console.log('✅ Preferenze pageSize salvate:', currentLimit);

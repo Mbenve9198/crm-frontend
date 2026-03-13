@@ -167,6 +167,21 @@ export function useTableFilters({ contacts, dynamicProperties }: UseTableFilters
     setSorting(null);
   }, []);
 
+  // Setter esterni per inizializzare/sincronizzare da preferenze salvate
+  const setExternalFilters = useCallback(
+    (filters: Record<string, ColumnFilter> | null | undefined) => {
+      setColumnFilters(filters || {});
+    },
+    []
+  );
+
+  const setExternalSorting = useCallback(
+    (state: SortingState | null | undefined) => {
+      setSorting(state || null);
+    },
+    []
+  );
+
   return {
     // Dati
     filteredContacts: sortedAndFilteredContacts,
@@ -182,6 +197,8 @@ export function useTableFilters({ contacts, dynamicProperties }: UseTableFilters
     handleFilterChange,
     handleSortChange,
     clearAllFilters,
+    setExternalFilters,
+    setExternalSorting,
     
     // Utilities
     getContactValue,

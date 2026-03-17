@@ -58,6 +58,7 @@ import { BulkChangeOwnerDialog } from "./bulk-change-owner-dialog";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 import { ColumnFilterComponent } from "./column-filter";
 import { useTableFilters } from "@/hooks/useTableFilters";
+import { getAllStatuses } from "@/lib/status-utils";
 
 // Colonne fisse base
 const baseColumns = [
@@ -893,7 +894,8 @@ function ContactsTable({
                 <ColumnFilterComponent
                   column="Status"
                   columnDisplayName="Status"
-                  values={columnValues['Status'] || []}
+                  // Per paginazione server-side: mostra sempre tutti gli status, non solo quelli presenti nella pagina corrente
+                  values={getAllStatuses()}
                   filter={columnFilters['Status']}
                   onFilterChange={(filter) => handleFilterChange('Status', filter)}
                   sortDirection={sorting?.column === 'Status' ? sorting.direction : null}

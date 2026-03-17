@@ -27,7 +27,7 @@ function formatDateInput(date: Date): string {
 
 type ExpandedPanel =
   | { source: string; key: "created" | "reactivated" }
-  | { source: string; key: "qr" | "ft" | "won" }
+  | { source: string; key: "notTouched" | "qr" | "ft" | "won" }
   | null;
 
 export default function LeadAnalyticsPage() {
@@ -159,6 +159,13 @@ export default function LeadAnalyticsPage() {
   const totalWon =
     data?.sources
       ? sourceKeys.reduce((acc, key) => acc + (data.sources[key]?.steps.won.count || 0), 0)
+      : 0;
+  const totalNotTouched =
+    data?.sources
+      ? sourceKeys.reduce(
+          (acc, key) => acc + (data.sources[key]?.steps.notTouched.count || 0),
+          0
+        )
       : 0;
 
   return (
@@ -361,6 +368,20 @@ export default function LeadAnalyticsPage() {
                     </p>
                   </CardContent>
                 </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Not touched</CardTitle>
+                    <CardDescription>
+                      Smartlead: solo activity iniziale. Rank Checker: nessuna
+                      activity.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-2xl font-semibold text-gray-900">
+                      {totalNotTouched}
+                    </p>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>
@@ -399,6 +420,9 @@ export default function LeadAnalyticsPage() {
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
                           Riattivati
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-gray-600">
+                          Not touched
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
                           QR code inviato
@@ -523,6 +547,11 @@ export default function LeadAnalyticsPage() {
                                     "Riattivati",
                                     row.cohort.reactivated.contacts
                                   )
+                                : expanded.key === "notTouched"
+                                  ? renderStepList(
+                                      "Not touched",
+                                      row.steps.notTouched.contacts
+                                    )
                                 : expanded.key === "qr"
                                   ? renderStepList(
                                       "QR code inviato",
@@ -550,6 +579,9 @@ export default function LeadAnalyticsPage() {
                               </td>
                               <td className="px-4 py-2 text-right">
                                 {row.cohort.reactivated.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.steps.notTouched.count}
                               </td>
                               <td className="px-4 py-2 text-right">
                                 {row.steps.qrCodeSent.count}
@@ -590,6 +622,19 @@ export default function LeadAnalyticsPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() =>
+                                      togglePanel({
+                                        source: key,
+                                        key: "notTouched",
+                                      })
+                                    }
+                                  >
+                                    <span className="text-xs">Not touched</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
                                       togglePanel({ source: key, key: "qr" })
                                     }
                                   >
@@ -622,7 +667,7 @@ export default function LeadAnalyticsPage() {
                               <tr className="border-b last:border-0 bg-gray-50">
                                 <td
                                   className="px-4 py-3 text-sm text-gray-700"
-                                  colSpan={8}
+                                  colSpan={9}
                                 >
                                   {panel}
                                 </td>

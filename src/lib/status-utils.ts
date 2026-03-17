@@ -7,11 +7,12 @@ export const getStatusColor = (status: ContactStatus): string => {
     'contattato': 'bg-yellow-500 shadow-yellow-500/50',
     'da richiamare': 'bg-orange-500 shadow-orange-500/50',
     'interessato': 'bg-blue-500 shadow-blue-500/50',
-    'non interessato': 'bg-red-500 shadow-red-500/50',
+    'ghosted/bad timing': 'bg-amber-600 shadow-amber-600/50',
     'qr code inviato': 'bg-purple-500 shadow-purple-500/50',
     'free trial iniziato': 'bg-emerald-500 shadow-emerald-500/50',
     'won': 'bg-green-600 shadow-green-600/50',
-    'lost': 'bg-gray-500 shadow-gray-500/50'
+    'lost before free trial': 'bg-red-600 shadow-red-600/50',
+    'lost after free trial': 'bg-rose-600 shadow-rose-600/50'
   };
   
   return colorMap[status] || 'bg-gray-400 shadow-gray-400/50';
@@ -24,11 +25,12 @@ export const getStatusLabel = (status: ContactStatus): string => {
     'contattato': 'Contattato',
     'da richiamare': 'Da richiamare',
     'interessato': 'Interessato',
-    'non interessato': 'Non interessato',
+    'ghosted/bad timing': 'Ghosted / Bad timing',
     'qr code inviato': 'QR Code inviato',
     'free trial iniziato': 'Free trial iniziato',
     'won': 'Won',
-    'lost': 'Lost'
+    'lost before free trial': 'Lost (before free trial)',
+    'lost after free trial': 'Lost (after free trial)'
   };
   
   return labelMap[status] || status;
@@ -36,7 +38,14 @@ export const getStatusLabel = (status: ContactStatus): string => {
 
 // Stati che richiedono MRR
 export const isPipelineStatus = (status: ContactStatus): boolean => {
-  return ['interessato', 'qr code inviato', 'free trial iniziato', 'won', 'lost'].includes(status);
+  return [
+    'interessato',
+    'qr code inviato',
+    'free trial iniziato',
+    'won',
+    'lost before free trial',
+    'lost after free trial'
+  ].includes(status);
 };
 
 // Tutti gli status disponibili
@@ -46,11 +55,12 @@ export const getAllStatuses = (): ContactStatus[] => {
     'contattato', 
     'da richiamare',
     'interessato',
-    'non interessato',
+    'ghosted/bad timing',
     'qr code inviato',
     'free trial iniziato',
     'won',
-    'lost'
+    'lost before free trial',
+    'lost after free trial'
   ];
 };
 
@@ -61,7 +71,8 @@ export const getPipelineStatuses = (): ContactStatus[] => {
     'qr code inviato',
     'free trial iniziato',
     'won',
-    'lost'
+    'lost before free trial',
+    'lost after free trial'
   ];
 };
 

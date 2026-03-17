@@ -1,4 +1,14 @@
-export type ContactStatus = 'da contattare' | 'contattato' | 'da richiamare' | 'interessato' | 'non interessato' | 'qr code inviato' | 'free trial iniziato' | 'won' | 'lost';
+export type ContactStatus =
+  | 'da contattare'
+  | 'contattato'
+  | 'da richiamare'
+  | 'interessato'
+  | 'ghosted/bad timing'
+  | 'qr code inviato'
+  | 'free trial iniziato'
+  | 'won'
+  | 'lost before free trial'
+  | 'lost after free trial';
 
 export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api';
 

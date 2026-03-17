@@ -5,6 +5,7 @@ export type LeadSourceAnalytics = {
   qrCodeSent: number;
   freeTrialStarted: number;
   won: number;
+  // Legacy: il backend storico somma "lost before/after" in questo campo
   lost: number;
   mrrWon: number;
   mrrFreeTrial: number;

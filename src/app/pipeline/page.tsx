@@ -393,7 +393,8 @@ function PipelinePage() {
                 'qr code inviato': 'from-purple-500 via-purple-600 to-purple-700', 
                 'free trial iniziato': 'from-emerald-500 via-emerald-600 to-emerald-700',
                 'won': 'from-green-600 via-green-700 to-green-800',
-                'lost': 'from-gray-500 via-gray-600 to-gray-700'
+                'lost before free trial': 'from-red-600 via-red-700 to-red-800',
+                'lost after free trial': 'from-rose-600 via-rose-700 to-rose-800'
               };
               
               const gradient = gradientMap[status as keyof typeof gradientMap] || 'from-slate-500 to-slate-600';

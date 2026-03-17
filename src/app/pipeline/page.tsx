@@ -323,7 +323,7 @@ function PipelinePage() {
           </div>
 
           {/* Card MRR sopra le colonne specifiche */}
-          <div className="grid grid-cols-5 gap-8 mb-3">
+          <div className="grid grid-cols-6 gap-8 mb-3">
             {/* Interessato - nessuna card */}
             <div></div>
             
@@ -378,11 +378,12 @@ function PipelinePage() {
               </CardContent>
             </Card>
             
-            {/* Lost/Ghosted - nessuna card */}
+            {/* Ghosted/Lost - nessuna card */}
+            <div></div>
             <div></div>
           </div>
 
-          <div className="grid grid-cols-5 gap-8">
+          <div className="grid grid-cols-6 gap-8">
             {getPipelineStatuses().map((status, index) => {
               const statusContacts = contactsByStatus[status] || [];
               const stats = getColumnStats(status);

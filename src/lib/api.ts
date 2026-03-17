@@ -39,7 +39,7 @@ import {
   UpdateMessageStatusResponse,
   UpdateMessageStatusRequest
 } from '@/types/whatsapp';
-import { LeadAnalyticsData, WonContactsAnalyticsData } from '@/types/analytics';
+import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData } from '@/types/analytics';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -513,6 +513,17 @@ class ApiClient {
     if (params?.to) searchParams.append('to', params.to);
     const queryString = searchParams.toString();
     const endpoint = queryString ? `/contacts/analytics/leads?${queryString}` : '/contacts/analytics/leads';
+    return this.request(endpoint);
+  }
+
+  async getLeadCohortAnalytics(params?: { from?: string; to?: string }): Promise<ApiResponse<LeadCohortFunnelAnalyticsData>> {
+    const searchParams = new URLSearchParams();
+    if (params?.from) searchParams.append('from', params.from);
+    if (params?.to) searchParams.append('to', params.to);
+    const queryString = searchParams.toString();
+    const endpoint = queryString
+      ? `/contacts/analytics/leads-cohort?${queryString}`
+      : '/contacts/analytics/leads-cohort';
     return this.request(endpoint);
   }
 

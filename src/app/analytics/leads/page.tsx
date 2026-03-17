@@ -3,7 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { LeadAnalyticsData, WonContact } from "@/types/analytics";
+import {
+  LeadCohortFunnelAnalyticsData,
+  LeadCohortContact,
+  LeadFunnelStepContact,
+} from "@/types/analytics";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import {
   Card,
@@ -20,6 +24,11 @@ function formatDateInput(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+type ExpandedPanel =
+  | { source: string; key: "created" | "reactivated" }
+  | { source: string; key: "qr" | "ft" | "won" }
+  | null;
+
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [from, setFrom] = useState<string>(() => {
@@ -28,16 +37,11 @@ export default function LeadAnalyticsPage() {
     return formatDateInput(d);
   });
   const [to, setTo] = useState<string>(() => formatDateInput(new Date()));
-  const [data, setData] = useState<LeadAnalyticsData | null>(null);
+  const [data, setData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [expandedSource, setExpandedSource] = useState<string | null>(null);
-  const [wonLoadingSource, setWonLoadingSource] = useState<string | null>(null);
-  const [wonError, setWonError] = useState<string | null>(null);
-  const [wonContactsBySource, setWonContactsBySource] = useState<
-    Record<string, WonContact[]>
-  >({});
+  const [expanded, setExpanded] = useState<ExpandedPanel>(null);
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
@@ -45,7 +49,7 @@ export default function LeadAnalyticsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await apiClient.getLeadAnalytics({ from, to });
+      const response = await apiClient.getLeadCohortAnalytics({ from, to });
       if (response.success && response.data) {
         setData(response.data);
       } else {
@@ -67,55 +71,16 @@ export default function LeadAnalyticsPage() {
 
   const handleApplyRange = (e: React.FormEvent) => {
     e.preventDefault();
-    setExpandedSource(null);
-    setWonError(null);
+    setExpanded(null);
     loadAnalytics();
   };
 
-  const handleToggleWonList = async (sourceKey: string) => {
-    if (expandedSource === sourceKey) {
-      setExpandedSource(null);
-      return;
-    }
-
-    setWonError(null);
-
-    if (wonContactsBySource[sourceKey]) {
-      setExpandedSource(sourceKey);
-      return;
-    }
-
-    try {
-      setWonLoadingSource(sourceKey);
-      const response = await apiClient.getWonContactsAnalytics({
-        source: sourceKey,
-        from,
-        to,
-      });
-      const data = response.data;
-      const contacts = data?.contacts;
-
-      if (response.success && contacts) {
-        setWonContactsBySource((prev) => ({
-          ...prev,
-          [sourceKey]: contacts,
-        }));
-        setExpandedSource(sourceKey);
-      } else {
-        setWonError(
-          response.message ||
-            "Errore nel caricamento dei clienti chiusi per questa sorgente."
-        );
-      }
-    } catch (err) {
-      setWonError(
-        err instanceof Error
-          ? err.message
-          : "Errore sconosciuto nel caricamento dei clienti chiusi."
-      );
-    } finally {
-      setWonLoadingSource(null);
-    }
+  const togglePanel = (next: ExpandedPanel) => {
+    setExpanded((prev) => {
+      if (!prev || !next) return next;
+      if (prev.source === next.source && prev.key === next.key) return null;
+      return next;
+    });
   };
 
   if (authLoading) {
@@ -157,6 +122,25 @@ export default function LeadAnalyticsPage() {
   }
 
   const sourceKeys = data ? Object.keys(data.sources) : [];
+  const totalCohort =
+    data?.sources
+      ? sourceKeys.reduce((acc, key) => acc + (data.sources[key]?.cohort.total.count || 0), 0)
+      : 0;
+  const totalCreated =
+    data?.sources
+      ? sourceKeys.reduce((acc, key) => acc + (data.sources[key]?.cohort.created.count || 0), 0)
+      : 0;
+  const totalReactivated =
+    data?.sources
+      ? sourceKeys.reduce(
+          (acc, key) => acc + (data.sources[key]?.cohort.reactivated.count || 0),
+          0
+        )
+      : 0;
+  const totalWon =
+    data?.sources
+      ? sourceKeys.reduce((acc, key) => acc + (data.sources[key]?.steps.won.count || 0), 0)
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -171,8 +155,9 @@ export default function LeadAnalyticsPage() {
                 Analytics Lead Funnel
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Confronto tra sorgenti lead (Smartlead outbound vs inbound Rank
-                Checker) per periodo.
+                Coorte (creati + riattivati) e funnel QR → free trial → won per
+                periodo (riattivazione = nessuna activity da almeno{" "}
+                {data?.silenceDaysThreshold ?? 40} giorni).
               </p>
             </div>
           </div>
@@ -247,9 +232,7 @@ export default function LeadAnalyticsPage() {
                       const firstOfMonth = formatDateInput(d);
                       setFrom(firstOfMonth);
                       setTo(today);
-                      setExpandedSource(null);
-                      setWonError(null);
-                      setWonContactsBySource({});
+                      setExpanded(null);
                       loadAnalytics();
                     }}
                     disabled={isLoading}
@@ -287,68 +270,54 @@ export default function LeadAnalyticsPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Totale lead</CardTitle>
+                    <CardTitle>Coorte totale</CardTitle>
                     <CardDescription>
-                      Somma di tutte le sorgenti nel periodo.
+                      Creati + riattivati nel periodo.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-2xl font-semibold text-gray-900">
-                      {sourceKeys.reduce(
-                        (acc, key) => acc + data.sources[key].totalLeads,
-                        0
-                      )}
+                      {totalCohort}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>QR code inviati</CardTitle>
+                    <CardTitle>Creati</CardTitle>
                     <CardDescription>
-                      Lead che hanno raggiunto lo stato “qr code inviato”.
+                      Nuovi contatti creati nel periodo.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-2xl font-semibold text-gray-900">
-                      {sourceKeys.reduce(
-                        (acc, key) => acc + data.sources[key].qrCodeSent,
-                        0
-                      )}
+                      {totalCreated}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Lead vinti (won)</CardTitle>
+                    <CardTitle>Riattivati</CardTitle>
                     <CardDescription>
-                      Numero totale di deal vinti nel periodo.
+                      Contatti con nuova activity dopo ≥{" "}
+                      {data.silenceDaysThreshold} giorni di silenzio.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-2xl font-semibold text-gray-900">
-                      {sourceKeys.reduce(
-                        (acc, key) => acc + data.sources[key].won,
-                        0
-                      )}
+                      {totalReactivated}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>MRR vinto totale</CardTitle>
+                    <CardTitle>Won nel periodo</CardTitle>
                     <CardDescription>
-                      Somma del MRR vinto su tutte le sorgenti.
+                      Deal entrati in “won” nel periodo (coorte).
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-2xl font-semibold text-gray-900">
-                      €
-                      {sourceKeys
-                        .reduce(
-                          (acc, key) => acc + data.sources[key].mrrWon,
-                          0
-                        )
-                        .toLocaleString("it-IT")}
+                      {totalWon}
                     </p>
                   </CardContent>
                 </Card>
@@ -361,7 +330,7 @@ export default function LeadAnalyticsPage() {
               <CardTitle>Confronto per sorgente</CardTitle>
               <CardDescription>
                 Dettaglio per <code>smartlead_outbound</code> e{" "}
-                <code>inbound_rank_checker</code>.
+                <code>inbound_rank_checker</code> (con liste “quali lead”).
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
@@ -383,162 +352,239 @@ export default function LeadAnalyticsPage() {
                           Sorgente
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          Lead totali
+                          Coorte (totale)
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          QR code inviati
+                          Creati
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          Free trial iniziati
+                          Riattivati
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-gray-600">
+                          QR code inviato
+                        </th>
+                        <th className="px-4 py-2 text-right font-medium text-gray-600">
+                          Free trial iniziato
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
                           Won
                         </th>
                         <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          Lost
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          MRR won
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          MRR free trial
-                        </th>
-                        <th className="px-4 py-2 text-right font-medium text-gray-600">
-                          Conversion rate won
+                          Azioni
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {sourceKeys.map((key) => {
                         const row = data.sources[key];
-                        const conversion =
-                          row.totalLeads > 0
-                            ? (row.won / row.totalLeads) * 100
-                            : 0;
-                        const isExpanded = expandedSource === key;
-                        const wonContacts = wonContactsBySource[key] || [];
+                        const isExpanded = expanded?.source === key;
+
+                        const renderCohortList = (
+                          title: string,
+                          contacts: LeadCohortContact[]
+                        ) => (
+                          <div className="space-y-2">
+                            <div className="font-semibold text-gray-800">
+                              {title} per <code>{key}</code>
+                            </div>
+                            {contacts.length === 0 ? (
+                              <div className="text-gray-600">Nessun contatto.</div>
+                            ) : (
+                              <ul className="space-y-1">
+                                {contacts.map((c) => (
+                                  <li
+                                    key={c.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-1 last:border-b-0"
+                                  >
+                                    <div>
+                                      <span className="font-medium">{c.name}</span>
+                                      {c.email && (
+                                        <span className="ml-2 text-gray-600">
+                                          {c.email}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-4 text-gray-700">
+                                      {typeof c.mrr === "number" && (
+                                        <span>
+                                          MRR: €{c.mrr.toLocaleString("it-IT")}
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-gray-500">
+                                        Inizio coorte:{" "}
+                                        {new Date(c.cohortStartAt).toLocaleDateString(
+                                          "it-IT"
+                                        )}
+                                      </span>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+
+                        const renderStepList = (
+                          title: string,
+                          contacts: LeadFunnelStepContact[]
+                        ) => (
+                          <div className="space-y-2">
+                            <div className="font-semibold text-gray-800">
+                              {title} per <code>{key}</code> (nel periodo)
+                            </div>
+                            {contacts.length === 0 ? (
+                              <div className="text-gray-600">Nessun contatto.</div>
+                            ) : (
+                              <ul className="space-y-1">
+                                {contacts.map((c) => (
+                                  <li
+                                    key={c.id}
+                                    className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-1 last:border-b-0"
+                                  >
+                                    <div>
+                                      <span className="font-medium">{c.name}</span>
+                                      {c.email && (
+                                        <span className="ml-2 text-gray-600">
+                                          {c.email}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-4 text-gray-700">
+                                      {typeof c.mrr === "number" && (
+                                        <span>
+                                          MRR: €{c.mrr.toLocaleString("it-IT")}
+                                        </span>
+                                      )}
+                                      <span className="text-xs text-gray-500">
+                                        Entrato:{" "}
+                                        {c.enteredAt
+                                          ? new Date(c.enteredAt).toLocaleDateString(
+                                              "it-IT"
+                                            )
+                                          : "N/A"}
+                                      </span>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        );
+
+                        const panel =
+                          isExpanded && expanded
+                            ? expanded.key === "created"
+                              ? renderCohortList(
+                                  "Creati",
+                                  row.cohort.created.contacts
+                                )
+                              : expanded.key === "reactivated"
+                                ? renderCohortList(
+                                    "Riattivati",
+                                    row.cohort.reactivated.contacts
+                                  )
+                                : expanded.key === "qr"
+                                  ? renderStepList(
+                                      "QR code inviato",
+                                      row.steps.qrCodeSent.contacts
+                                    )
+                                  : expanded.key === "ft"
+                                    ? renderStepList(
+                                        "Free trial iniziato",
+                                        row.steps.freeTrialStarted.contacts
+                                      )
+                                    : renderStepList("Won", row.steps.won.contacts)
+                            : null;
 
                         return (
                           <>
                             <tr key={key} className="border-b last:border-0">
                               <td className="px-4 py-2 font-medium text-gray-900">
-                                <div className="flex items-center gap-2">
-                                  <span>{key}</span>
+                                {key}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.cohort.total.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.cohort.created.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.cohort.reactivated.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.steps.qrCodeSent.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.steps.freeTrialStarted.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                {row.steps.won.count}
+                              </td>
+                              <td className="px-4 py-2 text-right">
+                                <div className="flex justify-end flex-wrap gap-2">
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleToggleWonList(key)}
-                                    disabled={wonLoadingSource === key}
+                                    onClick={() =>
+                                      togglePanel({ source: key, key: "created" })
+                                    }
                                   >
-                                    {wonLoadingSource === key && (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    )}
-                                    <span className="text-xs">
-                                      Clienti chiusi (won)
-                                    </span>
+                                    <span className="text-xs">Creati</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      togglePanel({
+                                        source: key,
+                                        key: "reactivated",
+                                      })
+                                    }
+                                  >
+                                    <span className="text-xs">Riattivati</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      togglePanel({ source: key, key: "qr" })
+                                    }
+                                  >
+                                    <span className="text-xs">QR</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      togglePanel({ source: key, key: "ft" })
+                                    }
+                                  >
+                                    <span className="text-xs">Free trial</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      togglePanel({ source: key, key: "won" })
+                                    }
+                                  >
+                                    <span className="text-xs">Won</span>
                                   </Button>
                                 </div>
                               </td>
-                              <td className="px-4 py-2 text-right">
-                                {row.totalLeads}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {row.qrCodeSent}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {row.freeTrialStarted}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {row.won}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {row.lost}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                €
-                                {row.mrrWon.toLocaleString("it-IT")}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                €
-                                {row.mrrFreeTrial.toLocaleString("it-IT")}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {conversion.toFixed(1)}%
-                              </td>
                             </tr>
-                            {isExpanded && (
+                            {panel && (
                               <tr className="border-b last:border-0 bg-gray-50">
                                 <td
                                   className="px-4 py-3 text-sm text-gray-700"
-                                  colSpan={9}
+                                  colSpan={8}
                                 >
-                                  {wonError && (
-                                    <div className="mb-2 text-red-700">
-                                      {wonError}
-                                    </div>
-                                  )}
-                                  {!wonError && wonLoadingSource === key && (
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                      <Loader2 className="h-4 w-4 animate-spin" />
-                                      <span>
-                                        Caricamento clienti chiusi per questa
-                                        sorgente...
-                                      </span>
-                                    </div>
-                                  )}
-                                  {!wonError &&
-                                    wonLoadingSource !== key &&
-                                    (wonContacts.length === 0 ? (
-                                      <div className="text-gray-600">
-                                        Nessun cliente chiuso (won) nel periodo
-                                        selezionato per questa sorgente.
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-2">
-                                        <div className="font-semibold text-gray-800">
-                                          Clienti chiusi (won) per{" "}
-                                          <code>{key}</code> nel periodo
-                                          selezionato:
-                                        </div>
-                                        <ul className="space-y-1">
-                                          {wonContacts.map((contact) => (
-                                            <li
-                                              key={contact.id}
-                                              className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-1 last:border-b-0"
-                                            >
-                                              <div>
-                                                <span className="font-medium">
-                                                  {contact.name}
-                                                </span>
-                                                {contact.email && (
-                                                  <span className="ml-2 text-gray-600">
-                                                    {contact.email}
-                                                  </span>
-                                                )}
-                                              </div>
-                                              <div className="flex items-center gap-4 text-gray-700">
-                                                {typeof contact.mrr ===
-                                                  "number" && (
-                                                  <span>
-                                                    MRR: €
-                                                    {contact.mrr.toLocaleString(
-                                                      "it-IT"
-                                                    )}
-                                                  </span>
-                                                )}
-                                                <span className="text-xs text-gray-500">
-                                                  Won il{" "}
-                                                  {new Date(
-                                                    contact.wonAt
-                                                  ).toLocaleDateString("it-IT")}
-                                                </span>
-                                              </div>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    ))}
+                                  {panel}
                                 </td>
                               </tr>
                             )}

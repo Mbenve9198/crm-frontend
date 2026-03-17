@@ -71,7 +71,7 @@ export const getPipelineStatuses = (): ContactStatus[] => {
     'qr code inviato',
     'free trial iniziato',
     'won',
-    'lost before free trial',
+    'ghosted/bad timing',
     'lost after free trial'
   ];
 };

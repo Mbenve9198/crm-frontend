@@ -378,7 +378,7 @@ function PipelinePage() {
               </CardContent>
             </Card>
             
-            {/* Lost - nessuna card */}
+            {/* Lost/Ghosted - nessuna card */}
             <div></div>
           </div>
 
@@ -393,7 +393,7 @@ function PipelinePage() {
                 'qr code inviato': 'from-purple-500 via-purple-600 to-purple-700', 
                 'free trial iniziato': 'from-emerald-500 via-emerald-600 to-emerald-700',
                 'won': 'from-green-600 via-green-700 to-green-800',
-                'lost before free trial': 'from-red-600 via-red-700 to-red-800',
+                'ghosted/bad timing': 'from-amber-600 via-amber-700 to-amber-800',
                 'lost after free trial': 'from-rose-600 via-rose-700 to-rose-800'
               };
               

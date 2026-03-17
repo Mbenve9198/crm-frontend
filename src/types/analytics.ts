@@ -76,6 +76,7 @@ export type LeadCohortFunnelAnalyticsData = {
     to: string;
   };
   silenceDaysThreshold: number;
+  outcomeWindowDays: number;
   sources: Record<LeadSourceKey, LeadCohortSourceAnalytics>;
 };
 

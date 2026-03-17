@@ -183,7 +183,8 @@ export default function LeadAnalyticsPage() {
               <p className="text-sm text-gray-500 mt-1">
                 Coorte (creati + riattivati) e funnel QR → free trial → won per
                 periodo (riattivazione = nessuna activity da almeno{" "}
-                {data?.silenceDaysThreshold ?? 40} giorni).
+                {data?.silenceDaysThreshold ?? 40} giorni, outcome entro{" "}
+                {data?.outcomeWindowDays ?? 60} giorni dalla coorte).
               </p>
             </div>
           </div>

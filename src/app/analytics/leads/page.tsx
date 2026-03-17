@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
+import { User } from "@/types/contact";
 import {
   LeadCohortFunnelAnalyticsData,
   LeadCohortContact,
@@ -31,6 +32,8 @@ type ExpandedPanel =
 
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const [owners, setOwners] = useState<User[]>([]);
+  const [owner, setOwner] = useState<string>("all");
   const [from, setFrom] = useState<string>(() => {
     const d = new Date();
     d.setDate(1);
@@ -45,11 +48,26 @@ export default function LeadAnalyticsPage() {
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
+  const loadOwners = async () => {
+    try {
+      const response = await apiClient.getUsersForAssignment();
+      const users = response.data?.users || [];
+      setOwners(users);
+    } catch {
+      // Non bloccare la pagina se il caricamento owner fallisce
+      setOwners([]);
+    }
+  };
+
   const loadAnalytics = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await apiClient.getLeadCohortAnalytics({ from, to });
+      const response = await apiClient.getLeadCohortAnalytics({
+        from,
+        to,
+        owner: owner !== "all" ? owner : "all",
+      });
       if (response.success && response.data) {
         setData(response.data);
       } else {
@@ -64,6 +82,7 @@ export default function LeadAnalyticsPage() {
 
   useEffect(() => {
     if (isAuthenticated && canAccess) {
+      loadOwners();
       loadAnalytics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,6 +199,27 @@ export default function LeadAnalyticsPage() {
                 onSubmit={handleApplyRange}
                 className="flex flex-col sm:flex-row gap-4 sm:items-end"
               >
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-sm font-medium text-gray-700"
+                    htmlFor="owner"
+                  >
+                    Owner
+                  </label>
+                  <select
+                    id="owner"
+                    className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    value={owner}
+                    onChange={(e) => setOwner(e.target.value)}
+                  >
+                    <option value="all">Tutti</option>
+                    {owners.map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.firstName} {u.lastName} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex flex-col gap-1">
                   <label
                     className="text-sm font-medium text-gray-700"

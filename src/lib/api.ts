@@ -516,10 +516,11 @@ class ApiClient {
     return this.request(endpoint);
   }
 
-  async getLeadCohortAnalytics(params?: { from?: string; to?: string }): Promise<ApiResponse<LeadCohortFunnelAnalyticsData>> {
+  async getLeadCohortAnalytics(params?: { from?: string; to?: string; owner?: string }): Promise<ApiResponse<LeadCohortFunnelAnalyticsData>> {
     const searchParams = new URLSearchParams();
     if (params?.from) searchParams.append('from', params.from);
     if (params?.to) searchParams.append('to', params.to);
+    if (params?.owner) searchParams.append('owner', params.owner);
     const queryString = searchParams.toString();
     const endpoint = queryString
       ? `/contacts/analytics/leads-cohort?${queryString}`

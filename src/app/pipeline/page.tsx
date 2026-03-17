@@ -323,7 +323,7 @@ function PipelinePage() {
           </div>
 
           {/* Card MRR sopra le colonne specifiche */}
-          <div className="grid grid-cols-6 gap-8 mb-3">
+          <div className="grid grid-cols-5 gap-8 mb-3">
             {/* Interessato - nessuna card */}
             <div></div>
             
@@ -378,12 +378,11 @@ function PipelinePage() {
               </CardContent>
             </Card>
             
-            {/* Ghosted/Lost - nessuna card */}
-            <div></div>
+            {/* Lost - nessuna card */}
             <div></div>
           </div>
 
-          <div className="grid grid-cols-6 gap-8">
+          <div className="grid grid-cols-5 gap-8">
             {getPipelineStatuses().map((status, index) => {
               const statusContacts = contactsByStatus[status] || [];
               const stats = getColumnStats(status);
@@ -394,7 +393,6 @@ function PipelinePage() {
                 'qr code inviato': 'from-purple-500 via-purple-600 to-purple-700', 
                 'free trial iniziato': 'from-emerald-500 via-emerald-600 to-emerald-700',
                 'won': 'from-green-600 via-green-700 to-green-800',
-                'ghosted/bad timing': 'from-amber-600 via-amber-700 to-amber-800',
                 'lost after free trial': 'from-rose-600 via-rose-700 to-rose-800'
               };
               

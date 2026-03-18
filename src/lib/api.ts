@@ -40,6 +40,7 @@ import {
   UpdateMessageStatusRequest
 } from '@/types/whatsapp';
 import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData } from '@/types/analytics';
+import { DashboardData } from '@/types/dashboard';
 
 // Tipi per statistiche e paginazione
 type PaginationData = {
@@ -525,6 +526,16 @@ class ApiClient {
     const endpoint = queryString
       ? `/contacts/analytics/leads-cohort?${queryString}`
       : '/contacts/analytics/leads-cohort';
+    return this.request(endpoint);
+  }
+
+  // === CRUSCOTTO (Dashboard) ===
+  async getDashboard(params?: { ownerId?: string; limit?: number }): Promise<ApiResponse<DashboardData>> {
+    const searchParams = new URLSearchParams();
+    if (params?.ownerId) searchParams.append('ownerId', params.ownerId);
+    if (typeof params?.limit === 'number') searchParams.append('limit', String(params.limit));
+    const qs = searchParams.toString();
+    const endpoint = qs ? `/dashboard?${qs}` : '/dashboard';
     return this.request(endpoint);
   }
 

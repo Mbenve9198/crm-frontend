@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle } from "lucide-react";
+import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -29,6 +29,12 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
   const [showLists, setShowLists] = useState(true);
 
   const menuItems = [
+    {
+      icon: LayoutDashboard,
+      label: "Cruscotto",
+      active: pathname === "/dashboard",
+      href: "/dashboard",
+    },
     {
       icon: Users,
       label: "Tutti i Contatti",

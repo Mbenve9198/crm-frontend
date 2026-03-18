@@ -13,6 +13,11 @@ export type DashboardListItem = {
   updatedAt: string;
   lastActivityAt?: string | null;
   activitiesCount?: number;
+  properties?: {
+    callbackAt?: string | null;
+    callbackNote?: string | null;
+    [key: string]: unknown;
+  };
 };
 
 export type DashboardKpis = {
@@ -24,6 +29,10 @@ export type DashboardKpis = {
   won: number;
   lost: number;
   pipelinePotentialEur: number;
+  callbackOverdue: number;
+  callbackToday: number;
+  callbackNext7Days: number;
+  callbackNoDate: number;
 };
 
 export type DashboardData = {

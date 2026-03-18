@@ -529,6 +529,14 @@ class ApiClient {
     return this.request(endpoint);
   }
 
+  // === CALLBACK (Richiamo) ===
+  async updateContactCallback(contactId: string, data: { callbackAt?: string | null; callbackNote?: string | null }): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/${contactId}/callback`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
   // === CRUSCOTTO (Dashboard) ===
   async getDashboard(params?: { ownerId?: string; limit?: number }): Promise<ApiResponse<DashboardData>> {
     const searchParams = new URLSearchParams();

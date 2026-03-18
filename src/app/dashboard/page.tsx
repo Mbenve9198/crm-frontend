@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { User as UserType } from "@/types/contact";
+import { User as UserType, Contact } from "@/types/contact";
 import { DashboardData, DashboardListItem } from "@/types/dashboard";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CallbackDialog } from "@/components/ui/callback-dialog";
 import {
   Loader2,
   LayoutDashboard,
@@ -27,6 +28,11 @@ import {
   CheckCircle2,
   PhoneCall,
   Inbox,
+  Clock,
+  CalendarClock,
+  Bell,
+  CalendarDays,
+  CalendarOff,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
 
@@ -44,6 +50,32 @@ function formatDateTime(iso?: string | null) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "N/A";
   return d.toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" });
+}
+
+function formatCallbackDate(iso?: string | null) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("it-IT", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getCallbackBadge(iso?: string | null): { label: string; className: string } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  if (d < todayStart) return { label: "SCADUTO", className: "bg-red-100 text-red-700" };
+  if (d < todayEnd) return { label: "OGGI", className: "bg-amber-100 text-amber-700" };
+  return null;
 }
 
 type KpiCardProps = {
@@ -191,6 +223,127 @@ function ThemedLeadsTable({
   );
 }
 
+type CallbackTableProps = {
+  items: DashboardListItem[];
+  onSetCallback: (item: DashboardListItem) => void;
+};
+
+function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
+  const router = useRouter();
+
+  return (
+    <Card className="overflow-hidden border-t-4 border-t-blue-500">
+      <div className="px-5 py-3.5 flex items-center justify-between bg-blue-50">
+        <h3 className="text-sm font-semibold text-blue-800">Da richiamare</h3>
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700">
+          {items.length}
+        </span>
+      </div>
+
+      <CardContent className="p-0">
+        {items.length === 0 ? (
+          <div className="py-10 flex flex-col items-center gap-2 text-gray-400">
+            <PhoneCall className="h-8 w-8" />
+            <p className="text-sm text-center max-w-[220px]">
+              Nessuna callback in sospeso — tutto sotto controllo.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50/60">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Lead
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Richiamo
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Nota
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    MRR
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Azioni
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((c) => {
+                  const cbDate = formatCallbackDate(c.properties?.callbackAt);
+                  const badge = getCallbackBadge(c.properties?.callbackAt);
+                  return (
+                    <tr
+                      key={c._id}
+                      className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900">{c.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {cbDate ? (
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-gray-700 text-xs">{cbDate}</span>
+                            {badge && (
+                              <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
+                                {badge.label}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-xs">Non impostato</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
+                        {c.properties?.callbackNote || "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSetCallback(c);
+                            }}
+                          >
+                            <CalendarClock className="h-3 w-3" />
+                            {c.properties?.callbackAt ? "Modifica" : "Imposta"}
+                          </Button>
+                          <Link
+                            href={`/?search=${encodeURIComponent(c.name)}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                              <ExternalLink className="h-3 w-3" />
+                              Apri
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OwnerSelect({
   owners,
   value,
@@ -219,6 +372,25 @@ function OwnerSelect({
   );
 }
 
+type CallbackBadgeProps = {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  color: string;
+};
+
+function CallbackBadge({ label, value, icon, color }: CallbackBadgeProps) {
+  return (
+    <div className={`flex items-center gap-2 rounded-lg px-3 py-2 ${color}`}>
+      {icon}
+      <div>
+        <p className="text-lg font-bold leading-tight">{value}</p>
+        <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -227,6 +399,9 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
+  const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
 
   const defaultOwnerId = useMemo(() => (user?._id ? user._id : "all"), [user?._id]);
 
@@ -265,6 +440,15 @@ export default function DashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, defaultOwnerId]);
+
+  const handleOpenCallbackDialog = (item: DashboardListItem) => {
+    setSelectedCallbackItem(item);
+    setCallbackDialogOpen(true);
+  };
+
+  const handleCallbackSaved = (_updatedContact: Contact) => {
+    loadDashboard(owner);
+  };
 
   if (authLoading) {
     return (
@@ -402,6 +586,42 @@ export default function DashboardPage() {
             />
           </div>
 
+          {/* Callback KPI badges */}
+          {(k?.callbackOverdue ?? 0) + (k?.callbackToday ?? 0) + (k?.callbackNext7Days ?? 0) + (k?.callbackNoDate ?? 0) > 0 && (
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                <PhoneCall className="h-4 w-4 text-blue-600" />
+                Richiami
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                <CallbackBadge
+                  label="Scaduti"
+                  value={k?.callbackOverdue ?? 0}
+                  icon={<Bell className="h-4 w-4" />}
+                  color="bg-red-50 text-red-700"
+                />
+                <CallbackBadge
+                  label="Oggi"
+                  value={k?.callbackToday ?? 0}
+                  icon={<CalendarClock className="h-4 w-4" />}
+                  color="bg-amber-50 text-amber-700"
+                />
+                <CallbackBadge
+                  label="7 giorni"
+                  value={k?.callbackNext7Days ?? 0}
+                  icon={<CalendarDays className="h-4 w-4" />}
+                  color="bg-blue-50 text-blue-700"
+                />
+                <CallbackBadge
+                  label="Senza data"
+                  value={k?.callbackNoDate ?? 0}
+                  icon={<CalendarOff className="h-4 w-4" />}
+                  color="bg-gray-100 text-gray-600"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Operative Tables — ordered by sales priority */}
           <div className="grid gap-6 xl:grid-cols-2">
             <ThemedLeadsTable
@@ -443,21 +663,26 @@ export default function DashboardPage() {
               emptyMessage="Zero lead in attesa — backlog pulito!"
             />
 
-            <ThemedLeadsTable
-              title="Da richiamare"
-              count={data?.lists.callback?.length || 0}
+            <CallbackTable
               items={data?.lists.callback || []}
-              headerBg="bg-blue-50"
-              headerText="text-blue-800"
-              badgeBg="bg-blue-100"
-              badgeText="text-blue-700"
-              accentBorder="border-t-blue-500"
-              emptyIcon={<PhoneCall className="h-8 w-8" />}
-              emptyMessage="Nessuna callback in sospeso — tutto sotto controllo."
+              onSetCallback={handleOpenCallbackDialog}
             />
           </div>
         </div>
       </main>
+
+      {/* Callback Dialog */}
+      {selectedCallbackItem && (
+        <CallbackDialog
+          open={callbackDialogOpen}
+          onOpenChange={setCallbackDialogOpen}
+          contactId={selectedCallbackItem._id}
+          contactName={selectedCallbackItem.name}
+          currentCallbackAt={selectedCallbackItem.properties?.callbackAt}
+          currentCallbackNote={selectedCallbackItem.properties?.callbackNote}
+          onSaved={handleCallbackSaved}
+        />
+      )}
     </div>
   );
 }

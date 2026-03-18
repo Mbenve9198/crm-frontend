@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
@@ -23,6 +24,7 @@ function LoadingSpinner() {
 
 function Dashboard() {
   const {} = useAuth();
+  const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
@@ -41,7 +43,7 @@ function Dashboard() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
   const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: object } | undefined>();
-  const [searchQuery] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get("search") || "");
   const [ownerFilter, setOwnerFilter] = useState<string>("all");
   const [serverColumnFilters, setServerColumnFilters] = useState<Record<string, ColumnFilter>>({});
   const [serverSorting, setServerSorting] = useState<SortingState | null>(null);
@@ -115,6 +117,7 @@ function Dashboard() {
   // Ricerca manuale su richiesta (Enter o click)
   const performSearch = (query: string) => {
     console.log(`🔍 Ricerca manuale attivata per: "${query}"`);
+    setSearchQuery(query);
     loadContacts(selectedList, query);
   };
 

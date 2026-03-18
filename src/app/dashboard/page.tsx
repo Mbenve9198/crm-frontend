@@ -103,7 +103,7 @@ function LeadsTable({
                     </td>
                     <td className="px-4 py-2 text-right">
                       <Link
-                        href={`/?contact=${c._id}`}
+                        href={`/?search=${encodeURIComponent(c.name)}`}
                         className="text-blue-700 hover:text-blue-900 text-sm font-medium"
                       >
                         Apri

@@ -685,7 +685,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Operative Tables — ordered by sales priority */}
+          {/* Operative Tables — paired cards */}
           <div className="grid gap-6 xl:grid-cols-2">
             <ThemedLeadsTable
               title="In free trial"
@@ -712,7 +712,10 @@ export default function DashboardPage() {
               emptyIcon={<CheckCircle2 className="h-8 w-8" />}
               emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
             />
+          </div>
 
+          {/* Full-width cards — more room for columns & notes */}
+          <div className="space-y-6">
             <ThemedLeadsTable
               title="Lead untouched"
               count={data?.lists.notTouched?.length || 0}

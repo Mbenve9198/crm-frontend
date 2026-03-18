@@ -21,7 +21,7 @@ import {
   Users,
   Trophy,
   XCircle,
-  TrendingUp,
+  DollarSign,
   ExternalLink,
   PartyPopper,
   CheckCircle2,
@@ -48,6 +48,7 @@ function formatDateTime(iso?: string | null) {
 
 type KpiCardProps = {
   label: string;
+  description?: string;
   value: string | number;
   icon: React.ReactNode;
   borderColor: string;
@@ -55,11 +56,24 @@ type KpiCardProps = {
   valueColor?: string;
 };
 
-function KpiCard({ label, value, icon, borderColor, iconBg, valueColor = "text-gray-900" }: KpiCardProps) {
+function KpiCard({
+  label,
+  description,
+  value,
+  icon,
+  borderColor,
+  iconBg,
+  valueColor = "text-gray-900",
+}: KpiCardProps) {
   return (
     <Card className={`relative overflow-hidden border-l-4 ${borderColor}`}>
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <p className="text-sm font-medium text-gray-600">{label}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-700 truncate">{label}</p>
+          {description ? (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{description}</p>
+          ) : null}
+        </div>
         <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${iconBg}`}>
           {icon}
         </div>
@@ -330,6 +344,7 @@ export default function DashboardPage() {
           <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
             <KpiCard
               label="Lead untouched"
+              description="Smartlead: ≤ 1 activity. Rank Checker: 0 activity."
               value={k?.notTouched ?? "—"}
               icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
               borderColor="border-l-amber-500"
@@ -377,9 +392,10 @@ export default function DashboardPage() {
               valueColor="text-red-600"
             />
             <KpiCard
-              label="Potential €"
+              label="Potential Commissions"
+              description="Somma di (20% × MRR × 12 + €50) per lead in QR/Free trial con MRR."
               value={typeof k?.pipelinePotentialEur === "number" ? formatEur(k.pipelinePotentialEur) : "—"}
-              icon={<TrendingUp className="h-5 w-5 text-yellow-600" />}
+              icon={<DollarSign className="h-5 w-5 text-yellow-600" />}
               borderColor="border-l-yellow-500"
               iconBg="bg-yellow-50"
               valueColor="text-yellow-700"

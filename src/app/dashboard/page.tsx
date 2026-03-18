@@ -171,6 +171,7 @@ type ThemedTableProps = {
   emptyIcon: React.ReactNode;
   emptyMessage: string;
   accentBorder: string;
+  hideMrr?: boolean;
 };
 
 function ThemedLeadsTable({
@@ -184,6 +185,7 @@ function ThemedLeadsTable({
   emptyIcon,
   emptyMessage,
   accentBorder,
+  hideMrr,
 }: ThemedTableProps) {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -226,9 +228,11 @@ function ThemedLeadsTable({
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Ultimo tocco
                     </th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      MRR
-                    </th>
+                    {!hideMrr && (
+                      <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        MRR
+                      </th>
+                    )}
                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Azioni
                     </th>
@@ -249,9 +253,11 @@ function ThemedLeadsTable({
                       </td>
                       <td className="px-4 py-3 text-gray-700">{getStatusLabel(c.status)}</td>
                       <td className="px-4 py-3 text-gray-500">{formatDateTime(c.lastActivityAt)}</td>
-                      <td className="px-4 py-3 text-right text-gray-700">
-                        {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
-                      </td>
+                      {!hideMrr && (
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right">
                         <Link
                           href={`/?search=${encodeURIComponent(c.name)}`}
@@ -324,9 +330,6 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                       Nota
                     </th>
                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      MRR
-                    </th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Azioni
                     </th>
                   </tr>
@@ -362,11 +365,13 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                             <span className="text-gray-400 text-xs">Non impostato</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
-                          {c.properties?.callbackNote || "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
-                          {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
+                        <td className="px-4 py-3">
+                          <div
+                            className="text-gray-500 text-xs max-w-[180px] truncate"
+                            title={c.properties?.callbackNote || undefined}
+                          >
+                            {c.properties?.callbackNote || "—"}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -685,7 +690,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Operative Tables — paired cards */}
+          {/* Operative Tables */}
           <div className="grid gap-6 xl:grid-cols-2">
             <ThemedLeadsTable
               title="In free trial"
@@ -712,10 +717,7 @@ export default function DashboardPage() {
               emptyIcon={<CheckCircle2 className="h-8 w-8" />}
               emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
             />
-          </div>
 
-          {/* Full-width cards — more room for columns & notes */}
-          <div className="space-y-6">
             <ThemedLeadsTable
               title="Lead untouched"
               count={data?.lists.notTouched?.length || 0}
@@ -727,6 +729,7 @@ export default function DashboardPage() {
               accentBorder="border-t-amber-500"
               emptyIcon={<Inbox className="h-8 w-8" />}
               emptyMessage="Zero lead in attesa — backlog pulito!"
+              hideMrr
             />
 
             <CallbackTable

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CallbackDialog } from "@/components/ui/callback-dialog";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Loader2,
   LayoutDashboard,
@@ -366,12 +367,20 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div
-                            className="text-gray-500 text-xs max-w-[180px] truncate"
-                            title={c.properties?.callbackNote || undefined}
-                          >
-                            {c.properties?.callbackNote || "—"}
-                          </div>
+                          {c.properties?.callbackNote ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-gray-500 text-xs max-w-[90px] truncate cursor-default">
+                                  {c.properties.callbackNote}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[260px] whitespace-normal">
+                                {c.properties.callbackNote}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">

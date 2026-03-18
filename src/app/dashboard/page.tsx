@@ -33,8 +33,12 @@ import {
   Bell,
   CalendarDays,
   CalendarOff,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
+
+const PAGE_SIZE = 10;
 
 function formatEur(value: number) {
   return new Intl.NumberFormat("it-IT", {
@@ -117,6 +121,45 @@ function KpiCard({
   );
 }
 
+function TablePagination({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (p: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-4 py-2.5 border-t bg-gray-50/40">
+      <span className="text-xs text-gray-500">
+        Pagina {page} di {totalPages}
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 w-7 p-0"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 type ThemedTableProps = {
   title: string;
   count: number;
@@ -143,6 +186,13 @@ function ThemedLeadsTable({
   accentBorder,
 }: ThemedTableProps) {
   const router = useRouter();
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [items]);
 
   return (
     <Card className={`overflow-hidden border-t-4 ${accentBorder}`}>
@@ -162,61 +212,64 @@ function ThemedLeadsTable({
             <p className="text-sm text-center max-w-[220px]">{emptyMessage}</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50/60">
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Lead
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Ultimo tocco
-                  </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    MRR
-                  </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Azioni
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((c) => (
-                  <tr
-                    key={c._id}
-                    className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{c.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{getStatusLabel(c.status)}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDateTime(c.lastActivityAt)}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">
-                      {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/?search=${encodeURIComponent(c.name)}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                          <ExternalLink className="h-3 w-3" />
-                          Apri
-                        </Button>
-                      </Link>
-                    </td>
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50/60">
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Lead
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Ultimo tocco
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      MRR
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Azioni
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paged.map((c) => (
+                    <tr
+                      key={c._id}
+                      className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-900">{c.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">{getStatusLabel(c.status)}</td>
+                      <td className="px-4 py-3 text-gray-500">{formatDateTime(c.lastActivityAt)}</td>
+                      <td className="px-4 py-3 text-right text-gray-700">
+                        {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          href={`/?search=${encodeURIComponent(c.name)}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                            <ExternalLink className="h-3 w-3" />
+                            Apri
+                          </Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </CardContent>
     </Card>
@@ -230,6 +283,13 @@ type CallbackTableProps = {
 
 function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
   const router = useRouter();
+  const [page, setPage] = useState(1);
+
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [items]);
 
   return (
     <Card className="overflow-hidden border-t-4 border-t-blue-500">
@@ -249,95 +309,98 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b bg-gray-50/60">
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Lead
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Richiamo
-                  </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Nota
-                  </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    MRR
-                  </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Azioni
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((c) => {
-                  const cbDate = formatCallbackDate(c.properties?.callbackAt);
-                  const badge = getCallbackBadge(c.properties?.callbackAt);
-                  return (
-                    <tr
-                      key={c._id}
-                      className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{c.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {cbDate ? (
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-gray-400" />
-                            <span className="text-gray-700 text-xs">{cbDate}</span>
-                            {badge && (
-                              <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
-                                {badge.label}
-                              </span>
-                            )}
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50/60">
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Lead
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Richiamo
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Nota
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      MRR
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Azioni
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paged.map((c) => {
+                    const cbDate = formatCallbackDate(c.properties?.callbackAt);
+                    const badge = getCallbackBadge(c.properties?.callbackAt);
+                    return (
+                      <tr
+                        key={c._id}
+                        className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{c.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
                           </div>
-                        ) : (
-                          <span className="text-gray-400 text-xs">Non impostato</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
-                        {c.properties?.callbackNote || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700">
-                        {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs gap-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSetCallback(c);
-                            }}
-                          >
-                            <CalendarClock className="h-3 w-3" />
-                            {c.properties?.callbackAt ? "Modifica" : "Imposta"}
-                          </Button>
-                          <Link
-                            href={`/?search=${encodeURIComponent(c.name)}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                              <ExternalLink className="h-3 w-3" />
-                              Apri
+                        </td>
+                        <td className="px-4 py-3">
+                          {cbDate ? (
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-gray-400" />
+                              <span className="text-gray-700 text-xs">{cbDate}</span>
+                              {badge && (
+                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
+                                  {badge.label}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">Non impostato</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-500 text-xs max-w-[180px] truncate">
+                          {c.properties?.callbackNote || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">
+                          {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onSetCallback(c);
+                              }}
+                            >
+                              <CalendarClock className="h-3 w-3" />
+                              {c.properties?.callbackAt ? "Modifica" : "Imposta"}
                             </Button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <Link
+                              href={`/?search=${encodeURIComponent(c.name)}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                                <ExternalLink className="h-3 w-3" />
+                                Apri
+                              </Button>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination page={safePage} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </CardContent>
     </Card>
@@ -419,7 +482,7 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiClient.getDashboard({ ownerId, limit: 20 });
+      const res = await apiClient.getDashboard({ ownerId, limit: 100 });
       if (res.success && res.data) {
         setData(res.data);
       } else {

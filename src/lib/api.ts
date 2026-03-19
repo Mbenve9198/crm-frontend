@@ -39,7 +39,7 @@ import {
   UpdateMessageStatusResponse,
   UpdateMessageStatusRequest
 } from '@/types/whatsapp';
-import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData } from '@/types/analytics';
+import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData, OwnerPerformanceData } from '@/types/analytics';
 import { DashboardData } from '@/types/dashboard';
 
 // Tipi per statistiche e paginazione
@@ -526,6 +526,18 @@ class ApiClient {
     const endpoint = queryString
       ? `/contacts/analytics/leads-cohort?${queryString}`
       : '/contacts/analytics/leads-cohort';
+    return this.request(endpoint);
+  }
+
+  async getOwnerPerformance(params?: { from?: string; to?: string; source?: string }): Promise<ApiResponse<OwnerPerformanceData>> {
+    const searchParams = new URLSearchParams();
+    if (params?.from) searchParams.append('from', params.from);
+    if (params?.to) searchParams.append('to', params.to);
+    if (params?.source && params.source !== 'all') searchParams.append('source', params.source);
+    const queryString = searchParams.toString();
+    const endpoint = queryString
+      ? `/contacts/analytics/owner-performance?${queryString}`
+      : '/contacts/analytics/owner-performance';
     return this.request(endpoint);
   }
 

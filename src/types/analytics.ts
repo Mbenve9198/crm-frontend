@@ -81,3 +81,77 @@ export type LeadCohortFunnelAnalyticsData = {
   sources: Record<LeadSourceKey, LeadCohortSourceAnalytics>;
 };
 
+// Owner Performance Analytics
+
+export type OwnerSourceBreakdown = {
+  cohort: number;
+  notTouched: number;
+  qrCodeSent: number;
+  freeTrialStarted: number;
+  won: number;
+  lostBFT: number;
+  lostAFT: number;
+  mrrWon: number;
+};
+
+export type NotTouchedContact = {
+  id: string;
+  name: string;
+  email: string;
+  source: string;
+  createdAt: string;
+};
+
+export type StalledContact = {
+  id: string;
+  name: string;
+  email: string;
+  source: string;
+  status: string;
+  owner: string | null;
+  lastActivityAt: string;
+};
+
+export type LostContact = {
+  id: string;
+  name: string;
+  email: string;
+  source: string;
+};
+
+export type OwnerPerformanceRow = {
+  ownerId: string;
+  ownerName: string;
+  cohort: number;
+  notTouched: number;
+  pctNotTouched: number;
+  avgFirstTouchDays: number | null;
+  qrCodeSent: number;
+  convToQR: number;
+  freeTrialStarted: number;
+  convQRtoFT: number;
+  won: number;
+  convFTtoWon: number;
+  lostBFT: number;
+  lostAFT: number;
+  stalled: number;
+  mrrWon: number;
+  avgSalesCycleDays: number | null;
+  trends: {
+    pctNotTouched: number | null;
+    convToQR: number | null;
+    convFTtoWon: number | null;
+  };
+  bySource: Record<string, OwnerSourceBreakdown>;
+  notTouchedContacts: NotTouchedContact[];
+  stalledContacts: StalledContact[];
+  lostBFTContacts: LostContact[];
+  lostAFTContacts: LostContact[];
+};
+
+export type OwnerPerformanceData = {
+  period: { from: string; to: string };
+  previousPeriod: { from: string; to: string };
+  owners: OwnerPerformanceRow[];
+};
+

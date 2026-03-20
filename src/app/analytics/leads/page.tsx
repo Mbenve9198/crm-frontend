@@ -356,7 +356,12 @@ export default function LeadAnalyticsPage() {
                           {Object.entries(r.bySource).map(([src, s]) => (
                             <tr key={src} className="border-b last:border-0">
                               <td className="px-2 py-1.5 font-medium text-gray-700">{src}</td>
-                              <td className="px-2 py-1.5 text-right">{s.cohort}</td>
+                              <td className="px-2 py-1.5 text-right">
+                                {s.cohort}
+                                {s.reactivated > 0 && (
+                                  <span className="text-gray-400 ml-1">({s.reactivated} riatt.)</span>
+                                )}
+                              </td>
                               <td className="px-2 py-1.5 text-right">{s.notTouched}</td>
                               <td className="px-2 py-1.5 text-right">{s.qrCodeSent}</td>
                               <td className="px-2 py-1.5 text-right">{s.freeTrialStarted}</td>

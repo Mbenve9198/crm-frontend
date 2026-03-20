@@ -85,6 +85,7 @@ export type LeadCohortFunnelAnalyticsData = {
 
 export type OwnerSourceBreakdown = {
   cohort: number;
+  reactivated: number;
   notTouched: number;
   qrCodeSent: number;
   freeTrialStarted: number;

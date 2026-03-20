@@ -11,6 +11,7 @@ import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Loader2,
   BarChart3,
@@ -234,15 +235,29 @@ export default function LeadAnalyticsPage() {
     );
   }
 
-  const SortHeader = ({ label, k, className = "" }: { label: string; k: SortKey; className?: string }) => (
+  const SortHeader = ({ label, k, className = "", tip }: { label: string; k: SortKey; className?: string; tip?: string }) => (
     <th
       className={`px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-800 select-none ${className}`}
       onClick={() => handleSort(k)}
     >
-      <span className="inline-flex items-center gap-0.5">
-        {label}
-        {sortKey === k && <span className="text-blue-600">{sortDir === "asc" ? "↑" : "↓"}</span>}
-      </span>
+      {tip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-0.5 border-b border-dotted border-gray-400">
+              {label}
+              {sortKey === k && <span className="text-blue-600">{sortDir === "asc" ? "↑" : "↓"}</span>}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[220px] whitespace-normal text-xs">
+            {tip}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        <span className="inline-flex items-center gap-0.5">
+          {label}
+          {sortKey === k && <span className="text-blue-600">{sortDir === "asc" ? "↑" : "↓"}</span>}
+        </span>
+      )}
     </th>
   );
 
@@ -610,21 +625,21 @@ export default function LeadAnalyticsPage() {
                     <thead>
                       <tr className="border-b bg-gray-50/80">
                         <SortHeader label="Owner" k="ownerName" className="text-left" />
-                        <SortHeader label="Coorte" k="cohort" className="text-right" />
-                        <SortHeader label="NT" k="notTouched" className="text-right" />
-                        <SortHeader label="% NT" k="pctNotTouched" className="text-right" />
-                        <SortHeader label="1° tocco" k="avgFirstTouchDays" className="text-right" />
-                        <SortHeader label="QR" k="qrCodeSent" className="text-right" />
-                        <SortHeader label="→ QR" k="convToQR" className="text-right" />
-                        <SortHeader label="FT" k="freeTrialStarted" className="text-right" />
-                        <SortHeader label="QR→FT" k="convQRtoFT" className="text-right" />
-                        <SortHeader label="Won" k="won" className="text-right" />
-                        <SortHeader label="FT→W" k="convFTtoWon" className="text-right" />
-                        <SortHeader label="L.BFT" k="lostBFT" className="text-right" />
-                        <SortHeader label="L.AFT" k="lostAFT" className="text-right" />
-                        <SortHeader label="Stallo" k="stalled" className="text-right" />
-                        <SortHeader label="MRR Won" k="mrrWon" className="text-right" />
-                        <SortHeader label="Ciclo" k="avgSalesCycleDays" className="text-right" />
+                        <SortHeader label="Coorte" k="cohort" className="text-right" tip="Lead assegnati (creati + riattivati) nel periodo" />
+                        <SortHeader label="NT" k="notTouched" className="text-right" tip="Not Touched — lead non ancora lavorati" />
+                        <SortHeader label="% NT" k="pctNotTouched" className="text-right" tip="% Not Touched sulla coorte — indice di reattività" />
+                        <SortHeader label="1° tocco" k="avgFirstTouchDays" className="text-right" tip="Media giorni tra assegnazione e prima chiamata" />
+                        <SortHeader label="QR" k="qrCodeSent" className="text-right" tip="Lead passati a QR code inviato" />
+                        <SortHeader label="→ QR" k="convToQR" className="text-right" tip="Conversion rate Coorte → QR inviato (%)" />
+                        <SortHeader label="FT" k="freeTrialStarted" className="text-right" tip="Lead passati a Free Trial iniziato" />
+                        <SortHeader label="QR→FT" k="convQRtoFT" className="text-right" tip="Conversion rate QR inviato → Free Trial (%)" />
+                        <SortHeader label="Won" k="won" className="text-right" tip="Lead chiusi come Won" />
+                        <SortHeader label="FT→W" k="convFTtoWon" className="text-right" tip="Conversion rate Free Trial → Won (%)" />
+                        <SortHeader label="L.BFT" k="lostBFT" className="text-right" tip="Lost Before Free Trial — persi prima della prova" />
+                        <SortHeader label="L.AFT" k="lostAFT" className="text-right" tip="Lost After Free Trial — persi dopo la prova" />
+                        <SortHeader label="Stallo" k="stalled" className="text-right" tip="Lead in QR/Free Trial senza activity da 7+ giorni" />
+                        <SortHeader label="MRR Won" k="mrrWon" className="text-right" tip="Somma MRR mensile dei lead Won" />
+                        <SortHeader label="Ciclo" k="avgSalesCycleDays" className="text-right" tip="Media giorni da QR inviato a Won (sales cycle)" />
                       </tr>
                     </thead>
                     <tbody>

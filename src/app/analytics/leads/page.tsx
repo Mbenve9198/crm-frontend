@@ -6,6 +6,7 @@ import apiClient from "@/lib/api";
 import {
   OwnerPerformanceData,
   OwnerPerformanceRow,
+  ForecastData,
 } from "@/types/analytics";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,7 @@ import {
   Clock,
   Pause,
   DollarSign,
+  Target,
 } from "lucide-react";
 
 function formatDateInput(date: Date): string {
@@ -614,6 +616,98 @@ export default function LeadAnalyticsPage() {
               </Card>
             </div>
           )}
+
+          {/* Forecast fine mese */}
+          {data?.forecast && data.forecast.totals.deals > 0 && (() => {
+            const fc = data.forecast;
+            return (
+              <Card className="overflow-hidden border-t-4 border-t-violet-500">
+                <div className="px-5 py-3.5 bg-violet-50 border-b flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-violet-800 flex items-center gap-1.5">
+                    <Target className="h-4 w-4" />
+                    Forecast fine mese
+                  </h3>
+                  <span className="text-xs text-violet-600">
+                    Scadenza trial entro il {new Date(fc.endOfMonth).toLocaleDateString("it-IT")} · Conv. {Math.round(fc.totals.conversionRate * 100)}%
+                  </span>
+                </div>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-gray-500 uppercase">Free trial in scadenza</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{fc.totals.deals}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-gray-500 uppercase">MRR potenziale (100%)</p>
+                      <p className="text-2xl font-bold text-gray-500 mt-1">{formatEur(fc.totals.mrrPotential)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs font-medium text-gray-500 uppercase">MRR forecast (50%)</p>
+                      <p className="text-2xl font-bold text-violet-700 mt-1">{formatEur(fc.totals.mrrForecast)}</p>
+                    </div>
+                  </div>
+
+                  {fc.owners.length > 1 && (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50/60">
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Owner</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Deal</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR pot.</th>
+                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR forecast</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fc.owners.map((o) => (
+                            <tr key={o.ownerId} className="border-b last:border-0">
+                              <td className="px-3 py-2 font-medium text-gray-900">{o.ownerName}</td>
+                              <td className="px-3 py-2 text-right">{o.deals}</td>
+                              <td className="px-3 py-2 text-right text-gray-500">{formatEur(o.mrrPotential)}</td>
+                              <td className="px-3 py-2 text-right font-medium text-violet-700">{formatEur(o.mrrForecast)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <details className="group">
+                    <summary className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">
+                      Dettaglio lead ({fc.contacts.length})
+                    </summary>
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="min-w-full text-xs">
+                        <thead>
+                          <tr className="bg-violet-50/50">
+                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
+                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR</th>
+                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
+                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Fine trial</th>
+                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Forecast</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {fc.contacts.map((c) => (
+                            <tr key={c.id} className="border-b last:border-0">
+                              <td className="px-2 py-1.5">
+                                <span className="font-medium text-gray-800">{c.name}</span>
+                                {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
+                              </td>
+                              <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>
+                              <td className="px-2 py-1.5 text-gray-500">{c.enteredAt ? new Date(c.enteredAt).toLocaleDateString("it-IT") : "—"}</td>
+                              <td className="px-2 py-1.5 text-gray-500">{new Date(c.trialEndAt).toLocaleDateString("it-IT")}</td>
+                              <td className="px-2 py-1.5 text-right font-medium text-violet-700">{formatEur(c.weightedMrr)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </details>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Main owner table */}
           {data && (

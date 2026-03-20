@@ -150,9 +150,43 @@ export type OwnerPerformanceRow = {
   lostAFTContacts: LostContact[];
 };
 
+export type ForecastContact = {
+  id: string;
+  name: string;
+  email: string;
+  mrr: number;
+  source: string;
+  owner: string;
+  enteredAt: string | null;
+  trialEndAt: string;
+  weightedMrr: number;
+};
+
+export type ForecastOwner = {
+  ownerId: string;
+  ownerName: string;
+  deals: number;
+  mrrPotential: number;
+  mrrForecast: number;
+};
+
+export type ForecastData = {
+  endOfMonth: string;
+  totals: {
+    deals: number;
+    mrrPotential: number;
+    mrrForecast: number;
+    conversionRate: number;
+    trialDays: number;
+  };
+  owners: ForecastOwner[];
+  contacts: ForecastContact[];
+};
+
 export type OwnerPerformanceData = {
   period: { from: string; to: string };
   previousPeriod: { from: string; to: string };
   owners: OwnerPerformanceRow[];
+  forecast: ForecastData;
 };
 

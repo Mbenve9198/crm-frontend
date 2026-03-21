@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import {
@@ -126,7 +127,7 @@ function CohortContactTable({ contacts, dateLabel, dateKey }: { contacts: LeadCo
       <tbody>
         {contacts.map((c) => (
           <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
-            <td className="py-1 px-2 text-gray-900">{c.name}</td>
+            <td className="py-1 px-2"><Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link></td>
             <td className="py-1 px-2 text-gray-600">{c.email}</td>
             <td className="py-1 px-2 text-gray-600">{c.source}</td>
             <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
@@ -153,7 +154,7 @@ function FunnelContactTable({ contacts }: { contacts: LeadFunnelStepContact[] })
       <tbody>
         {contacts.map((c) => (
           <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
-            <td className="py-1 px-2 text-gray-900">{c.name}</td>
+            <td className="py-1 px-2"><Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link></td>
             <td className="py-1 px-2 text-gray-600">{c.email}</td>
             <td className="py-1 px-2 text-gray-600">{c.source}</td>
             <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
@@ -468,7 +469,7 @@ export default function LeadAnalyticsPage() {
                               return (
                                 <tr key={c.id} className="border-b last:border-0">
                                   <td className="px-2 py-1.5">
-                                    <span className="font-medium text-gray-800">{c.name}</span>
+                                    <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
                                     {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
                                   </td>
                                   <td className="px-2 py-1.5 text-gray-500">{c.source}</td>
@@ -509,7 +510,7 @@ export default function LeadAnalyticsPage() {
                             return (
                               <tr key={c.id} className="border-b last:border-0">
                                 <td className="px-2 py-1.5">
-                                  <span className="font-medium text-gray-800">{c.name}</span>
+                                  <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
                                   {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
                                 </td>
                                 <td className="px-2 py-1.5 text-gray-500">{c.status}</td>
@@ -533,7 +534,7 @@ export default function LeadAnalyticsPage() {
                         <ul className="text-xs space-y-0.5">
                           {r.lostBFTContacts.map((c) => (
                             <li key={c.id} className="flex justify-between border-b border-gray-100 pb-0.5">
-                              <span className="font-medium text-gray-700">{c.name}</span>
+                              <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
                               <span className="text-gray-400">{c.source}</span>
                             </li>
                           ))}
@@ -546,7 +547,7 @@ export default function LeadAnalyticsPage() {
                         <ul className="text-xs space-y-0.5">
                           {r.lostAFTContacts.map((c) => (
                             <li key={c.id} className="flex justify-between border-b border-gray-100 pb-0.5">
-                              <span className="font-medium text-gray-700">{c.name}</span>
+                              <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
                               <span className="text-gray-400">{c.source}</span>
                             </li>
                           ))}
@@ -921,7 +922,7 @@ export default function LeadAnalyticsPage() {
                           {fc.contacts.map((c) => (
                             <tr key={c.id} className="border-b last:border-0">
                               <td className="px-2 py-1.5">
-                                <span className="font-medium text-gray-800">{c.name}</span>
+                                <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
                                 {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
                               </td>
                               <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>

@@ -685,7 +685,6 @@ export default function LeadAnalyticsPage() {
                             <th className="px-2 py-1.5 text-left font-medium text-gray-500">QR inviato</th>
                             <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
                             <th className="px-2 py-1.5 text-left font-medium text-gray-500">Deadline</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Forecast</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -699,7 +698,6 @@ export default function LeadAnalyticsPage() {
                               <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
                               <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
                               <td className="px-2 py-1.5 text-gray-500">{new Date(c.deadlineAt).toLocaleDateString("it-IT")}</td>
-                              <td className="px-2 py-1.5 text-right font-medium text-violet-700">{formatEur(c.weightedMrr)}</td>
                             </tr>
                           ))}
                         </tbody>

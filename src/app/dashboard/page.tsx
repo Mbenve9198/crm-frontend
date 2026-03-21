@@ -38,8 +38,25 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
+import { MessageCircle } from "lucide-react";
 
 const PAGE_SIZE = 10;
+
+function WhatsAppLink({ phone }: { phone: string }) {
+  const cleaned = phone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
+  return (
+    <a
+      href={`https://api.whatsapp.com/send/?phone=${encodeURIComponent(cleaned)}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="inline-flex items-center gap-0.5 text-green-600 hover:text-green-700 hover:underline"
+    >
+      <MessageCircle className="h-3 w-3" />
+      <span>{phone}</span>
+    </a>
+  );
+}
 
 function formatEur(value: number) {
   return new Intl.NumberFormat("it-IT", {
@@ -249,7 +266,7 @@ function ThemedLeadsTable({
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{c.name}</div>
                         <div className="text-xs text-gray-500">
-                          {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
+                          {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700">{getStatusLabel(c.status)}</td>
@@ -348,7 +365,7 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{c.name}</div>
                           <div className="text-xs text-gray-500">
-                            {c.email || "—"}{c.phone ? ` · ${c.phone}` : ""}
+                            {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
                           </div>
                         </td>
                         <td className="px-4 py-3">

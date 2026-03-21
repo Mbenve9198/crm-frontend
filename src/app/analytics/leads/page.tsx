@@ -625,16 +625,16 @@ export default function LeadAnalyticsPage() {
                 <div className="px-5 py-3.5 bg-violet-50 border-b flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-violet-800 flex items-center gap-1.5">
                     <Target className="h-4 w-4" />
-                    Forecast fine mese
+                    Deal in chiusura entro 30 giorni
                   </h3>
                   <span className="text-xs text-violet-600">
-                    Scadenza trial entro il {new Date(fc.endOfMonth).toLocaleDateString("it-IT")} · Conv. {Math.round(fc.totals.conversionRate * 100)}%
+                    Ciclo vendita: {fc.totals.salesCycleDays}gg da QR inviato · Conv. {Math.round(fc.totals.conversionRate * 100)}%
                   </span>
                 </div>
                 <CardContent className="pt-4 space-y-4">
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase">Free trial in scadenza</p>
+                      <p className="text-xs font-medium text-gray-500 uppercase">Deal in chiusura</p>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{fc.totals.deals}</p>
                     </div>
                     <div className="text-center">
@@ -682,8 +682,9 @@ export default function LeadAnalyticsPage() {
                           <tr className="bg-violet-50/50">
                             <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
                             <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR</th>
+                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">QR inviato</th>
                             <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Fine trial</th>
+                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Deadline</th>
                             <th className="px-2 py-1.5 text-right font-medium text-gray-500">Forecast</th>
                           </tr>
                         </thead>
@@ -695,8 +696,9 @@ export default function LeadAnalyticsPage() {
                                 {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
                               </td>
                               <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>
-                              <td className="px-2 py-1.5 text-gray-500">{c.enteredAt ? new Date(c.enteredAt).toLocaleDateString("it-IT") : "—"}</td>
-                              <td className="px-2 py-1.5 text-gray-500">{new Date(c.trialEndAt).toLocaleDateString("it-IT")}</td>
+                              <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
+                              <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
+                              <td className="px-2 py-1.5 text-gray-500">{new Date(c.deadlineAt).toLocaleDateString("it-IT")}</td>
                               <td className="px-2 py-1.5 text-right font-medium text-violet-700">{formatEur(c.weightedMrr)}</td>
                             </tr>
                           ))}

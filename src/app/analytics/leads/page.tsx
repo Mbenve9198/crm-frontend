@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import {
   OwnerPerformanceData,
   OwnerPerformanceRow,
   ForecastData,
+  LeadCohortFunnelAnalyticsData,
+  LeadCohortContact,
+  LeadFunnelStepContact,
 } from "@/types/analytics";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,6 +111,60 @@ function AgingBadge({ days }: { days: number }) {
   return <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700">&gt;7gg</span>;
 }
 
+function CohortContactTable({ contacts, dateLabel, dateKey }: { contacts: LeadCohortContact[]; dateLabel: string; dateKey: "cohortStartAt" }) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="border-b">
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Nome</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Email</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Sorgente</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">MRR</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">{dateLabel}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {contacts.map((c) => (
+          <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
+            <td className="py-1 px-2 text-gray-900">{c.name}</td>
+            <td className="py-1 px-2 text-gray-600">{c.email}</td>
+            <td className="py-1 px-2 text-gray-600">{c.source}</td>
+            <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
+            <td className="py-1 px-2 text-gray-600">{c[dateKey] ? new Date(c[dateKey]!).toLocaleDateString("it-IT") : "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function FunnelContactTable({ contacts }: { contacts: LeadFunnelStepContact[] }) {
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="border-b">
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Nome</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Email</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Sorgente</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">MRR</th>
+          <th className="text-left py-1 px-2 font-semibold text-gray-600">Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {contacts.map((c) => (
+          <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
+            <td className="py-1 px-2 text-gray-900">{c.name}</td>
+            <td className="py-1 px-2 text-gray-600">{c.email}</td>
+            <td className="py-1 px-2 text-gray-600">{c.source}</td>
+            <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
+            <td className="py-1 px-2 text-gray-600">{c.enteredAt ? new Date(c.enteredAt).toLocaleDateString("it-IT") : "—"}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -119,11 +176,17 @@ export default function LeadAnalyticsPage() {
   const [to, setTo] = useState(() => formatDateInput(new Date()));
   const [source, setSource] = useState("all");
   const [data, setData] = useState<OwnerPerformanceData | null>(null);
+  const [cohortData, setCohortData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("cohort");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  type CohortExpandedPanel =
+    | { source: string; key: "created" | "reactivated" | "notTouched" | "qr" | "ft" | "won" }
+    | null;
+  const [cohortExpanded, setCohortExpanded] = useState<CohortExpandedPanel>(null);
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
@@ -131,12 +194,13 @@ export default function LeadAnalyticsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      const res = await apiClient.getOwnerPerformance({ from, to, source });
-      if (res.success && res.data) {
-        setData(res.data);
-      } else {
-        setError(res.message || "Errore nel caricamento");
-      }
+      const [ownerRes, cohortRes] = await Promise.all([
+        apiClient.getOwnerPerformance({ from, to, source }),
+        apiClient.getLeadCohortAnalytics({ from, to }),
+      ]);
+      if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
+      else setError(ownerRes.message || "Errore nel caricamento");
+      if (cohortRes.success && cohortRes.data) setCohortData(cohortRes.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
     } finally {
@@ -508,10 +572,10 @@ export default function LeadAnalyticsPage() {
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
               <BarChart3 className="h-6 w-6 text-blue-600" />
-              Owner Performance
+              Analytics Lead
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              Confronto stage-by-stage: chi converte, chi perde, dove intervenire.
+              Funnel per sorgente e performance owner — confronto stage-by-stage.
             </p>
           </div>
 
@@ -580,6 +644,172 @@ export default function LeadAnalyticsPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* ===== Funnel per Sorgente ===== */}
+          {cohortData && (
+            <Card className="shadow-sm border border-gray-200/80">
+              <div className="px-5 py-3.5 bg-indigo-50 border-b flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" /> Funnel per Sorgente
+                </h3>
+                <span className="text-xs text-indigo-600">
+                  {cohortData.period.from ? new Date(cohortData.period.from).toLocaleDateString("it-IT") : ""} → {cohortData.period.to ? new Date(cohortData.period.to).toLocaleDateString("it-IT") : ""}
+                </span>
+              </div>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50/80">
+                        <th className="px-4 py-2.5 text-left font-semibold text-gray-700">Sorgente</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Creati</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Riattivati</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Coorte</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Not&nbsp;Touched</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">QR&nbsp;Inviato</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Free&nbsp;Trial</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Won</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(cohortData.sources).map(([srcKey, src]) => {
+                        const sourceLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey;
+                        const toggleKey = (source: string, key: CohortExpandedPanel extends null ? never : Exclude<CohortExpandedPanel, null>["key"]) => {
+                          setCohortExpanded((prev) =>
+                            prev && prev.source === source && prev.key === key ? null : { source, key }
+                          );
+                        };
+                        const isExp = (key: Exclude<CohortExpandedPanel, null>["key"]) => cohortExpanded?.source === srcKey && cohortExpanded?.key === key;
+                        return (
+                          <React.Fragment key={srcKey}>
+                            <tr className="border-b hover:bg-gray-50/60">
+                              <td className="px-4 py-2.5 font-medium text-gray-900">{sourceLabel}</td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-indigo-600 hover:text-indigo-800" onClick={() => toggleKey(srcKey, "created")}>{src.cohort.created.count}</button>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-indigo-600 hover:text-indigo-800" onClick={() => toggleKey(srcKey, "reactivated")}>{src.cohort.reactivated.count}</button>
+                              </td>
+                              <td className="px-4 py-2.5 text-right font-semibold">{src.cohort.total.count}</td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-amber-600 hover:text-amber-800" onClick={() => toggleKey(srcKey, "notTouched")}>{src.steps.notTouched.count}</button>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-purple-600 hover:text-purple-800" onClick={() => toggleKey(srcKey, "qr")}>{src.steps.qrCodeSent.count}</button>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-blue-600 hover:text-blue-800" onClick={() => toggleKey(srcKey, "ft")}>{src.steps.freeTrialStarted.count}</button>
+                              </td>
+                              <td className="px-4 py-2.5 text-right">
+                                <button className="underline text-emerald-600 hover:text-emerald-800" onClick={() => toggleKey(srcKey, "won")}>{src.steps.won.count}</button>
+                              </td>
+                            </tr>
+                            {isExp("created") && (
+                              <tr>
+                                <td colSpan={8} className="bg-indigo-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-indigo-700 mb-2">Lead creati — {sourceLabel}</p>
+                                  {src.cohort.created.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <CohortContactTable contacts={src.cohort.created.contacts} dateLabel="Creato il" dateKey="cohortStartAt" />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                            {isExp("reactivated") && (
+                              <tr>
+                                <td colSpan={8} className="bg-indigo-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-indigo-700 mb-2">Lead riattivati — {sourceLabel}</p>
+                                  {src.cohort.reactivated.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <CohortContactTable contacts={src.cohort.reactivated.contacts} dateLabel="Riattivato il" dateKey="cohortStartAt" />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                            {isExp("notTouched") && (
+                              <tr>
+                                <td colSpan={8} className="bg-amber-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-amber-700 mb-2">Not touched — {sourceLabel}</p>
+                                  {src.steps.notTouched.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <FunnelContactTable contacts={src.steps.notTouched.contacts} />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                            {isExp("qr") && (
+                              <tr>
+                                <td colSpan={8} className="bg-purple-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-purple-700 mb-2">QR code inviato — {sourceLabel}</p>
+                                  {src.steps.qrCodeSent.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <FunnelContactTable contacts={src.steps.qrCodeSent.contacts} />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                            {isExp("ft") && (
+                              <tr>
+                                <td colSpan={8} className="bg-blue-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-blue-700 mb-2">Free trial iniziato — {sourceLabel}</p>
+                                  {src.steps.freeTrialStarted.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <FunnelContactTable contacts={src.steps.freeTrialStarted.contacts} />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                            {isExp("won") && (
+                              <tr>
+                                <td colSpan={8} className="bg-emerald-50/40 px-6 py-3">
+                                  <p className="text-xs font-semibold text-emerald-700 mb-2">Won — {sourceLabel}</p>
+                                  {src.steps.won.contacts.length === 0 ? (
+                                    <p className="text-xs text-gray-500">Nessun lead</p>
+                                  ) : (
+                                    <FunnelContactTable contacts={src.steps.won.contacts} />
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                      {/* Riga totale */}
+                      {(() => {
+                        const srcs = Object.values(cohortData.sources);
+                        const totCreated = srcs.reduce((s, v) => s + v.cohort.created.count, 0);
+                        const totReact = srcs.reduce((s, v) => s + v.cohort.reactivated.count, 0);
+                        const totCohort = srcs.reduce((s, v) => s + v.cohort.total.count, 0);
+                        const totNT = srcs.reduce((s, v) => s + v.steps.notTouched.count, 0);
+                        const totQR = srcs.reduce((s, v) => s + v.steps.qrCodeSent.count, 0);
+                        const totFT = srcs.reduce((s, v) => s + v.steps.freeTrialStarted.count, 0);
+                        const totWon = srcs.reduce((s, v) => s + v.steps.won.count, 0);
+                        return (
+                          <tr className="border-t-2 bg-indigo-50/60 font-semibold">
+                            <td className="px-4 py-2.5 text-gray-900">Totale</td>
+                            <td className="px-4 py-2.5 text-right">{totCreated}</td>
+                            <td className="px-4 py-2.5 text-right">{totReact}</td>
+                            <td className="px-4 py-2.5 text-right">{totCohort}</td>
+                            <td className="px-4 py-2.5 text-right">{totNT}</td>
+                            <td className="px-4 py-2.5 text-right">{totQR}</td>
+                            <td className="px-4 py-2.5 text-right">{totFT}</td>
+                            <td className="px-4 py-2.5 text-right">{totWon}</td>
+                          </tr>
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ===== Owner Performance ===== */}
 
           {/* Summary KPIs */}
           {team && (

@@ -179,7 +179,11 @@ export default function LeadAnalyticsPage() {
     d.setDate(1);
     return formatDateInput(d);
   });
-  const [to, setTo] = useState(() => formatDateInput(new Date()));
+  const [to, setTo] = useState(() => {
+    const d = new Date();
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return formatDateInput(lastDay);
+  });
   const [source, setSource] = useState("all");
   const [data, setData] = useState<OwnerPerformanceData | null>(null);
   const [cohortData, setCohortData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
@@ -672,16 +676,14 @@ export default function LeadAnalyticsPage() {
                     variant="outline"
                     disabled={isLoading}
                     onClick={() => {
-                      const d = new Date();
-                      const today = formatDateInput(d);
-                      d.setDate(1);
-                      setFrom(formatDateInput(d));
+                      const today = formatDateInput(new Date());
+                      setFrom(today);
                       setTo(today);
                       setExpandedOwner(null);
                       setTimeout(() => loadAnalytics(), 0);
                     }}
                   >
-                    Mese corrente
+                    Oggi
                   </Button>
                 </div>
               </form>

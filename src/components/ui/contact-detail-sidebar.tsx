@@ -189,20 +189,24 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const onStatusSelectChange = (newStatus: ContactStatus) => {
     if (!contact || newStatus === contact.status) return;
 
-    // Se il nuovo status richiede MRR
+    // Sempre mostrare il form MRR + closeDate quando si entra in "qr code inviato"
+    if (newStatus === 'qr code inviato') {
+      setPendingStatus(newStatus);
+      setShowMRRInput(true);
+      setPendingMRR(contact.mrr || 0);
+      const d = new Date();
+      d.setDate(d.getDate() + 25);
+      setPendingCloseDate(d.toISOString().slice(0, 10));
+      return;
+    }
+
+    // Per altri status pipeline, mostrare form MRR solo se manca
     if (isPipelineStatus(newStatus)) {
       if (!contact.mrr || !isPipelineStatus(contact.status)) {
         setPendingStatus(newStatus);
         setShowMRRInput(true);
         setPendingMRR(contact.mrr || 0);
-        // Pre-fill closeDate: +25 giorni da oggi per QR code inviato
-        if (newStatus === 'qr code inviato') {
-          const d = new Date();
-          d.setDate(d.getDate() + 25);
-          setPendingCloseDate(d.toISOString().slice(0, 10));
-        } else {
-          setPendingCloseDate("");
-        }
+        setPendingCloseDate("");
         return;
       }
     }
@@ -449,9 +453,9 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       <Button size="sm" onClick={onMRRConfirm} disabled={isUpdatingStatus}>
                         ✓
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => {
                           setShowMRRInput(false);
                           setPendingMRR(undefined);
@@ -481,14 +485,14 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         title="Modifica MRR"
                       >
                         ✏️
-                    </Button>
-                  </div>
-                )}
-              </div>
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 {/* Close Date display for QR/FT contacts */}
                 {!showMRRInput && ['qr code inviato', 'free trial iniziato'].includes(contact.status) && (
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-gray-700">Close date:</span>
                     <span className="text-sm text-gray-600">
                       {contact.properties?.closeDate
@@ -506,6 +510,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             ? new Date(contact.properties.closeDate).toISOString().slice(0, 10)
                             : ""
                         );
+                        setPendingStatus(null);
                         setShowMRRInput(true);
                       }}
                       title="Modifica close date"
@@ -514,6 +519,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     </Button>
                   </div>
                 )}
+              </div>
             )}
           </div>
         </div>

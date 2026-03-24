@@ -280,6 +280,30 @@ export default function LeadAnalyticsPage() {
     };
   }, [data]);
 
+  const visibleCols = useMemo(() => {
+    if (!data || data.owners.length === 0) return { won: true, convFTtoWon: true, lostBFT: true, lostAFT: true, stalled: true, mrrWon: true, avgSalesCycleDays: true };
+    const o = data.owners;
+    return {
+      won: o.some((r) => r.won > 0),
+      convFTtoWon: o.some((r) => r.convFTtoWon > 0),
+      lostBFT: o.some((r) => r.lostBFT > 0),
+      lostAFT: o.some((r) => r.lostAFT > 0),
+      stalled: o.some((r) => r.stalled > 0),
+      mrrWon: o.some((r) => r.mrrWon > 0),
+      avgSalesCycleDays: o.some((r) => r.avgSalesCycleDays !== null),
+    };
+  }, [data]);
+
+  const closureColCount = useMemo(() => {
+    const v = visibleCols;
+    return (v.won ? 1 : 0) + (v.convFTtoWon ? 1 : 0) + (v.lostBFT ? 1 : 0) + (v.lostAFT ? 1 : 0) + (v.stalled ? 1 : 0);
+  }, [visibleCols]);
+
+  const revenueColCount = useMemo(() => {
+    const v = visibleCols;
+    return (v.mrrWon ? 1 : 0) + (v.avgSalesCycleDays ? 1 : 0);
+  }, [visibleCols]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -332,7 +356,7 @@ export default function LeadAnalyticsPage() {
     const isExpanded = expandedOwner === r.ownerId && !isTeam;
     const now = new Date();
     const rowClass = isTeam
-      ? "bg-gray-100 font-semibold border-t-2 border-gray-300"
+      ? "bg-blue-50/70 font-semibold border-t-2 border-blue-300"
       : "border-b hover:bg-gray-50 cursor-pointer transition-colors";
 
     const semNT = semaphore(r.pctNotTouched, { green: [0, 24], yellow: [25, 50] });
@@ -343,6 +367,8 @@ export default function LeadAnalyticsPage() {
       : "green" as SemaphoreLevel;
     const semStall = semaphore(r.stalled, { green: [0, 1], yellow: [2, 5] });
 
+    const totalColSpan = 1 + 4 + 4 + closureColCount + revenueColCount;
+
     return (
       <>
         <tr
@@ -350,12 +376,13 @@ export default function LeadAnalyticsPage() {
           className={rowClass}
           onClick={() => !isTeam && setExpandedOwner(isExpanded ? null : r.ownerId)}
         >
-          <td className="px-3 py-2.5 text-sm text-gray-900 whitespace-nowrap">
+          <td className={`px-3 py-2.5 text-sm whitespace-nowrap ${isTeam ? "text-blue-900" : "text-gray-900"}`}>
             <div className="flex items-center gap-1">
               {!isTeam && (isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />)}
-              {r.ownerName}
+              {isTeam ? <span className="uppercase text-xs tracking-wide">Totale Team</span> : r.ownerName}
             </div>
           </td>
+          {/* Reattività */}
           <td className="px-3 py-2.5 text-sm text-right">{r.cohort}</td>
           <td className="px-3 py-2.5 text-sm text-right">{r.notTouched}</td>
           <td className="px-3 py-2.5 text-right">
@@ -369,6 +396,7 @@ export default function LeadAnalyticsPage() {
               <span className="text-gray-400 text-xs">—</span>
             )}
           </td>
+          {/* Funnel */}
           <td className="px-3 py-2.5 text-sm text-right">{r.qrCodeSent}</td>
           <td className="px-3 py-2.5 text-right">
             <SemBadge value={r.convToQR} level={semConvQR} />
@@ -378,27 +406,37 @@ export default function LeadAnalyticsPage() {
           <td className="px-3 py-2.5 text-right">
             <span className="text-xs font-medium text-gray-700">{r.convQRtoFT}%</span>
           </td>
-          <td className="px-3 py-2.5 text-sm text-right font-medium">{r.won}</td>
-          <td className="px-3 py-2.5 text-right">
-            <SemBadge value={r.convFTtoWon} level={semConvFTW} />
-            {!isTeam && <TrendArrow delta={r.trends.convFTtoWon} />}
-          </td>
-          <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostBFT}</td>
-          <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostAFT}</td>
-          <td className="px-3 py-2.5 text-right">
-            <SemBadge value={r.stalled} level={semStall} suffix="" />
-          </td>
-          <td className="px-3 py-2.5 text-sm text-right font-medium text-emerald-700">
-            {r.mrrWon > 0 ? formatEur(r.mrrWon) : "—"}
-          </td>
-          <td className="px-3 py-2.5 text-sm text-right text-gray-600">
-            {r.avgSalesCycleDays !== null ? `${r.avgSalesCycleDays}gg` : "—"}
-          </td>
+          {/* Chiusura */}
+          {visibleCols.won && <td className="px-3 py-2.5 text-sm text-right font-medium">{r.won}</td>}
+          {visibleCols.convFTtoWon && (
+            <td className="px-3 py-2.5 text-right">
+              <SemBadge value={r.convFTtoWon} level={semConvFTW} />
+              {!isTeam && <TrendArrow delta={r.trends.convFTtoWon} />}
+            </td>
+          )}
+          {visibleCols.lostBFT && <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostBFT}</td>}
+          {visibleCols.lostAFT && <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostAFT}</td>}
+          {visibleCols.stalled && (
+            <td className="px-3 py-2.5 text-right">
+              <SemBadge value={r.stalled} level={semStall} suffix="" />
+            </td>
+          )}
+          {/* Revenue */}
+          {visibleCols.mrrWon && (
+            <td className="px-3 py-2.5 text-sm text-right font-medium text-emerald-700">
+              {r.mrrWon > 0 ? formatEur(r.mrrWon) : "—"}
+            </td>
+          )}
+          {visibleCols.avgSalesCycleDays && (
+            <td className="px-3 py-2.5 text-sm text-right text-gray-600">
+              {r.avgSalesCycleDays !== null ? `${r.avgSalesCycleDays}gg` : "—"}
+            </td>
+          )}
         </tr>
 
         {isExpanded && (
           <tr>
-            <td colSpan={16} className="px-4 py-4 bg-gray-50/80 border-b">
+            <td colSpan={totalColSpan} className="px-4 py-4 bg-gray-50/80 border-b">
               <div className="space-y-5">
                 {/* Source breakdown */}
                 {Object.keys(r.bySource).length > 0 && (
@@ -951,25 +989,49 @@ export default function LeadAnalyticsPage() {
               </div>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
+                  <table className="min-w-full text-sm border-collapse">
                     <thead>
-                      <tr className="border-b bg-gray-50/80">
-                        <SortHeader label="Owner" k="ownerName" className="text-left" />
-                        <SortHeader label="Coorte" k="cohort" className="text-right" tip="Lead assegnati (creati + riattivati) nel periodo" />
-                        <SortHeader label="NT" k="notTouched" className="text-right" tip="Not Touched — lead non ancora lavorati" />
-                        <SortHeader label="% NT" k="pctNotTouched" className="text-right" tip="% Not Touched sulla coorte — indice di reattività" />
-                        <SortHeader label="1° tocco" k="avgFirstTouchDays" className="text-right" tip="Media giorni tra assegnazione e prima chiamata" />
-                        <SortHeader label="QR" k="qrCodeSent" className="text-right" tip="Lead passati a QR code inviato" />
-                        <SortHeader label="→ QR" k="convToQR" className="text-right" tip="Conversion rate Coorte → QR inviato (%)" />
-                        <SortHeader label="FT" k="freeTrialStarted" className="text-right" tip="Lead passati a Free Trial iniziato" />
-                        <SortHeader label="QR→FT" k="convQRtoFT" className="text-right" tip="Conversion rate QR inviato → Free Trial (%)" />
-                        <SortHeader label="Won" k="won" className="text-right" tip="Lead chiusi come Won" />
-                        <SortHeader label="FT→W" k="convFTtoWon" className="text-right" tip="Conversion rate Free Trial → Won (%)" />
-                        <SortHeader label="L.BFT" k="lostBFT" className="text-right" tip="Lost Before Free Trial — persi prima della prova" />
-                        <SortHeader label="L.AFT" k="lostAFT" className="text-right" tip="Lost After Free Trial — persi dopo la prova" />
-                        <SortHeader label="Stallo" k="stalled" className="text-right" tip="Lead in QR/Free Trial senza activity da 7+ giorni" />
-                        <SortHeader label="MRR Won" k="mrrWon" className="text-right" tip="Somma MRR mensile dei lead Won" />
-                        <SortHeader label="Ciclo" k="avgSalesCycleDays" className="text-right" tip="Media giorni da QR inviato a Won (sales cycle)" />
+                      {/* Group header row */}
+                      <tr>
+                        <th rowSpan={2} className="px-3 py-2 text-left text-xs font-semibold text-gray-600 bg-gray-50 border-b-2 border-gray-200" />
+                        <th colSpan={4} className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-amber-800 bg-amber-50 border-b border-amber-200">
+                          Reattività
+                        </th>
+                        <th colSpan={4} className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-purple-800 bg-purple-50 border-b border-purple-200">
+                          Funnel
+                        </th>
+                        {closureColCount > 0 && (
+                          <th colSpan={closureColCount} className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-red-800 bg-red-50 border-b border-red-200">
+                            Chiusura &amp; Perdita
+                          </th>
+                        )}
+                        {revenueColCount > 0 && (
+                          <th colSpan={revenueColCount} className="px-2 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest text-emerald-800 bg-emerald-50 border-b border-emerald-200">
+                            Revenue
+                          </th>
+                        )}
+                      </tr>
+                      {/* Column header row */}
+                      <tr className="border-b-2 border-gray-200 bg-gray-50/80">
+                        {/* Reattività */}
+                        <SortHeader label="Coorte" k="cohort" className="text-right bg-amber-50/40" tip="Lead assegnati (creati + riattivati) nel periodo" />
+                        <SortHeader label="Non lavorati" k="notTouched" className="text-right bg-amber-50/40" tip="Lead non ancora lavorati (Smartlead ≤1 activity, Rank Checker 0)" />
+                        <SortHeader label="% Non lav." k="pctNotTouched" className="text-right bg-amber-50/40" tip="% lead non lavorati sulla coorte — indice di reattività" />
+                        <SortHeader label="1ª chiamata" k="avgFirstTouchDays" className="text-right bg-amber-50/40" tip="Media giorni tra assegnazione e prima chiamata" />
+                        {/* Funnel */}
+                        <SortHeader label="QR inv." k="qrCodeSent" className="text-right bg-purple-50/40" tip="Lead passati a QR code inviato" />
+                        <SortHeader label="Conv. → QR" k="convToQR" className="text-right bg-purple-50/40" tip="% coorte convertita in QR inviato" />
+                        <SortHeader label="Free Trial" k="freeTrialStarted" className="text-right bg-purple-50/40" tip="Lead passati a Free Trial iniziato" />
+                        <SortHeader label="Conv. QR→FT" k="convQRtoFT" className="text-right bg-purple-50/40" tip="% QR convertiti in Free Trial" />
+                        {/* Chiusura */}
+                        {visibleCols.won && <SortHeader label="Won" k="won" className="text-right bg-red-50/30" tip="Lead chiusi come Won" />}
+                        {visibleCols.convFTtoWon && <SortHeader label="Conv. FT→W" k="convFTtoWon" className="text-right bg-red-50/30" tip="% Free Trial convertiti in Won" />}
+                        {visibleCols.lostBFT && <SortHeader label="Lost pre-FT" k="lostBFT" className="text-right bg-red-50/30" tip="Persi prima del Free Trial" />}
+                        {visibleCols.lostAFT && <SortHeader label="Lost post-FT" k="lostAFT" className="text-right bg-red-50/30" tip="Persi dopo il Free Trial" />}
+                        {visibleCols.stalled && <SortHeader label="In stallo" k="stalled" className="text-right bg-red-50/30" tip="Lead in QR/FT senza activity da 7+ giorni" />}
+                        {/* Revenue */}
+                        {visibleCols.mrrWon && <SortHeader label="MRR Won" k="mrrWon" className="text-right bg-emerald-50/40" tip="Somma MRR mensile dei lead Won" />}
+                        {visibleCols.avgSalesCycleDays && <SortHeader label="Ciclo vendita" k="avgSalesCycleDays" className="text-right bg-emerald-50/40" tip="Media giorni da QR inviato a Won" />}
                       </tr>
                     </thead>
                     <tbody>

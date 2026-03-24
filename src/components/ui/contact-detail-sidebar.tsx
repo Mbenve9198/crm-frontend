@@ -478,7 +478,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         onClick={() => {
                           setPendingMRR(contact.mrr || 0);
                           if (contact.properties?.closeDate) {
-                            setPendingCloseDate(new Date(contact.properties.closeDate).toISOString().slice(0, 10));
+                            setPendingCloseDate(new Date(String(contact.properties.closeDate)).toISOString().slice(0, 10));
                           }
                           setShowMRRInput(true);
                         }}
@@ -496,7 +496,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <span className="text-sm font-medium text-gray-700">Close date:</span>
                     <span className="text-sm text-gray-600">
                       {contact.properties?.closeDate
-                        ? new Date(contact.properties.closeDate).toLocaleDateString("it-IT")
+                        ? new Date(String(contact.properties.closeDate)).toLocaleDateString("it-IT")
                         : "Non impostata"}
                     </span>
                     <Button
@@ -507,7 +507,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         setPendingMRR(contact.mrr || 0);
                         setPendingCloseDate(
                           contact.properties?.closeDate
-                            ? new Date(contact.properties.closeDate).toISOString().slice(0, 10)
+                            ? new Date(String(contact.properties.closeDate)).toISOString().slice(0, 10)
                             : ""
                         );
                         setPendingStatus(null);

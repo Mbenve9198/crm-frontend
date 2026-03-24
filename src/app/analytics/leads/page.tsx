@@ -289,8 +289,8 @@ export default function LeadAnalyticsPage() {
     if (!data || data.owners.length === 0) return { won: true, convFTtoWon: true, lostBFT: true, lostAFT: true, stalled: true, mrrWon: true, avgSalesCycleDays: true };
     const o = data.owners;
     return {
-      won: o.some((r) => r.won > 0),
-      convFTtoWon: o.some((r) => r.convFTtoWon > 0),
+      won: true,
+      convFTtoWon: true,
       lostBFT: o.some((r) => r.lostBFT > 0),
       lostAFT: o.some((r) => r.lostAFT > 0),
       stalled: o.some((r) => r.stalled > 0),

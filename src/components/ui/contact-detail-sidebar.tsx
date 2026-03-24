@@ -186,17 +186,24 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   };
 
+  const closeDateStatuses: ContactStatus[] = ['qr code inviato', 'free trial iniziato'];
+
   const onStatusSelectChange = (newStatus: ContactStatus) => {
     if (!contact || newStatus === contact.status) return;
 
-    // Sempre mostrare il form MRR + closeDate quando si entra in "qr code inviato"
-    if (newStatus === 'qr code inviato') {
+    // Sempre mostrare il form MRR + closeDate quando si entra in QR o FT
+    if (closeDateStatuses.includes(newStatus)) {
       setPendingStatus(newStatus);
       setShowMRRInput(true);
       setPendingMRR(contact.mrr || 0);
-      const d = new Date();
-      d.setDate(d.getDate() + 25);
-      setPendingCloseDate(d.toISOString().slice(0, 10));
+      // Pre-fill closeDate: usa quella esistente o +25gg da oggi
+      if (contact.properties?.closeDate) {
+        setPendingCloseDate(new Date(String(contact.properties.closeDate)).toISOString().slice(0, 10));
+      } else {
+        const d = new Date();
+        d.setDate(d.getDate() + 25);
+        setPendingCloseDate(d.toISOString().slice(0, 10));
+      }
       return;
     }
 
@@ -439,7 +446,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         className="w-20 h-8"
                         min="0"
                       />
-                      {(pendingStatus === 'qr code inviato' || (!pendingStatus && contact.status === 'qr code inviato')) && (
+                      {(closeDateStatuses.includes(pendingStatus as ContactStatus) || (!pendingStatus && closeDateStatuses.includes(contact.status as ContactStatus))) && (
                         <>
                           <span className="text-sm font-medium text-gray-700">Close date:</span>
                           <Input
@@ -477,8 +484,11 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         className="h-6 w-6 p-0"
                         onClick={() => {
                           setPendingMRR(contact.mrr || 0);
+                          setPendingStatus(null);
                           if (contact.properties?.closeDate) {
                             setPendingCloseDate(new Date(String(contact.properties.closeDate)).toISOString().slice(0, 10));
+                          } else {
+                            setPendingCloseDate("");
                           }
                           setShowMRRInput(true);
                         }}

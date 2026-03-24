@@ -186,6 +186,7 @@ export type ApiResponse<T = unknown> = {
 export interface UpdateStatusRequest {
   status: ContactStatus;
   mrr?: number;
+  closeDate?: string | null;
 }
 
 export interface StatusUpdateResponse {

@@ -33,6 +33,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [pendingMRR, setPendingMRR] = useState<number | undefined>();
+  const [pendingCloseDate, setPendingCloseDate] = useState<string>("");
   const [showMRRInput, setShowMRRInput] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
@@ -151,28 +152,30 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     setEditedContact(contact ? { ...contact } : null);
   };
 
-  const handleStatusChange = async (newStatus: ContactStatus, mrr?: number) => {
+  const handleStatusChange = async (newStatus: ContactStatus, mrr?: number, closeDate?: string) => {
     if (!contact) return;
 
     try {
       setIsUpdatingStatus(true);
 
-      const response = await apiClient.updateContactStatus(contact._id, {
+      const payload: { status: ContactStatus; mrr?: number; closeDate?: string | null } = {
         status: newStatus,
         mrr
-      });
+      };
+      if (closeDate !== undefined) {
+        payload.closeDate = closeDate || null;
+      }
+
+      const response = await apiClient.updateContactStatus(contact._id, payload);
 
       if (response.success && response.data) {
-        // Aggiorna il contatto locale
         setEditedContact(response.data);
         onContactUpdate(response.data);
-        
-        // Ricarica le activities per mostrare quella nuova
         loadActivities();
         
-        // Reset stati temporanei
         setShowMRRInput(false);
         setPendingMRR(undefined);
+        setPendingCloseDate("");
         setPendingStatus(null);
       }
     } catch (error) {
@@ -188,24 +191,31 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
     // Se il nuovo status richiede MRR
     if (isPipelineStatus(newStatus)) {
-      // Se non abbiamo MRR O se stiamo entrando in pipeline per la prima volta
       if (!contact.mrr || !isPipelineStatus(contact.status)) {
-        setPendingStatus(newStatus); // Memorizza il nuovo status desiderato
+        setPendingStatus(newStatus);
         setShowMRRInput(true);
-        setPendingMRR(contact.mrr || 0); // Usa l'MRR esistente o 0
+        setPendingMRR(contact.mrr || 0);
+        // Pre-fill closeDate: +25 giorni da oggi per QR code inviato
+        if (newStatus === 'qr code inviato') {
+          const d = new Date();
+          d.setDate(d.getDate() + 25);
+          setPendingCloseDate(d.toISOString().slice(0, 10));
+        } else {
+          setPendingCloseDate("");
+        }
         return;
       }
     }
 
-    // Altrimenti procedi direttamente (ha già MRR o non serve)
     handleStatusChange(newStatus, contact.mrr || pendingMRR);
   };
 
   const onMRRConfirm = () => {
     if (!contact || pendingMRR === undefined) return;
     
-    const newStatus = pendingStatus || contact.status; // Usa il nuovo status desiderato o quello attuale
-    handleStatusChange(newStatus, pendingMRR);
+    const newStatus = pendingStatus || contact.status;
+    const closeDateISO = pendingCloseDate ? new Date(pendingCloseDate + "T23:59:59").toISOString() : undefined;
+    handleStatusChange(newStatus, pendingMRR, closeDateISO);
   };
 
   const handleAddActivity = async () => {
@@ -410,55 +420,100 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
               </div>
             </div>
             
-            {/* MRR Display/Edit */}
+            {/* MRR + Close Date Display/Edit */}
             {(isPipelineStatus(contact.status) || showMRRInput) && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">MRR:</span>
-                {showMRRInput ? (
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="€"
-                      value={pendingMRR || ''}
-                      onChange={(e) => setPendingMRR(Number(e.target.value))}
-                      className="w-20 h-8"
-                      min="0"
-                    />
-                    <Button size="sm" onClick={onMRRConfirm} disabled={isUpdatingStatus}>
-                      ✓
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => {
-                        setShowMRRInput(false);
-                        setPendingMRR(undefined);
-                        setPendingStatus(null);
-                      }}
-                    >
-                      ✕
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">MRR:</span>
+                  {showMRRInput ? (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Input
+                        type="number"
+                        placeholder="€"
+                        value={pendingMRR || ''}
+                        onChange={(e) => setPendingMRR(Number(e.target.value))}
+                        className="w-20 h-8"
+                        min="0"
+                      />
+                      {(pendingStatus === 'qr code inviato' || (!pendingStatus && contact.status === 'qr code inviato')) && (
+                        <>
+                          <span className="text-sm font-medium text-gray-700">Close date:</span>
+                          <Input
+                            type="date"
+                            value={pendingCloseDate}
+                            onChange={(e) => setPendingCloseDate(e.target.value)}
+                            className="w-36 h-8"
+                          />
+                        </>
+                      )}
+                      <Button size="sm" onClick={onMRRConfirm} disabled={isUpdatingStatus}>
+                        ✓
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => {
+                          setShowMRRInput(false);
+                          setPendingMRR(undefined);
+                          setPendingCloseDate("");
+                          setPendingStatus(null);
+                        }}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-semibold text-green-600">
+                        €{contact.mrr || 0}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0"
+                        onClick={() => {
+                          setPendingMRR(contact.mrr || 0);
+                          if (contact.properties?.closeDate) {
+                            setPendingCloseDate(new Date(contact.properties.closeDate).toISOString().slice(0, 10));
+                          }
+                          setShowMRRInput(true);
+                        }}
+                        title="Modifica MRR"
+                      >
+                        ✏️
                     </Button>
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold text-green-600">
-                      €{contact.mrr || 0}
-                    </div>
+                )}
+              </div>
+
+                {/* Close Date display for QR/FT contacts */}
+                {!showMRRInput && ['qr code inviato', 'free trial iniziato'].includes(contact.status) && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-medium text-gray-700">Close date:</span>
+                    <span className="text-sm text-gray-600">
+                      {contact.properties?.closeDate
+                        ? new Date(contact.properties.closeDate).toLocaleDateString("it-IT")
+                        : "Non impostata"}
+                    </span>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0"
                       onClick={() => {
                         setPendingMRR(contact.mrr || 0);
+                        setPendingCloseDate(
+                          contact.properties?.closeDate
+                            ? new Date(contact.properties.closeDate).toISOString().slice(0, 10)
+                            : ""
+                        );
                         setShowMRRInput(true);
                       }}
-                      title="Modifica MRR"
+                      title="Modifica close date"
                     >
                       ✏️
                     </Button>
                   </div>
                 )}
-              </div>
             )}
           </div>
         </div>

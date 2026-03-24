@@ -897,93 +897,109 @@ export default function LeadAnalyticsPage() {
 
           {/* ===== Owner Performance ===== */}
 
-          {/* Forecast fine mese */}
-          {data?.forecast && data.forecast.totals.deals > 0 && (() => {
+          {/* Prove attive */}
+          {data?.forecast && (() => {
             const fc = data.forecast;
+            const statusLabel = (s: string) => s === "qr code inviato" ? "QR inviato" : s === "free trial iniziato" ? "Free Trial" : s;
             return (
               <Card className="overflow-hidden border-t-4 border-t-violet-500">
                 <div className="px-5 py-3.5 bg-violet-50 border-b flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-violet-800 flex items-center gap-1.5">
                     <Target className="h-4 w-4" />
-                    Deal in chiusura entro 30 giorni
+                    Prove attive
                   </h3>
                   <span className="text-xs text-violet-600">
-                    Ciclo vendita: {fc.totals.salesCycleDays}gg da QR inviato · Conv. {Math.round(fc.totals.conversionRate * 100)}%
+                    Close date nel periodo · Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
                   </span>
                 </div>
                 <CardContent className="pt-4 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase">Deal in chiusura</p>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{fc.totals.deals}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase">MRR potenziale (100%)</p>
-                      <p className="text-2xl font-bold text-gray-500 mt-1">{formatEur(fc.totals.mrrPotential)}</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase">MRR forecast (50%)</p>
-                      <p className="text-2xl font-bold text-violet-700 mt-1">{formatEur(fc.totals.mrrForecast)}</p>
-                    </div>
-                  </div>
+                  {fc.totals.deals === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">Nessuna prova attiva con close date nel periodo selezionato.</p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <p className="text-xs font-medium text-gray-500 uppercase">Prove attive</p>
+                          <p className="text-2xl font-bold text-gray-900 mt-1">{fc.totals.deals}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-medium text-gray-500 uppercase">MRR potenziale (100%)</p>
+                          <p className="text-2xl font-bold text-gray-500 mt-1">{formatEur(fc.totals.mrrPotential)}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-medium text-gray-500 uppercase">MRR forecast (50%)</p>
+                          <p className="text-2xl font-bold text-violet-700 mt-1">{formatEur(fc.totals.mrrForecast)}</p>
+                        </div>
+                      </div>
 
-                  {fc.owners.length > 1 && (
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50/60">
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Owner</th>
-                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Deal</th>
-                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR pot.</th>
-                            <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR forecast</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {fc.owners.map((o) => (
-                            <tr key={o.ownerId} className="border-b last:border-0">
-                              <td className="px-3 py-2 font-medium text-gray-900">{o.ownerName}</td>
-                              <td className="px-3 py-2 text-right">{o.deals}</td>
-                              <td className="px-3 py-2 text-right text-gray-500">{formatEur(o.mrrPotential)}</td>
-                              <td className="px-3 py-2 text-right font-medium text-violet-700">{formatEur(o.mrrForecast)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                      {fc.owners.length > 1 && (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm">
+                            <thead>
+                              <tr className="border-b bg-gray-50/60">
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Owner</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Prove</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR pot.</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">MRR forecast</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fc.owners.map((o) => (
+                                <tr key={o.ownerId} className="border-b last:border-0">
+                                  <td className="px-3 py-2 font-medium text-gray-900">{o.ownerName}</td>
+                                  <td className="px-3 py-2 text-right">{o.deals}</td>
+                                  <td className="px-3 py-2 text-right text-gray-500">{formatEur(o.mrrPotential)}</td>
+                                  <td className="px-3 py-2 text-right font-medium text-violet-700">{formatEur(o.mrrForecast)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      <details className="group">
+                        <summary className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">
+                          Dettaglio lead ({fc.contacts.length})
+                        </summary>
+                        <div className="mt-2 overflow-x-auto">
+                          <table className="min-w-full text-xs">
+                            <thead>
+                              <tr className="bg-violet-50/50">
+                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
+                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Status</th>
+                                <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR</th>
+                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">QR inviato</th>
+                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
+                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Close date</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fc.contacts.map((c) => (
+                                <tr key={c.id} className="border-b last:border-0">
+                                  <td className="px-2 py-1.5">
+                                    <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
+                                    {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
+                                  </td>
+                                  <td className="px-2 py-1.5">
+                                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${c.status === "free trial iniziato" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}>
+                                      {statusLabel(c.status)}
+                                    </span>
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>
+                                  <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
+                                  <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
+                                  <td className="px-2 py-1.5 text-gray-500">
+                                    {new Date(c.closeDateAt).toLocaleDateString("it-IT")}
+                                    {c.isManualCloseDate && <span className="ml-1 text-violet-500 text-[9px]" title="Impostata manualmente">✎</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    </>
                   )}
-
-                  <details className="group">
-                    <summary className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">
-                      Dettaglio lead ({fc.contacts.length})
-                    </summary>
-                    <div className="mt-2 overflow-x-auto">
-                      <table className="min-w-full text-xs">
-                        <thead>
-                          <tr className="bg-violet-50/50">
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">QR inviato</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Deadline</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {fc.contacts.map((c) => (
-                            <tr key={c.id} className="border-b last:border-0">
-                              <td className="px-2 py-1.5">
-                                <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                                {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>
-                              <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
-                              <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
-                              <td className="px-2 py-1.5 text-gray-500">{new Date(c.deadlineAt).toLocaleDateString("it-IT")}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </details>
                 </CardContent>
               </Card>
             );

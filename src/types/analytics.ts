@@ -157,9 +157,11 @@ export type ForecastContact = {
   mrr: number;
   source: string;
   owner: string;
+  status: string;
   qrEnteredAt: string | null;
   ftEnteredAt: string | null;
-  deadlineAt: string;
+  closeDateAt: string;
+  isManualCloseDate: boolean;
   weightedMrr: number;
 };
 
@@ -177,7 +179,6 @@ export type ForecastData = {
     mrrPotential: number;
     mrrForecast: number;
     conversionRate: number;
-    salesCycleDays: number;
   };
   owners: ForecastOwner[];
   contacts: ForecastContact[];

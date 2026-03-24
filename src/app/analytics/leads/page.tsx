@@ -92,15 +92,20 @@ function SemBadge({ value, level, suffix = "%" }: { value: number | string; leve
 }
 
 function TrendArrow({ delta }: { delta: number | null }) {
-  if (delta === null || delta === 0) return <Minus className="h-3 w-3 text-gray-400 inline ml-1" />;
+  if (delta === null || delta === 0)
+    return (
+      <span className="inline-flex items-center justify-end w-[42px] text-gray-400">
+        <Minus className="h-3 w-3" />
+      </span>
+    );
   if (delta > 0)
     return (
-      <span className="inline-flex items-center ml-1 text-emerald-600 text-[10px] font-bold">
+      <span className="inline-flex items-center justify-end w-[42px] text-emerald-600 text-[10px] font-bold">
         <TrendingUp className="h-3 w-3 mr-0.5" />+{delta}
       </span>
     );
   return (
-    <span className="inline-flex items-center ml-1 text-red-600 text-[10px] font-bold">
+    <span className="inline-flex items-center justify-end w-[42px] text-red-600 text-[10px] font-bold">
       <TrendingDown className="h-3 w-3 mr-0.5" />{delta}
     </span>
   );
@@ -385,9 +390,11 @@ export default function LeadAnalyticsPage() {
           {/* Reattività */}
           <td className="px-3 py-2.5 text-sm text-right">{r.cohort}</td>
           <td className="px-3 py-2.5 text-sm text-right">{r.notTouched}</td>
-          <td className="px-3 py-2.5 text-right">
-            <SemBadge value={r.pctNotTouched} level={semNT} />
-            {!isTeam && <TrendArrow delta={r.trends.pctNotTouched} />}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center justify-end gap-1">
+              <SemBadge value={r.pctNotTouched} level={semNT} />
+              {!isTeam ? <TrendArrow delta={r.trends.pctNotTouched} /> : <span className="w-[42px]" />}
+            </div>
           </td>
           <td className="px-3 py-2.5 text-right">
             {r.avgFirstTouchDays !== null ? (
@@ -398,9 +405,11 @@ export default function LeadAnalyticsPage() {
           </td>
           {/* Funnel */}
           <td className="px-3 py-2.5 text-sm text-right">{r.qrCodeSent}</td>
-          <td className="px-3 py-2.5 text-right">
-            <SemBadge value={r.convToQR} level={semConvQR} />
-            {!isTeam && <TrendArrow delta={r.trends.convToQR} />}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center justify-end gap-1">
+              <SemBadge value={r.convToQR} level={semConvQR} />
+              {!isTeam ? <TrendArrow delta={r.trends.convToQR} /> : <span className="w-[42px]" />}
+            </div>
           </td>
           <td className="px-3 py-2.5 text-sm text-right">{r.freeTrialStarted}</td>
           <td className="px-3 py-2.5 text-right">
@@ -409,9 +418,11 @@ export default function LeadAnalyticsPage() {
           {/* Chiusura */}
           {visibleCols.won && <td className="px-3 py-2.5 text-sm text-right font-medium">{r.won}</td>}
           {visibleCols.convFTtoWon && (
-            <td className="px-3 py-2.5 text-right">
-              <SemBadge value={r.convFTtoWon} level={semConvFTW} />
-              {!isTeam && <TrendArrow delta={r.trends.convFTtoWon} />}
+            <td className="px-3 py-2.5">
+              <div className="flex items-center justify-end gap-1">
+                <SemBadge value={r.convFTtoWon} level={semConvFTW} />
+                {!isTeam ? <TrendArrow delta={r.trends.convFTtoWon} /> : <span className="w-[42px]" />}
+              </div>
             </td>
           )}
           {visibleCols.lostBFT && <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostBFT}</td>}

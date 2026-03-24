@@ -989,7 +989,7 @@ export default function LeadAnalyticsPage() {
                                   <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
                                   <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
                                   <td className="px-2 py-1.5 text-gray-500">
-                                    {new Date(c.closeDateAt).toLocaleDateString("it-IT")}
+                                    {(() => { const d = new Date(c.closeDateAt || (c as any).deadlineAt); return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("it-IT"); })()}
                                     {c.isManualCloseDate && <span className="ml-1 text-violet-500 text-[9px]" title="Impostata manualmente">✎</span>}
                                   </td>
                                 </tr>

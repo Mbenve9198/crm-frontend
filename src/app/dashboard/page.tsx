@@ -261,9 +261,6 @@ function ThemedLeadsTable({
                         MRR
                       </th>
                     )}
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Azioni
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,17 +291,6 @@ function ThemedLeadsTable({
                           {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/?search=${encodeURIComponent(c.name)}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                            <ExternalLink className="h-3 w-3" />
-                            Apri
-                          </Button>
-                        </Link>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

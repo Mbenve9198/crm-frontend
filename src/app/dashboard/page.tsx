@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { useAuth } from "@/context/AuthContext";
@@ -24,7 +24,7 @@ import {
   Trophy,
   XCircle,
   DollarSign,
-  ExternalLink,
+
   PartyPopper,
   CheckCircle2,
   PhoneCall,
@@ -417,15 +417,6 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                               <CalendarClock className="h-3 w-3" />
                               {c.properties?.callbackAt ? "Modifica" : "Imposta"}
                             </Button>
-                            <Link
-                              href={`/?search=${encodeURIComponent(c.name)}`}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                                <ExternalLink className="h-3 w-3" />
-                                Apri
-                              </Button>
-                            </Link>
                           </div>
                         </td>
                       </tr>

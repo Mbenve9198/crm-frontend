@@ -1092,7 +1092,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                     preload="metadata"
                                     style={{ maxWidth: '100%' }}
                                   >
-                                    <source src={`https://crm-backend-8gwn.onrender.com/api/calls/recording/${activity.data.recordingSid}`} type="audio/wav" />
+                                    <source src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://crm-backend-8gwn.onrender.com'}/api/calls/recording/${activity.data.recordingSid}`} type="audio/wav" />
                                     Il tuo browser non supporta l&apos;elemento audio.
                                   </audio>
                                   {activity.data?.recordingDuration && (

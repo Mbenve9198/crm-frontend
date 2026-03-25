@@ -190,6 +190,14 @@ type ThemedTableProps = {
   emptyMessage: string;
   accentBorder: string;
   hideMrr?: boolean;
+  showCloseDate?: boolean;
+  showSource?: boolean;
+};
+
+const sourceLabel = (src?: string) => {
+  if (src === "smartlead_outbound") return "Smartlead";
+  if (src === "inbound_rank_checker") return "Inbound";
+  return src || "—";
 };
 
 function ThemedLeadsTable({
@@ -204,6 +212,8 @@ function ThemedLeadsTable({
   emptyMessage,
   accentBorder,
   hideMrr,
+  showCloseDate,
+  showSource,
 }: ThemedTableProps) {
   const router = useRouter();
   const [page, setPage] = useState(1);
@@ -244,7 +254,7 @@ function ThemedLeadsTable({
                       Status
                     </th>
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Ultimo tocco
+                      {showCloseDate ? "Close date" : showSource ? "Source" : "Ultimo tocco"}
                     </th>
                     {!hideMrr && (
                       <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -270,7 +280,15 @@ function ThemedLeadsTable({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700">{getStatusLabel(c.status)}</td>
-                      <td className="px-4 py-3 text-gray-500">{formatDateTime(c.lastActivityAt)}</td>
+                      <td className="px-4 py-3 text-gray-500">
+                        {showCloseDate
+                          ? (c.properties?.closeDate
+                              ? new Date(String(c.properties.closeDate)).toLocaleDateString("it-IT")
+                              : "—")
+                          : showSource
+                            ? <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${c.source === "smartlead_outbound" ? "bg-blue-100 text-blue-700" : c.source === "inbound_rank_checker" ? "bg-teal-100 text-teal-700" : "bg-gray-100 text-gray-600"}`}>{sourceLabel(c.source)}</span>
+                            : formatDateTime(c.lastActivityAt)}
+                      </td>
                       {!hideMrr && (
                         <td className="px-4 py-3 text-right text-gray-700">
                           {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
@@ -729,6 +747,7 @@ export default function DashboardPage() {
               accentBorder="border-t-emerald-500"
               emptyIcon={<PartyPopper className="h-8 w-8" />}
               emptyMessage="Nessun free trial attivo — è il momento di convertire qualche lead!"
+              showCloseDate
             />
 
             <ThemedLeadsTable
@@ -742,6 +761,7 @@ export default function DashboardPage() {
               accentBorder="border-t-purple-500"
               emptyIcon={<CheckCircle2 className="h-8 w-8" />}
               emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
+              showCloseDate
             />
 
             <ThemedLeadsTable
@@ -756,6 +776,7 @@ export default function DashboardPage() {
               emptyIcon={<Inbox className="h-8 w-8" />}
               emptyMessage="Zero lead in attesa — backlog pulito!"
               hideMrr
+              showSource
             />
 
             <CallbackTable

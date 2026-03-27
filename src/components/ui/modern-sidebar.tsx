@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard } from "lucide-react";
+import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard, Phone } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -55,6 +55,12 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
             label: "Analytics Lead",
             active: pathname === "/analytics/leads",
             href: "/analytics/leads",
+          } as const,
+          {
+            icon: Phone,
+            label: "Chiamate",
+            active: pathname === "/calls",
+            href: "/calls",
           } as const,
         ]
       : []),

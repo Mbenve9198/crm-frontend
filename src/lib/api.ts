@@ -6,7 +6,10 @@ import {
   InitiateCallResponse, 
   UpdateCallRequest, 
   CallStats, 
-  RecordingResponse 
+  RecordingResponse,
+  CallsAnalyticsData,
+  CallsResponse,
+  CallFlag
 } from '@/types/call';
 import {
   TwilioSettings,
@@ -960,6 +963,38 @@ class ApiClient {
 
   async getCallRecording(callId: string): Promise<ApiResponse<RecordingResponse>> {
     return this.request<RecordingResponse>(`/calls/${callId}/recording`);
+  }
+
+  async getAllCalls(params?: {
+    from?: string; to?: string; owner?: string; outcome?: string;
+    status?: string; minDuration?: number; maxDuration?: number;
+    hasRecording?: string; flag?: string; page?: number; limit?: number;
+    sort?: string; order?: string;
+  }): Promise<ApiResponse<Call[]> & { pagination?: CallsResponse['pagination'] }> {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== '' && v !== null) sp.append(k, String(v));
+      });
+    }
+    return this.request(`/calls/all?${sp}`);
+  }
+
+  async getCallsAnalytics(params?: { from?: string; to?: string }): Promise<ApiResponse<CallsAnalyticsData>> {
+    const sp = new URLSearchParams();
+    if (params?.from) sp.append('from', params.from);
+    if (params?.to) sp.append('to', params.to);
+    return this.request<CallsAnalyticsData>(`/calls/analytics?${sp}`);
+  }
+
+  async updateCallCoaching(callId: string, data: {
+    rating?: number; flag?: CallFlag; comment?: string;
+  }): Promise<ApiResponse<Call>> {
+    return this.request<Call>(`/calls/${callId}/coaching`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
   }
 
   // === METODI PER LE IMPOSTAZIONI TWILIO ===

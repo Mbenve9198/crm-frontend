@@ -1,3 +1,12 @@
+export interface CoachingComment {
+  _id: string;
+  author: { _id: string; firstName: string; lastName: string };
+  text: string;
+  createdAt: string;
+}
+
+export type CallFlag = 'best-practice' | 'needs-review' | null;
+
 export interface Call {
   _id: string;
   twilioCallSid: string;
@@ -5,6 +14,8 @@ export interface Call {
     _id: string;
     name: string;
     phone: string;
+    email?: string;
+    source?: string;
   };
   initiatedBy: {
     _id: string;
@@ -25,6 +36,9 @@ export interface Call {
   priceUnit: string;
   notes?: string;
   outcome?: CallOutcome;
+  rating?: number;
+  flag?: CallFlag;
+  coachingComments?: CoachingComment[];
   errorCode?: string;
   errorMessage?: string;
   twilioData: Record<string, unknown>;
@@ -95,4 +109,39 @@ export interface RecordingResponse {
   recordingUrl: string;
   recordingSid: string;
   duration: number;
+}
+
+export interface CallOwnerAnalytics {
+  ownerId: string;
+  ownerName: string;
+  totalCalls: number;
+  completedCalls: number;
+  answeredCalls: number;
+  noAnswerCalls: number;
+  busyCalls: number;
+  failedCalls: number;
+  answerRate: number;
+  totalDuration: number;
+  avgDuration: number;
+  withRecording: number;
+  outcomes: {
+    interested: number;
+    meetingSet: number;
+    saleMade: number;
+    notInterested: number;
+    callback: number;
+    voicemail: number;
+  };
+  coaching: {
+    ratedCalls: number;
+    avgRating: number | null;
+    bestPractice: number;
+    needsReview: number;
+  };
+  hourDistribution: number[];
+}
+
+export interface CallsAnalyticsData {
+  owners: CallOwnerAnalytics[];
+  daily: { _id: { date: string; owner: string }; calls: number; duration: number; completed: number }[];
 } 

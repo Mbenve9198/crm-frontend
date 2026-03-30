@@ -515,7 +515,7 @@ export default function DashboardPage() {
       if (res.success && res.data) {
         setData(res.data);
       } else {
-        setError(res.message || "Errore nel caricamento del cruscotto");
+        setError(res.message || "Errore nel caricamento della dashboard");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Errore sconosciuto");
@@ -578,7 +578,7 @@ export default function DashboardPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Alert className="max-w-md bg-white">
           <AlertTitle>Autenticazione richiesta</AlertTitle>
-          <AlertDescription>Effettua il login per accedere al cruscotto.</AlertDescription>
+          <AlertDescription>Effettua il login per accedere alla dashboard.</AlertDescription>
         </Alert>
       </div>
     );
@@ -597,7 +597,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
                 <LayoutDashboard className="h-6 w-6 text-blue-600" />
-                Cruscotto
+                Dashboard
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Panoramica operativa e liste di lavoro.

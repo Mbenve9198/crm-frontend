@@ -31,7 +31,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
   const menuItems = [
     {
       icon: LayoutDashboard,
-      label: "Cruscotto",
+      label: "Dashboard",
       active: pathname === "/dashboard",
       href: "/dashboard",
     },

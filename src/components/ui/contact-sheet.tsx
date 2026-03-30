@@ -84,6 +84,7 @@ const activityTypeConfig: Record<string, { label: string; color: string }> = {
   email: { label: "Email", color: "bg-purple-500" },
   instagram_dm: { label: "Instagram", color: "bg-pink-500" },
   status_change: { label: "Status", color: "bg-gray-400" },
+  note: { label: "Nota", color: "bg-yellow-500" },
 };
 
 export function ContactSheet({
@@ -148,8 +149,7 @@ export function ContactSheet({
     setSavingNote(true);
     try {
       await apiClient.createActivity(contact._id, {
-        type: "whatsapp",
-        title: "Nota operativa",
+        type: "note",
         description: note.trim(),
       });
       setNote("");
@@ -293,7 +293,7 @@ export function ContactSheet({
                   onChange={(e) => setNote(e.target.value)}
                   className="min-h-[60px] text-sm resize-none"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       handleSaveNote();
                     }
@@ -312,7 +312,7 @@ export function ContactSheet({
                   )}
                 </Button>
               </div>
-              <p className="text-[10px] text-gray-400">Cmd+Invio per salvare</p>
+              <p className="text-[10px] text-gray-400">Invio per salvare · Shift+Invio per andare a capo</p>
             </div>
 
             {/* Activity timeline */}

@@ -532,11 +532,13 @@ class ApiClient {
     return this.request(endpoint);
   }
 
-  async getOwnerPerformance(params?: { from?: string; to?: string; source?: string }): Promise<ApiResponse<OwnerPerformanceData>> {
+  async getOwnerPerformance(params?: { from?: string; to?: string; source?: string; closeDateFrom?: string; closeDateTo?: string }): Promise<ApiResponse<OwnerPerformanceData>> {
     const searchParams = new URLSearchParams();
     if (params?.from) searchParams.append('from', params.from);
     if (params?.to) searchParams.append('to', params.to);
     if (params?.source && params.source !== 'all') searchParams.append('source', params.source);
+    if (params?.closeDateFrom) searchParams.append('closeDateFrom', params.closeDateFrom);
+    if (params?.closeDateTo) searchParams.append('closeDateTo', params.closeDateTo);
     const queryString = searchParams.toString();
     const endpoint = queryString
       ? `/contacts/analytics/owner-performance?${queryString}`

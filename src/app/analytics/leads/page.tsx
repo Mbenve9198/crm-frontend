@@ -188,9 +188,20 @@ export default function LeadAnalyticsPage() {
     return formatDateInput(lastDay);
   });
   const [source, setSource] = useState("all");
+  const [closeDateFrom, setCloseDateFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return formatDateInput(d);
+  });
+  const [closeDateTo, setCloseDateTo] = useState(() => {
+    const d = new Date();
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    return formatDateInput(lastDay);
+  });
   const [data, setData] = useState<OwnerPerformanceData | null>(null);
   const [cohortData, setCohortData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTrials, setIsLoadingTrials] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("cohort");
@@ -203,12 +214,18 @@ export default function LeadAnalyticsPage() {
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
+  const formatRangeLabel = (f: string, t: string) => {
+    const df = new Date(f);
+    const dt = new Date(t);
+    return `${df.toLocaleDateString("it-IT", { day: "numeric", month: "short" })} – ${dt.toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`;
+  };
+
   const loadAnalytics = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const [ownerRes, cohortRes] = await Promise.all([
-        apiClient.getOwnerPerformance({ from, to, source }),
+        apiClient.getOwnerPerformance({ from, to, source, closeDateFrom, closeDateTo }),
         apiClient.getLeadCohortAnalytics({ from, to }),
       ]);
       if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
@@ -218,6 +235,18 @@ export default function LeadAnalyticsPage() {
       setError(err instanceof Error ? err.message : "Errore sconosciuto");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadTrialsOnly = async () => {
+    try {
+      setIsLoadingTrials(true);
+      const res = await apiClient.getOwnerPerformance({ from, to, source, closeDateFrom, closeDateTo });
+      if (res.success && res.data) setData(prev => prev ? { ...prev, forecast: res.data!.forecast } : res.data!);
+    } catch {
+      // silent
+    } finally {
+      setIsLoadingTrials(false);
     }
   };
 
@@ -642,13 +671,16 @@ export default function LeadAnalyticsPage() {
             </p>
           </div>
 
-          {/* Filters */}
+          {/* Filtro principale — Data creazione */}
           <Card>
             <CardHeader className="border-b pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <CalendarRange className="h-5 w-5 text-blue-600" />
-                Filtri
-              </CardTitle>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CalendarRange className="h-5 w-5 text-blue-600" />
+                  Data creazione lead
+                </CardTitle>
+                <p className="text-xs text-gray-500 mt-1">Applicato a: Comparativa Owner, Funnel per Sorgente</p>
+              </div>
             </CardHeader>
             <CardContent className="pt-4">
               <form
@@ -749,8 +781,9 @@ export default function LeadAnalyticsPage() {
                 <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-2">
                   <BarChart3 className="h-4 w-4" /> Funnel per Sorgente
                 </h3>
-                <span className="text-xs text-indigo-600">
-                  {cohortData.period.from ? new Date(cohortData.period.from).toLocaleDateString("it-IT") : ""} → {cohortData.period.to ? new Date(cohortData.period.to).toLocaleDateString("it-IT") : ""}
+                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                  <CalendarRange className="h-3 w-3" />
+                  Creazione: {formatRangeLabel(from, to)}
                 </span>
               </div>
               <CardContent className="p-0">
@@ -906,7 +939,42 @@ export default function LeadAnalyticsPage() {
             </Card>
           )}
 
-          {/* ===== Owner Performance ===== */}
+          {/* ===== Prove Attive (filtro indipendente) ===== */}
+
+          {/* Filtro dedicato — Data chiusura prevista */}
+          <Card className="border-violet-200">
+            <CardHeader className="border-b pb-3">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Target className="h-5 w-5 text-violet-600" />
+                  Data chiusura prevista
+                </CardTitle>
+                <p className="text-xs text-gray-500 mt-1">Applicato a: Prove Attive</p>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  loadTrialsOnly();
+                }}
+                className="flex flex-col sm:flex-row gap-4 sm:items-end"
+              >
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="closeDateFrom">Dal</label>
+                  <input id="closeDateFrom" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateFrom} onChange={(e) => setCloseDateFrom(e.target.value)} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="closeDateTo">Al</label>
+                  <input id="closeDateTo" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateTo} onChange={(e) => setCloseDateTo(e.target.value)} />
+                </div>
+                <Button type="submit" disabled={isLoadingTrials} className="bg-violet-600 hover:bg-violet-700">
+                  {isLoadingTrials && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Applica
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
           {/* Prove attive */}
           {data?.forecast && (() => {
@@ -919,9 +987,15 @@ export default function LeadAnalyticsPage() {
                     <Target className="h-4 w-4" />
                     Prove attive
                   </h3>
-                  <span className="text-xs text-violet-600">
-                    Close date nel periodo · Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">
+                      <CalendarRange className="h-3 w-3" />
+                      Chiusura: {formatRangeLabel(closeDateFrom, closeDateTo)}
+                    </span>
+                    <span className="text-xs text-violet-600">
+                      Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
+                    </span>
+                  </div>
                 </div>
                 <CardContent className="pt-4 space-y-4">
                   {fc.totals.deals === 0 ? (
@@ -1021,8 +1095,9 @@ export default function LeadAnalyticsPage() {
             <Card className="overflow-hidden">
               <div className="px-5 py-3.5 bg-blue-50 border-b flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-blue-800">Comparativa Owner</h3>
-                <span className="text-xs text-blue-600">
-                  {data.period.from ? new Date(data.period.from).toLocaleDateString("it-IT") : ""} → {data.period.to ? new Date(data.period.to).toLocaleDateString("it-IT") : ""}
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                  <CalendarRange className="h-3 w-3" />
+                  Creazione: {formatRangeLabel(from, to)}
                 </span>
               </div>
               <CardContent className="p-0">

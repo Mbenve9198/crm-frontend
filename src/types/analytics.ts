@@ -120,6 +120,14 @@ export type LostContact = {
   source: string;
 };
 
+export type FunnelContact = {
+  id: string;
+  name: string;
+  email: string;
+  source: string;
+  mrr?: number;
+};
+
 export type OwnerPerformanceRow = {
   ownerId: string;
   ownerName: string;
@@ -145,6 +153,9 @@ export type OwnerPerformanceRow = {
   };
   bySource: Record<string, OwnerSourceBreakdown>;
   notTouchedContacts: NotTouchedContact[];
+  qrContacts: FunnelContact[];
+  ftContacts: FunnelContact[];
+  wonContacts: FunnelContact[];
   stalledContacts: StalledContact[];
   lostBFTContacts: LostContact[];
   lostAFTContacts: LostContact[];

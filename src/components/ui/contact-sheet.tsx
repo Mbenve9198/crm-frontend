@@ -34,6 +34,8 @@ type ContactSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCallbackRequest?: (contact: Contact) => void;
+  backLabel?: string;
+  onBack?: () => void;
 };
 
 const sourceLabel = (src?: string) => {
@@ -92,6 +94,8 @@ export function ContactSheet({
   open,
   onOpenChange,
   onCallbackRequest,
+  backLabel,
+  onBack,
 }: ContactSheetProps) {
   const [contact, setContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -179,6 +183,14 @@ export function ContactSheet({
           <div className="flex flex-col h-full">
             {/* Header */}
             <SheetHeader className="border-b bg-gray-50/80 p-5 pr-12">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 mb-1 -mt-1"
+                >
+                  {backLabel || "← Indietro"}
+                </button>
+              )}
               <SheetTitle className="text-lg leading-tight">
                 {contact.name}
               </SheetTitle>

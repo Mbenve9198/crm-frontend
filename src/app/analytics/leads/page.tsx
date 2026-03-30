@@ -12,6 +12,7 @@ import {
   LeadCohortContact,
   LeadFunnelStepContact,
 } from "@/types/analytics";
+import { OwnerDrilldownSheet, DrilldownCategory } from "@/components/ui/owner-drilldown-sheet";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import {
   Loader2,
   BarChart3,
-  ChevronDown,
-  ChevronRight,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -113,12 +112,6 @@ function TrendArrow({ delta }: { delta: number | null }) {
   );
 }
 
-function AgingBadge({ days }: { days: number }) {
-  if (days <= 2) return <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700">&lt;48h</span>;
-  if (days <= 7) return <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700">2-7gg</span>;
-  return <span className="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700">&gt;7gg</span>;
-}
-
 function CohortContactTable({ contacts, dateLabel, dateKey }: { contacts: LeadCohortContact[]; dateLabel: string; dateKey: "cohortStartAt" }) {
   return (
     <table className="w-full text-xs">
@@ -195,7 +188,11 @@ export default function LeadAnalyticsPage() {
   const [isLoadingOwner, setIsLoadingOwner] = useState(false);
   const [isLoadingTrials, setIsLoadingTrials] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
+  const [drilldown, setDrilldown] = useState<{
+    ownerName: string;
+    category: DrilldownCategory;
+    contacts: { id: string; name: string; email?: string; source?: string; mrr?: number; createdAt?: string; status?: string; lastActivityAt?: string }[];
+  } | null>(null);
   const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("cohort");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -223,7 +220,7 @@ export default function LeadAnalyticsPage() {
     try {
       setIsLoadingOwner(true);
       setError(null);
-      setExpandedOwner(null);
+      setDrilldown(null);
       const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo });
       if (res.success && res.data) setData(res.data);
       else setError(res.message || "Errore nel caricamento");
@@ -342,10 +339,13 @@ export default function LeadAnalyticsPage() {
       avgSalesCycleDays,
       trends: { pctNotTouched: null, convToQR: null, convFTtoWon: null },
       bySource: {},
-      notTouchedContacts: [],
-      stalledContacts: [],
-      lostBFTContacts: [],
-      lostAFTContacts: [],
+      notTouchedContacts: o.flatMap(r => r.notTouchedContacts),
+      qrContacts: o.flatMap(r => r.qrContacts),
+      ftContacts: o.flatMap(r => r.ftContacts),
+      wonContacts: o.flatMap(r => r.wonContacts),
+      stalledContacts: o.flatMap(r => r.stalledContacts),
+      lostBFTContacts: o.flatMap(r => r.lostBFTContacts),
+      lostAFTContacts: o.flatMap(r => r.lostAFTContacts),
     };
   }, [filteredOwners]);
 
@@ -425,12 +425,34 @@ export default function LeadAnalyticsPage() {
     </th>
   );
 
+  const openDrilldown = (r: OwnerPerformanceRow, category: DrilldownCategory) => {
+    const contactMap: Record<DrilldownCategory, () => typeof drilldown extends null ? never : NonNullable<typeof drilldown>["contacts"]> = {
+      notTouched: () => r.notTouchedContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, createdAt: c.createdAt })),
+      qrCodeSent: () => r.qrContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      freeTrialStarted: () => r.ftContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      won: () => r.wonContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, mrr: c.mrr })),
+      lostBFT: () => r.lostBFTContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      lostAFT: () => r.lostAFTContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      stalled: () => r.stalledContacts.map(c => ({ id: String(c.id || (c as any)._id), name: c.name, email: c.email, source: c.source, status: c.status, lastActivityAt: c.lastActivityAt })),
+    };
+    setDrilldown({ ownerName: r.ownerName, category, contacts: contactMap[category]() });
+  };
+
+  const ClickableCell = ({ value, row, category, className = "" }: { value: number; row: OwnerPerformanceRow; category: DrilldownCategory; className?: string }) => (
+    value > 0 ? (
+      <button
+        onClick={(e) => { e.stopPropagation(); openDrilldown(row, category); }}
+        className={`hover:underline hover:text-blue-600 cursor-pointer ${className}`}
+      >
+        {value}
+      </button>
+    ) : <span className={className}>{value}</span>
+  );
+
   const renderOwnerRow = (r: OwnerPerformanceRow, isTeam = false) => {
-    const isExpanded = expandedOwner === r.ownerId && !isTeam;
-    const now = new Date();
     const rowClass = isTeam
       ? "bg-blue-50/70 font-semibold border-t-2 border-blue-300"
-      : "border-b hover:bg-gray-50 cursor-pointer transition-colors";
+      : "border-b hover:bg-gray-50/50 transition-colors";
 
     const semNT = semaphore(r.pctNotTouched, { green: [0, 24], yellow: [25, 50] });
     const semConvQR = semaphore(r.convToQR, { green: [26, 100], yellow: [10, 25] });
@@ -440,245 +462,92 @@ export default function LeadAnalyticsPage() {
       : "green" as SemaphoreLevel;
     const semStall = semaphore(r.stalled, { green: [0, 1], yellow: [2, 5] });
 
-    const totalColSpan = 1 + 4 + 4 + closureColCount + revenueColCount;
-
     return (
-      <>
-        <tr
-          key={r.ownerId}
-          className={rowClass}
-          onClick={() => !isTeam && setExpandedOwner(isExpanded ? null : r.ownerId)}
-        >
-          <td className={`px-3 py-2.5 text-sm whitespace-nowrap ${isTeam ? "text-blue-900" : "text-gray-900"}`}>
-            <div className="flex items-center gap-1">
-              {!isTeam && (isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />)}
-              {isTeam ? <span className="uppercase text-xs tracking-wide">Totale Team</span> : r.ownerName}
-            </div>
-          </td>
-          {/* Reattività */}
-          <td className="px-3 py-2.5 text-sm text-right">{r.cohort}</td>
-          <td className="px-3 py-2.5 text-sm text-right">{r.notTouched}</td>
-          <td className="px-3 py-2.5">
-            <div className="flex items-center justify-end gap-1">
-              <SemBadge value={r.pctNotTouched} level={semNT} />
-              {!isTeam ? <TrendArrow delta={r.trends.pctNotTouched} /> : <span className="w-[42px]" />}
-            </div>
-          </td>
-          <td className="px-3 py-2.5 text-right">
-            {r.avgFirstTouchDays !== null ? (
-              <SemBadge value={r.avgFirstTouchDays} level={semFT} suffix="gg" />
-            ) : (
-              <span className="text-gray-400 text-xs">—</span>
-            )}
-          </td>
-          {/* Funnel — numeri */}
-          <td className="px-3 py-2.5 text-sm text-right">{r.qrCodeSent}</td>
-          <td className="px-3 py-2.5 text-sm text-right">{r.freeTrialStarted}</td>
-          {visibleCols.won && <td className="px-3 py-2.5 text-sm text-right font-medium">{r.won}</td>}
-          {/* Funnel — conversioni */}
-          <td className="px-3 py-2.5">
-            <div className="flex items-center justify-end gap-1">
-              <SemBadge value={r.convToQR} level={semConvQR} />
-              {!isTeam ? <TrendArrow delta={r.trends.convToQR} /> : <span className="w-[42px]" />}
-            </div>
-          </td>
-          <td className="px-3 py-2.5 text-right">
-            <span className="text-xs font-medium text-gray-700">{r.convQRtoFT}%</span>
-          </td>
-          {visibleCols.convFTtoWon && (
-            <td className="px-3 py-2.5">
-              <div className="flex items-center justify-end gap-1">
-                <SemBadge value={r.convFTtoWon} level={semConvFTW} />
-                {!isTeam ? <TrendArrow delta={r.trends.convFTtoWon} /> : <span className="w-[42px]" />}
-              </div>
-            </td>
+      <tr key={r.ownerId} className={rowClass}>
+        <td className={`px-3 py-2.5 text-sm whitespace-nowrap ${isTeam ? "text-blue-900" : "text-gray-900"}`}>
+          {isTeam ? <span className="uppercase text-xs tracking-wide">Totale Team</span> : r.ownerName}
+        </td>
+        {/* Reattività */}
+        <td className="px-3 py-2.5 text-sm text-right">{r.cohort}</td>
+        <td className="px-3 py-2.5 text-sm text-right">
+          <ClickableCell value={r.notTouched} row={r} category="notTouched" />
+        </td>
+        <td className="px-3 py-2.5">
+          <div className="flex items-center justify-end gap-1">
+            <SemBadge value={r.pctNotTouched} level={semNT} />
+            {!isTeam ? <TrendArrow delta={r.trends.pctNotTouched} /> : <span className="w-[42px]" />}
+          </div>
+        </td>
+        <td className="px-3 py-2.5 text-right">
+          {r.avgFirstTouchDays !== null ? (
+            <SemBadge value={r.avgFirstTouchDays} level={semFT} suffix="gg" />
+          ) : (
+            <span className="text-gray-400 text-xs">—</span>
           )}
-          {/* Chiusura & Perdita */}
-          {visibleCols.lostBFT && <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostBFT}</td>}
-          {visibleCols.lostAFT && <td className="px-3 py-2.5 text-sm text-right text-gray-500">{r.lostAFT}</td>}
-          {visibleCols.stalled && (
-            <td className="px-3 py-2.5 text-right">
-              <SemBadge value={r.stalled} level={semStall} suffix="" />
-            </td>
-          )}
-          {/* Revenue */}
-          {visibleCols.mrrWon && (
-            <td className="px-3 py-2.5 text-sm text-right font-medium text-emerald-700">
-              {r.mrrWon > 0 ? formatEur(r.mrrWon) : "—"}
-            </td>
-          )}
-          {visibleCols.avgSalesCycleDays && (
-            <td className="px-3 py-2.5 text-sm text-right text-gray-600">
-              {r.avgSalesCycleDays !== null ? `${r.avgSalesCycleDays}gg` : "—"}
-            </td>
-          )}
-        </tr>
-
-        {isExpanded && (
-          <tr>
-            <td colSpan={totalColSpan} className="px-4 py-4 bg-gray-50/80 border-b">
-              <div className="space-y-5">
-                {/* Source breakdown */}
-                {Object.keys(r.bySource).length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2">Breakdown per sorgente</h4>
-                    <div className="overflow-x-auto">
-                      <table className="text-xs w-full">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Sorgente</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Coorte</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Not touched</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">QR</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Free trial</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Won</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Lost BFT</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">Lost AFT</th>
-                            <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR Won</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {Object.entries(r.bySource).map(([src, s]) => (
-                            <tr key={src} className="border-b last:border-0">
-                              <td className="px-2 py-1.5 font-medium text-gray-700">{src}</td>
-                              <td className="px-2 py-1.5 text-right">
-                                {s.cohort}
-                                {s.reactivated > 0 && (
-                                  <span className="text-gray-400 ml-1">({s.reactivated} riatt.)</span>
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5 text-right">{s.notTouched}</td>
-                              <td className="px-2 py-1.5 text-right">{s.qrCodeSent}</td>
-                              <td className="px-2 py-1.5 text-right">{s.freeTrialStarted}</td>
-                              <td className="px-2 py-1.5 text-right">{s.won}</td>
-                              <td className="px-2 py-1.5 text-right">{s.lostBFT}</td>
-                              <td className="px-2 py-1.5 text-right">{s.lostAFT}</td>
-                              <td className="px-2 py-1.5 text-right text-emerald-700">{s.mrrWon > 0 ? formatEur(s.mrrWon) : "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Not touched with aging */}
-                {r.notTouchedContacts.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2 flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      Lead not touched ({r.notTouchedContacts.length})
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="text-xs w-full">
-                        <thead>
-                          <tr className="bg-amber-50">
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Sorgente</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Creato</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Aging</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {r.notTouchedContacts
-                            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-                            .map((c) => {
-                              const days = Math.floor((now.getTime() - new Date(c.createdAt).getTime()) / 86400000);
-                              return (
-                                <tr key={c.id} className="border-b last:border-0">
-                                  <td className="px-2 py-1.5">
-                                    <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                                    {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-gray-500">{c.source}</td>
-                                  <td className="px-2 py-1.5 text-gray-500">{new Date(c.createdAt).toLocaleDateString("it-IT")}</td>
-                                  <td className="px-2 py-1.5">
-                                    <AgingBadge days={days} />
-                                    <span className="ml-1 text-gray-500">{days}gg</span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Stalled */}
-                {r.stalledContacts.length > 0 && (
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2 flex items-center gap-1">
-                      <Pause className="h-3.5 w-3.5 text-orange-500" />
-                      In stallo ({r.stalledContacts.length})
-                    </h4>
-                    <div className="overflow-x-auto">
-                      <table className="text-xs w-full">
-                        <thead>
-                          <tr className="bg-orange-50">
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Status</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Ultima activity</th>
-                            <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inattivo da</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {r.stalledContacts.map((c) => {
-                            const days = Math.floor((now.getTime() - new Date(c.lastActivityAt).getTime()) / 86400000);
-                            return (
-                              <tr key={c.id} className="border-b last:border-0">
-                                <td className="px-2 py-1.5">
-                                  <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                                  {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
-                                </td>
-                                <td className="px-2 py-1.5 text-gray-500">{c.status}</td>
-                                <td className="px-2 py-1.5 text-gray-500">{new Date(c.lastActivityAt).toLocaleDateString("it-IT")}</td>
-                                <td className="px-2 py-1.5 text-red-600 font-medium">{days}gg</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Lost */}
-                {(r.lostBFTContacts.length > 0 || r.lostAFTContacts.length > 0) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {r.lostBFTContacts.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2">Lost before free trial ({r.lostBFTContacts.length})</h4>
-                        <ul className="text-xs space-y-0.5">
-                          {r.lostBFTContacts.map((c) => (
-                            <li key={c.id} className="flex justify-between border-b border-gray-100 pb-0.5">
-                              <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                              <span className="text-gray-400">{c.source}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {r.lostAFTContacts.length > 0 && (
-                      <div>
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2">Lost after free trial ({r.lostAFTContacts.length})</h4>
-                        <ul className="text-xs space-y-0.5">
-                          {r.lostAFTContacts.map((c) => (
-                            <li key={c.id} className="flex justify-between border-b border-gray-100 pb-0.5">
-                              <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                              <span className="text-gray-400">{c.source}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </td>
-          </tr>
+        </td>
+        {/* Funnel — numeri */}
+        <td className="px-3 py-2.5 text-sm text-right">
+          <ClickableCell value={r.qrCodeSent} row={r} category="qrCodeSent" />
+        </td>
+        <td className="px-3 py-2.5 text-sm text-right">
+          <ClickableCell value={r.freeTrialStarted} row={r} category="freeTrialStarted" />
+        </td>
+        {visibleCols.won && (
+          <td className="px-3 py-2.5 text-sm text-right font-medium">
+            <ClickableCell value={r.won} row={r} category="won" />
+          </td>
         )}
-      </>
+        {/* Funnel — conversioni */}
+        <td className="px-3 py-2.5">
+          <div className="flex items-center justify-end gap-1">
+            <SemBadge value={r.convToQR} level={semConvQR} />
+            {!isTeam ? <TrendArrow delta={r.trends.convToQR} /> : <span className="w-[42px]" />}
+          </div>
+        </td>
+        <td className="px-3 py-2.5 text-right">
+          <span className="text-xs font-medium text-gray-700">{r.convQRtoFT}%</span>
+        </td>
+        {visibleCols.convFTtoWon && (
+          <td className="px-3 py-2.5">
+            <div className="flex items-center justify-end gap-1">
+              <SemBadge value={r.convFTtoWon} level={semConvFTW} />
+              {!isTeam ? <TrendArrow delta={r.trends.convFTtoWon} /> : <span className="w-[42px]" />}
+            </div>
+          </td>
+        )}
+        {/* Chiusura & Perdita */}
+        {visibleCols.lostBFT && (
+          <td className="px-3 py-2.5 text-sm text-right text-gray-500">
+            <ClickableCell value={r.lostBFT} row={r} category="lostBFT" />
+          </td>
+        )}
+        {visibleCols.lostAFT && (
+          <td className="px-3 py-2.5 text-sm text-right text-gray-500">
+            <ClickableCell value={r.lostAFT} row={r} category="lostAFT" />
+          </td>
+        )}
+        {visibleCols.stalled && (
+          <td className="px-3 py-2.5 text-right">
+            <button
+              onClick={(e) => { e.stopPropagation(); if (r.stalled > 0) openDrilldown(r, "stalled"); }}
+              className={r.stalled > 0 ? "cursor-pointer" : ""}
+            >
+              <SemBadge value={r.stalled} level={semStall} suffix="" />
+            </button>
+          </td>
+        )}
+        {/* Revenue */}
+        {visibleCols.mrrWon && (
+          <td className="px-3 py-2.5 text-sm text-right font-medium text-emerald-700">
+            {r.mrrWon > 0 ? formatEur(r.mrrWon) : "—"}
+          </td>
+        )}
+        {visibleCols.avgSalesCycleDays && (
+          <td className="px-3 py-2.5 text-sm text-right text-gray-600">
+            {r.avgSalesCycleDays !== null ? `${r.avgSalesCycleDays}gg` : "—"}
+          </td>
+        )}
+      </tr>
     );
   };
 
@@ -1161,6 +1030,16 @@ export default function LeadAnalyticsPage() {
           )}
         </div>
       </main>
+
+      {drilldown && (
+        <OwnerDrilldownSheet
+          open={!!drilldown}
+          onOpenChange={(v) => { if (!v) setDrilldown(null); }}
+          ownerName={drilldown.ownerName}
+          category={drilldown.category}
+          contacts={drilldown.contacts}
+        />
+      )}
     </div>
   );
 }

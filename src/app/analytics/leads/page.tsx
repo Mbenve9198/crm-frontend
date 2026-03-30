@@ -597,6 +597,21 @@ export default function LeadAnalyticsPage() {
                 {isLoadingFunnel && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica
               </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isLoadingFunnel}
+                className="h-8 text-xs"
+                onClick={() => {
+                  const today = formatDateInput(new Date());
+                  setFunnelFrom(today);
+                  setFunnelTo(today);
+                  setTimeout(() => loadFunnel(), 0);
+                }}
+              >
+                Oggi
+              </Button>
             </form>
           {cohortData && (
             <>
@@ -781,6 +796,21 @@ export default function LeadAnalyticsPage() {
                     {isLoadingTrials && <Loader2 className="h-3 w-3 animate-spin" />}
                     Applica
                   </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={isLoadingTrials}
+                    className="h-8 text-xs"
+                    onClick={() => {
+                      const today = formatDateInput(new Date());
+                      setCloseDateFrom(today);
+                      setCloseDateTo(today);
+                      setTimeout(() => loadTrials(), 0);
+                    }}
+                  >
+                    Oggi
+                  </Button>
                 </form>
                 <CardContent className="pt-4 space-y-4">
                   {fc.totals.deals === 0 ? (
@@ -896,6 +926,21 @@ export default function LeadAnalyticsPage() {
               <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
                 {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isLoadingOwner}
+                className="h-8 text-xs"
+                onClick={() => {
+                  const today = formatDateInput(new Date());
+                  setOwnerFrom(today);
+                  setOwnerTo(today);
+                  setTimeout(() => loadOwner(), 0);
+                }}
+              >
+                Oggi
               </Button>
             </form>
             {availableOwners.length > 0 && (

@@ -8,7 +8,9 @@ export type ContactStatus =
   | 'free trial iniziato'
   | 'won'
   | 'lost before free trial'
-  | 'lost after free trial';
+  | 'lost after free trial'
+  | 'bad_data'
+  | 'non_qualificato';
 
 export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api';
 

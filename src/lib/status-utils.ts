@@ -12,7 +12,9 @@ export const getStatusColor = (status: ContactStatus): string => {
     'free trial iniziato': 'bg-emerald-500 shadow-emerald-500/50',
     'won': 'bg-green-600 shadow-green-600/50',
     'lost before free trial': 'bg-red-600 shadow-red-600/50',
-    'lost after free trial': 'bg-rose-600 shadow-rose-600/50'
+    'lost after free trial': 'bg-rose-600 shadow-rose-600/50',
+    'bad_data': 'bg-slate-500 shadow-slate-500/50',
+    'non_qualificato': 'bg-zinc-500 shadow-zinc-500/50'
   };
   
   return colorMap[status] || 'bg-gray-400 shadow-gray-400/50';
@@ -30,7 +32,9 @@ export const getStatusLabel = (status: ContactStatus): string => {
     'free trial iniziato': 'Free trial iniziato',
     'won': 'Won',
     'lost before free trial': 'Lost (before free trial)',
-    'lost after free trial': 'Lost (after free trial)'
+    'lost after free trial': 'Lost (after free trial)',
+    'bad_data': 'Bad data',
+    'non_qualificato': 'Non qualificato'
   };
   
   return labelMap[status] || status;
@@ -60,7 +64,9 @@ export const getAllStatuses = (): ContactStatus[] => {
     'free trial iniziato',
     'won',
     'lost before free trial',
-    'lost after free trial'
+    'lost after free trial',
+    'bad_data',
+    'non_qualificato'
   ];
 };
 

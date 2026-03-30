@@ -339,13 +339,13 @@ export default function LeadAnalyticsPage() {
       avgSalesCycleDays,
       trends: { pctNotTouched: null, convToQR: null, convFTtoWon: null },
       bySource: {},
-      notTouchedContacts: o.flatMap(r => r.notTouchedContacts),
-      qrContacts: o.flatMap(r => r.qrContacts),
-      ftContacts: o.flatMap(r => r.ftContacts),
-      wonContacts: o.flatMap(r => r.wonContacts),
-      stalledContacts: o.flatMap(r => r.stalledContacts),
-      lostBFTContacts: o.flatMap(r => r.lostBFTContacts),
-      lostAFTContacts: o.flatMap(r => r.lostAFTContacts),
+      notTouchedContacts: o.flatMap(r => r.notTouchedContacts || []),
+      qrContacts: o.flatMap(r => r.qrContacts || []),
+      ftContacts: o.flatMap(r => r.ftContacts || []),
+      wonContacts: o.flatMap(r => r.wonContacts || []),
+      stalledContacts: o.flatMap(r => r.stalledContacts || []),
+      lostBFTContacts: o.flatMap(r => r.lostBFTContacts || []),
+      lostAFTContacts: o.flatMap(r => r.lostAFTContacts || []),
     };
   }, [filteredOwners]);
 
@@ -427,13 +427,13 @@ export default function LeadAnalyticsPage() {
 
   const openDrilldown = (r: OwnerPerformanceRow, category: DrilldownCategory) => {
     const contactMap: Record<DrilldownCategory, () => typeof drilldown extends null ? never : NonNullable<typeof drilldown>["contacts"]> = {
-      notTouched: () => r.notTouchedContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, createdAt: c.createdAt })),
-      qrCodeSent: () => r.qrContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
-      freeTrialStarted: () => r.ftContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
-      won: () => r.wonContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, mrr: c.mrr })),
-      lostBFT: () => r.lostBFTContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
-      lostAFT: () => r.lostAFTContacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
-      stalled: () => r.stalledContacts.map(c => ({ id: String(c.id || (c as any)._id), name: c.name, email: c.email, source: c.source, status: c.status, lastActivityAt: c.lastActivityAt })),
+      notTouched: () => (r.notTouchedContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, createdAt: c.createdAt })),
+      qrCodeSent: () => (r.qrContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      freeTrialStarted: () => (r.ftContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      won: () => (r.wonContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, mrr: c.mrr })),
+      lostBFT: () => (r.lostBFTContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      lostAFT: () => (r.lostAFTContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
+      stalled: () => (r.stalledContacts || []).map(c => ({ id: String(c.id || (c as any)._id), name: c.name, email: c.email, source: c.source, status: c.status, lastActivityAt: c.lastActivityAt })),
     };
     setDrilldown({ ownerName: r.ownerName, category, contacts: contactMap[category]() });
   };

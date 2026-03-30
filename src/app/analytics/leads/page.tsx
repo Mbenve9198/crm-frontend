@@ -20,7 +20,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import {
   Loader2,
   BarChart3,
-  CalendarRange,
   ChevronDown,
   ChevronRight,
   TrendingUp,
@@ -177,30 +176,23 @@ function FunnelContactTable({ contacts }: { contacts: LeadFunnelStepContact[] })
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
-  const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
-    return formatDateInput(d);
-  });
-  const [to, setTo] = useState(() => {
-    const d = new Date();
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-    return formatDateInput(lastDay);
-  });
+  const defaultFrom = () => { const d = new Date(); d.setDate(1); return formatDateInput(d); };
+  const defaultTo = () => { const d = new Date(); return formatDateInput(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
+
+  const [funnelFrom, setFunnelFrom] = useState(defaultFrom);
+  const [funnelTo, setFunnelTo] = useState(defaultTo);
+
+  const [ownerFrom, setOwnerFrom] = useState(defaultFrom);
+  const [ownerTo, setOwnerTo] = useState(defaultTo);
   const [source, setSource] = useState("all");
-  const [closeDateFrom, setCloseDateFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
-    return formatDateInput(d);
-  });
-  const [closeDateTo, setCloseDateTo] = useState(() => {
-    const d = new Date();
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-    return formatDateInput(lastDay);
-  });
+
+  const [closeDateFrom, setCloseDateFrom] = useState(defaultFrom);
+  const [closeDateTo, setCloseDateTo] = useState(defaultTo);
+
   const [data, setData] = useState<OwnerPerformanceData | null>(null);
   const [cohortData, setCohortData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingFunnel, setIsLoadingFunnel] = useState(false);
+  const [isLoadingOwner, setIsLoadingOwner] = useState(false);
   const [isLoadingTrials, setIsLoadingTrials] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
@@ -214,34 +206,37 @@ export default function LeadAnalyticsPage() {
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
-  const formatRangeLabel = (f: string, t: string) => {
-    const df = new Date(f);
-    const dt = new Date(t);
-    return `${df.toLocaleDateString("it-IT", { day: "numeric", month: "short" })} – ${dt.toLocaleDateString("it-IT", { day: "numeric", month: "short" })}`;
-  };
-
-  const loadAnalytics = async () => {
+  const loadFunnel = async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      const [ownerRes, cohortRes] = await Promise.all([
-        apiClient.getOwnerPerformance({ from, to, source, closeDateFrom, closeDateTo }),
-        apiClient.getLeadCohortAnalytics({ from, to }),
-      ]);
-      if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
-      else setError(ownerRes.message || "Errore nel caricamento");
-      if (cohortRes.success && cohortRes.data) setCohortData(cohortRes.data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+      setIsLoadingFunnel(true);
+      const res = await apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo });
+      if (res.success && res.data) setCohortData(res.data);
+    } catch {
+      // silent
     } finally {
-      setIsLoading(false);
+      setIsLoadingFunnel(false);
     }
   };
 
-  const loadTrialsOnly = async () => {
+  const loadOwner = async () => {
+    try {
+      setIsLoadingOwner(true);
+      setError(null);
+      setExpandedOwner(null);
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo });
+      if (res.success && res.data) setData(res.data);
+      else setError(res.message || "Errore nel caricamento");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+    } finally {
+      setIsLoadingOwner(false);
+    }
+  };
+
+  const loadTrials = async () => {
     try {
       setIsLoadingTrials(true);
-      const res = await apiClient.getOwnerPerformance({ from, to, source, closeDateFrom, closeDateTo });
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo });
       if (res.success && res.data) setData(prev => prev ? { ...prev, forecast: res.data!.forecast } : res.data!);
     } catch {
       // silent
@@ -250,8 +245,30 @@ export default function LeadAnalyticsPage() {
     }
   };
 
+  const loadAll = async () => {
+    try {
+      setIsLoadingFunnel(true);
+      setIsLoadingOwner(true);
+      setIsLoadingTrials(true);
+      setError(null);
+      const [ownerRes, cohortRes] = await Promise.all([
+        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo }),
+        apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo }),
+      ]);
+      if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
+      else setError(ownerRes.message || "Errore nel caricamento");
+      if (cohortRes.success && cohortRes.data) setCohortData(cohortRes.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Errore sconosciuto");
+    } finally {
+      setIsLoadingFunnel(false);
+      setIsLoadingOwner(false);
+      setIsLoadingTrials(false);
+    }
+  };
+
   useEffect(() => {
-    if (isAuthenticated && canAccess) loadAnalytics();
+    if (isAuthenticated && canAccess) loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, canAccess]);
 
@@ -671,65 +688,7 @@ export default function LeadAnalyticsPage() {
             </p>
           </div>
 
-          {/* Filtro principale — Data creazione */}
-          <Card>
-            <CardHeader className="border-b pb-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CalendarRange className="h-5 w-5 text-blue-600" />
-                  Data creazione lead
-                </CardTitle>
-                <p className="text-xs text-gray-500 mt-1">Applicato a: Comparativa Owner, Funnel per Sorgente</p>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setExpandedOwner(null);
-                  loadAnalytics();
-                }}
-                className="flex flex-col sm:flex-row gap-4 sm:items-end"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="from">Dal</label>
-                  <input id="from" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={from} onChange={(e) => setFrom(e.target.value)} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="to">Al</label>
-                  <input id="to" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={to} onChange={(e) => setTo(e.target.value)} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="source">Sorgente</label>
-                  <select id="source" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={source} onChange={(e) => setSource(e.target.value)}>
-                    <option value="all">Tutte</option>
-                    <option value="smartlead_outbound">Smartlead Outbound</option>
-                    <option value="inbound_rank_checker">Rank Checker Inbound</option>
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Applica
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isLoading}
-                    onClick={() => {
-                      const today = formatDateInput(new Date());
-                      setFrom(today);
-                      setTo(today);
-                      setExpandedOwner(null);
-                      setTimeout(() => loadAnalytics(), 0);
-                    }}
-                  >
-                    Oggi
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          {/* I filtri sono ora inline dentro ogni sezione */}
 
           {error && (
             <Alert className="bg-red-50 border-red-200 text-red-800">
@@ -775,17 +734,27 @@ export default function LeadAnalyticsPage() {
           )}
 
           {/* ===== Funnel per Sorgente ===== */}
+          <Card className="shadow-sm border border-gray-200/80 overflow-hidden">
+            <div className="px-5 py-3.5 bg-indigo-50 border-b flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" /> Funnel per Sorgente
+              </h3>
+            </div>
+            <form
+              onSubmit={(e) => { e.preventDefault(); loadFunnel(); }}
+              className="flex flex-wrap items-center gap-3 px-5 py-3 bg-indigo-50/40 border-b"
+            >
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data creazione</span>
+              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" value={funnelFrom} onChange={(e) => setFunnelFrom(e.target.value)} />
+              <span className="text-xs text-gray-400">–</span>
+              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" value={funnelTo} onChange={(e) => setFunnelTo(e.target.value)} />
+              <Button type="submit" size="sm" disabled={isLoadingFunnel} className="h-8 text-xs">
+                {isLoadingFunnel && <Loader2 className="h-3 w-3 animate-spin" />}
+                Applica
+              </Button>
+            </form>
           {cohortData && (
-            <Card className="shadow-sm border border-gray-200/80">
-              <div className="px-5 py-3.5 bg-indigo-50 border-b flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-indigo-800 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" /> Funnel per Sorgente
-                </h3>
-                <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                  <CalendarRange className="h-3 w-3" />
-                  Creazione: {formatRangeLabel(from, to)}
-                </span>
-              </div>
+            <>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
@@ -936,47 +905,11 @@ export default function LeadAnalyticsPage() {
                   </table>
                 </div>
               </CardContent>
-            </Card>
+            </>
           )}
-
-          {/* ===== Prove Attive (filtro indipendente) ===== */}
-
-          {/* Filtro dedicato — Data chiusura prevista */}
-          <Card className="border-violet-200">
-            <CardHeader className="border-b pb-3">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Target className="h-5 w-5 text-violet-600" />
-                  Data chiusura prevista
-                </CardTitle>
-                <p className="text-xs text-gray-500 mt-1">Applicato a: Prove Attive</p>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  loadTrialsOnly();
-                }}
-                className="flex flex-col sm:flex-row gap-4 sm:items-end"
-              >
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="closeDateFrom">Dal</label>
-                  <input id="closeDateFrom" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateFrom} onChange={(e) => setCloseDateFrom(e.target.value)} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="closeDateTo">Al</label>
-                  <input id="closeDateTo" type="date" className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateTo} onChange={(e) => setCloseDateTo(e.target.value)} />
-                </div>
-                <Button type="submit" disabled={isLoadingTrials} className="bg-violet-600 hover:bg-violet-700">
-                  {isLoadingTrials && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Applica
-                </Button>
-              </form>
-            </CardContent>
           </Card>
 
-          {/* Prove attive */}
+          {/* ===== Prove Attive ===== */}
           {data?.forecast && (() => {
             const fc = data.forecast;
             const statusLabel = (s: string) => s === "qr code inviato" ? "QR inviato" : s === "free trial iniziato" ? "Free Trial" : s;
@@ -987,16 +920,23 @@ export default function LeadAnalyticsPage() {
                     <Target className="h-4 w-4" />
                     Prove attive
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">
-                      <CalendarRange className="h-3 w-3" />
-                      Chiusura: {formatRangeLabel(closeDateFrom, closeDateTo)}
-                    </span>
-                    <span className="text-xs text-violet-600">
-                      Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
-                    </span>
-                  </div>
+                  <span className="text-xs text-violet-600">
+                    Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
+                  </span>
                 </div>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); loadTrials(); }}
+                  className="flex flex-wrap items-center gap-3 px-5 py-3 bg-violet-50/40 border-b"
+                >
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data chiusura prevista</span>
+                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateFrom} onChange={(e) => setCloseDateFrom(e.target.value)} />
+                  <span className="text-xs text-gray-400">–</span>
+                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateTo} onChange={(e) => setCloseDateTo(e.target.value)} />
+                  <Button type="submit" size="sm" disabled={isLoadingTrials} className="h-8 text-xs bg-violet-600 hover:bg-violet-700">
+                    {isLoadingTrials && <Loader2 className="h-3 w-3 animate-spin" />}
+                    Applica
+                  </Button>
+                </form>
                 <CardContent className="pt-4 space-y-4">
                   {fc.totals.deals === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-4">Nessuna prova attiva con close date nel periodo selezionato.</p>
@@ -1091,15 +1031,30 @@ export default function LeadAnalyticsPage() {
           })()}
 
           {/* Main owner table */}
+          <Card className="overflow-hidden">
+            <div className="px-5 py-3.5 bg-blue-50 border-b flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-blue-800">Comparativa Owner</h3>
+            </div>
+            <form
+              onSubmit={(e) => { e.preventDefault(); loadOwner(); }}
+              className="flex flex-wrap items-center gap-3 px-5 py-3 bg-blue-50/40 border-b"
+            >
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data creazione</span>
+              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={ownerFrom} onChange={(e) => setOwnerFrom(e.target.value)} />
+              <span className="text-xs text-gray-400">–</span>
+              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={ownerTo} onChange={(e) => setOwnerTo(e.target.value)} />
+              <select className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={source} onChange={(e) => setSource(e.target.value)}>
+                <option value="all">Tutte le sorgenti</option>
+                <option value="smartlead_outbound">Smartlead Outbound</option>
+                <option value="inbound_rank_checker">Rank Checker Inbound</option>
+              </select>
+              <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
+                {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}
+                Applica
+              </Button>
+            </form>
           {data && (
-            <Card className="overflow-hidden">
-              <div className="px-5 py-3.5 bg-blue-50 border-b flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-blue-800">Comparativa Owner</h3>
-                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                  <CalendarRange className="h-3 w-3" />
-                  Creazione: {formatRangeLabel(from, to)}
-                </span>
-              </div>
+            <>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm border-collapse">
@@ -1155,10 +1110,11 @@ export default function LeadAnalyticsPage() {
                   </table>
                 </div>
               </CardContent>
-            </Card>
+            </>
           )}
+          </Card>
 
-          {!data && !isLoading && !error && (
+          {!data && !isLoadingOwner && !error && (
             <div className="py-16 text-center text-gray-500">
               Clicca <span className="font-semibold">Applica</span> per caricare i dati.
             </div>

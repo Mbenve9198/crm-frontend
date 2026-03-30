@@ -707,41 +707,7 @@ export default function LeadAnalyticsPage() {
             </Alert>
           )}
 
-          {/* Summary KPIs */}
-          {team && (
-            <div className="grid gap-4 grid-cols-2 xl:grid-cols-5">
-              <Card className="border-l-4 border-l-blue-500">
-                <CardContent className="pt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase">New lead</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{team.cohort}</p>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-amber-500">
-                <CardContent className="pt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Not touched</p>
-                  <p className="text-2xl font-bold text-amber-700 mt-1">{team.notTouched} <span className="text-sm font-normal text-gray-500">({team.pctNotTouched}%)</span></p>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-purple-500">
-                <CardContent className="pt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> Avg 1° tocco</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{team.avgFirstTouchDays !== null ? `${team.avgFirstTouchDays}gg` : "—"}</p>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-emerald-500">
-                <CardContent className="pt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1"><DollarSign className="h-3 w-3" /> MRR Won</p>
-                  <p className="text-2xl font-bold text-emerald-700 mt-1">{team.mrrWon > 0 ? formatEur(team.mrrWon) : "—"}</p>
-                </CardContent>
-              </Card>
-              <Card className="border-l-4 border-l-orange-500">
-                <CardContent className="pt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase flex items-center gap-1"><Pause className="h-3 w-3" /> In stallo</p>
-                  <p className="text-2xl font-bold text-orange-700 mt-1">{team.stalled}</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+          {/* KPI cards spostate dentro Comparativa Owner */}
 
           {/* ===== Funnel per Sorgente ===== */}
           <Card className="shadow-sm border border-gray-200/80 overflow-hidden">
@@ -1103,6 +1069,30 @@ export default function LeadAnalyticsPage() {
                 )}
               </div>
             )}
+          {team && (
+            <div className="grid gap-3 grid-cols-2 xl:grid-cols-5 px-5 py-4 border-b">
+              <div className="rounded-lg border-l-4 border-l-blue-500 bg-white px-3 py-2.5 shadow-xs">
+                <p className="text-[10px] font-medium text-gray-500 uppercase">New lead</p>
+                <p className="text-xl font-bold text-gray-900 mt-0.5">{team.cohort}</p>
+              </div>
+              <div className="rounded-lg border-l-4 border-l-amber-500 bg-white px-3 py-2.5 shadow-xs">
+                <p className="text-[10px] font-medium text-gray-500 uppercase flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Not touched</p>
+                <p className="text-xl font-bold text-amber-700 mt-0.5">{team.notTouched} <span className="text-sm font-normal text-gray-500">({team.pctNotTouched}%)</span></p>
+              </div>
+              <div className="rounded-lg border-l-4 border-l-purple-500 bg-white px-3 py-2.5 shadow-xs">
+                <p className="text-[10px] font-medium text-gray-500 uppercase flex items-center gap-1"><Clock className="h-3 w-3" /> Avg 1° tocco</p>
+                <p className="text-xl font-bold text-gray-900 mt-0.5">{team.avgFirstTouchDays !== null ? `${team.avgFirstTouchDays}gg` : "—"}</p>
+              </div>
+              <div className="rounded-lg border-l-4 border-l-emerald-500 bg-white px-3 py-2.5 shadow-xs">
+                <p className="text-[10px] font-medium text-gray-500 uppercase flex items-center gap-1"><DollarSign className="h-3 w-3" /> MRR Won</p>
+                <p className="text-xl font-bold text-emerald-700 mt-0.5">{team.mrrWon > 0 ? formatEur(team.mrrWon) : "—"}</p>
+              </div>
+              <div className="rounded-lg border-l-4 border-l-orange-500 bg-white px-3 py-2.5 shadow-xs">
+                <p className="text-[10px] font-medium text-gray-500 uppercase flex items-center gap-1"><Pause className="h-3 w-3" /> In stallo</p>
+                <p className="text-xl font-bold text-orange-700 mt-0.5">{team.stalled}</p>
+              </div>
+            </div>
+          )}
           {data && (
             <>
               <CardContent className="p-0">

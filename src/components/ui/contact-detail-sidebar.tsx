@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock } from "lucide-react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
@@ -255,7 +255,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       call: Phone,
       whatsapp: MessageCircle,
       instagram_dm: Instagram,
-      status_change: ArrowRight
+      status_change: ArrowRight,
+      note: StickyNote
     };
     return iconMap[type] || Mail;
   };
@@ -266,7 +267,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       call: 'bg-green-100 text-green-800',
       whatsapp: 'bg-emerald-100 text-emerald-800',
       instagram_dm: 'bg-purple-100 text-purple-800',
-      status_change: 'bg-orange-100 text-orange-800'
+      status_change: 'bg-orange-100 text-orange-800',
+      note: 'bg-yellow-100 text-yellow-800'
     };
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };
@@ -900,6 +902,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="note">📝 Nota</SelectItem>
                       <SelectItem value="email">📧 Email</SelectItem>
                       <SelectItem value="call">📞 Chiamata</SelectItem>
                       <SelectItem value="whatsapp">💬 WhatsApp</SelectItem>

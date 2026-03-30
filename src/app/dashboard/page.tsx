@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { useRouter } from "next/navigation";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
@@ -12,6 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CallbackDialog } from "@/components/ui/callback-dialog";
+import { ContactSheet } from "@/components/ui/contact-sheet";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Loader2,
@@ -192,6 +192,7 @@ type ThemedTableProps = {
   hideMrr?: boolean;
   showCloseDate?: boolean;
   showSource?: boolean;
+  onContactClick?: (id: string) => void;
 };
 
 const sourceLabel = (src?: string) => {
@@ -214,8 +215,8 @@ function ThemedLeadsTable({
   hideMrr,
   showCloseDate,
   showSource,
+  onContactClick,
 }: ThemedTableProps) {
-  const router = useRouter();
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
@@ -268,7 +269,7 @@ function ThemedLeadsTable({
                     <tr
                       key={c._id}
                       className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
+                      onClick={() => onContactClick?.(c._id)}
                     >
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{c.name}</div>
@@ -307,10 +308,10 @@ function ThemedLeadsTable({
 type CallbackTableProps = {
   items: DashboardListItem[];
   onSetCallback: (item: DashboardListItem) => void;
+  onContactClick?: (id: string) => void;
 };
 
-function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
-  const router = useRouter();
+function CallbackTable({ items, onSetCallback, onContactClick }: CallbackTableProps) {
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
@@ -364,7 +365,7 @@ function CallbackTable({ items, onSetCallback }: CallbackTableProps) {
                       <tr
                         key={c._id}
                         className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => router.push(`/?search=${encodeURIComponent(c.name)}`)}
+                        onClick={() => onContactClick?.(c._id)}
                       >
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{c.name}</div>
@@ -491,6 +492,8 @@ export default function DashboardPage() {
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
+  const [sheetContactId, setSheetContactId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const defaultOwnerId = useMemo(() => (user?._id ? user._id : "all"), [user?._id]);
 
@@ -537,6 +540,26 @@ export default function DashboardPage() {
 
   const handleCallbackSaved = (_updatedContact: Contact) => {
     loadDashboard(owner);
+  };
+
+  const handleContactClick = (id: string) => {
+    setSheetContactId(id);
+    setSheetOpen(true);
+  };
+
+  const handleSheetCallbackRequest = (contact: Contact) => {
+    setSelectedCallbackItem({
+      _id: contact._id,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone,
+      status: contact.status,
+      source: contact.source,
+      createdAt: contact.createdAt,
+      updatedAt: contact.updatedAt,
+      properties: contact.properties as DashboardListItem["properties"],
+    });
+    setCallbackDialogOpen(true);
   };
 
   if (authLoading) {
@@ -725,6 +748,7 @@ export default function DashboardPage() {
               emptyIcon={<PartyPopper className="h-8 w-8" />}
               emptyMessage="Nessun free trial attivo — è il momento di convertire qualche lead!"
               showCloseDate
+              onContactClick={handleContactClick}
             />
 
             <ThemedLeadsTable
@@ -739,6 +763,7 @@ export default function DashboardPage() {
               emptyIcon={<CheckCircle2 className="h-8 w-8" />}
               emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
               showCloseDate
+              onContactClick={handleContactClick}
             />
 
             <ThemedLeadsTable
@@ -754,11 +779,13 @@ export default function DashboardPage() {
               emptyMessage="Zero lead in attesa — backlog pulito!"
               hideMrr
               showSource
+              onContactClick={handleContactClick}
             />
 
             <CallbackTable
               items={data?.lists.callback || []}
               onSetCallback={handleOpenCallbackDialog}
+              onContactClick={handleContactClick}
             />
           </div>
         </div>
@@ -776,6 +803,14 @@ export default function DashboardPage() {
           onSaved={handleCallbackSaved}
         />
       )}
+
+      {/* Contact Detail Sheet */}
+      <ContactSheet
+        contactId={sheetContactId}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        onCallbackRequest={handleSheetCallbackRequest}
+      />
     </div>
   );
 }

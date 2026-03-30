@@ -160,7 +160,7 @@ export function OwnerDrilldownSheet({
         contactId={selectedContactId}
         open={detailOpen}
         onOpenChange={(v) => {
-          if (!v) handleBackToList();
+          if (!v) handleClose(false);
         }}
         backLabel={`← ${label} (${contacts.length})`}
         onBack={handleBackToList}

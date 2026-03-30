@@ -86,6 +86,37 @@ function formatCallbackDate(iso?: string | null) {
   });
 }
 
+function formatAge(iso?: string | null): { label: string; className: string } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const diffMs = Date.now() - d.getTime();
+  if (diffMs < 0) return { label: "appena", className: "text-emerald-600 bg-emerald-50" };
+
+  const totalMinutes = Math.floor(diffMs / 60_000);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+
+  let label: string;
+  if (days > 0) {
+    label = hours > 0 ? `${days}g ${hours}h` : `${days}g`;
+  } else if (totalHours > 0) {
+    const mins = totalMinutes % 60;
+    label = mins > 0 ? `${totalHours}h ${mins}m` : `${totalHours}h`;
+  } else {
+    label = `${totalMinutes}m`;
+  }
+
+  let className: string;
+  if (totalHours < 12) className = "text-emerald-700 bg-emerald-50";
+  else if (totalHours < 24) className = "text-amber-700 bg-amber-50";
+  else if (totalHours < 48) className = "text-orange-700 bg-orange-50";
+  else className = "text-red-700 bg-red-50";
+
+  return { label, className };
+}
+
 function getCallbackBadge(iso?: string | null): { label: string; className: string } | null {
   if (!iso) return null;
   const d = new Date(iso);
@@ -192,6 +223,7 @@ type ThemedTableProps = {
   hideMrr?: boolean;
   showCloseDate?: boolean;
   showSource?: boolean;
+  showAge?: boolean;
   onContactClick?: (id: string) => void;
 };
 
@@ -215,6 +247,7 @@ function ThemedLeadsTable({
   hideMrr,
   showCloseDate,
   showSource,
+  showAge,
   onContactClick,
 }: ThemedTableProps) {
   const [page, setPage] = useState(1);
@@ -257,6 +290,11 @@ function ThemedLeadsTable({
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       {showCloseDate ? "Close date" : showSource ? "Source" : "Ultimo tocco"}
                     </th>
+                    {showAge && (
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        In attesa da
+                      </th>
+                    )}
                     {!hideMrr && (
                       <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         MRR
@@ -287,6 +325,21 @@ function ThemedLeadsTable({
                             ? <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${c.source === "smartlead_outbound" ? "bg-blue-100 text-blue-700" : c.source === "inbound_rank_checker" ? "bg-teal-100 text-teal-700" : "bg-gray-100 text-gray-600"}`}>{sourceLabel(c.source)}</span>
                             : formatDateTime(c.lastActivityAt)}
                       </td>
+                      {showAge && (() => {
+                        const age = formatAge(c.createdAt);
+                        return (
+                          <td className="px-4 py-3">
+                            {age ? (
+                              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${age.className}`}>
+                                <Clock className="h-3 w-3" />
+                                {age.label}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs">—</span>
+                            )}
+                          </td>
+                        );
+                      })()}
                       {!hideMrr && (
                         <td className="px-4 py-3 text-right text-gray-700">
                           {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
@@ -779,6 +832,7 @@ export default function DashboardPage() {
               emptyMessage="Zero lead in attesa — backlog pulito!"
               hideMrr
               showSource
+              showAge
               onContactClick={handleContactClick}
             />
 

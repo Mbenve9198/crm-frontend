@@ -282,6 +282,7 @@ export default function LeadAnalyticsPage() {
       avgSalesCycleDays,
       trends: { pctNotTouched: null, convToQR: null, convFTtoWon: null },
       bySource: {},
+      cohortContacts: o.flatMap(r => r.cohortContacts || []),
       notTouchedContacts: o.flatMap(r => r.notTouchedContacts || []),
       qrContacts: o.flatMap(r => r.qrContacts || []),
       ftContacts: o.flatMap(r => r.ftContacts || []),
@@ -370,6 +371,7 @@ export default function LeadAnalyticsPage() {
 
   const openDrilldown = (r: OwnerPerformanceRow, category: DrilldownCategory) => {
     const contactMap: Record<DrilldownCategory, () => typeof drilldown extends null ? never : NonNullable<typeof drilldown>["contacts"]> = {
+      cohort: () => (r.cohortContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
       notTouched: () => (r.notTouchedContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, createdAt: c.createdAt })),
       qrCodeSent: () => (r.qrContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
       freeTrialStarted: () => (r.ftContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
@@ -414,7 +416,9 @@ export default function LeadAnalyticsPage() {
           {isTeam ? <span className="uppercase text-xs tracking-wide">Totale Team</span> : r.ownerName}
         </td>
         {/* Reattività */}
-        <td className="px-3 py-2.5 text-sm text-right">{r.cohort}</td>
+        <td className="px-3 py-2.5 text-sm text-right">
+          <ClickableCell value={r.cohort} row={r} category="cohort" />
+        </td>
         <td className="px-3 py-2.5 text-sm text-right">
           <ClickableCell value={r.notTouched} row={r} category="notTouched" />
         </td>

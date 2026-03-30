@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 export type DrilldownCategory =
+  | "cohort"
   | "notTouched"
   | "qrCodeSent"
   | "freeTrialStarted"
@@ -49,6 +50,7 @@ type LeadDrilldownSheetProps = {
 };
 
 const categoryLabels: Record<DrilldownCategory, string> = {
+  cohort: "Coorte",
   notTouched: "Non lavorati",
   qrCodeSent: "QR inviato",
   freeTrialStarted: "Free Trial",
@@ -62,6 +64,7 @@ const categoryLabels: Record<DrilldownCategory, string> = {
 };
 
 const categoryColors: Record<DrilldownCategory, string> = {
+  cohort: "bg-gray-600",
   notTouched: "bg-amber-500",
   qrCodeSent: "bg-purple-500",
   freeTrialStarted: "bg-blue-500",

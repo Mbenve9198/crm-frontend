@@ -152,6 +152,7 @@ export type OwnerPerformanceRow = {
     convFTtoWon: number | null;
   };
   bySource: Record<string, OwnerSourceBreakdown>;
+  cohortContacts: FunnelContact[];
   notTouchedContacts: NotTouchedContact[];
   qrContacts: FunnelContact[];
   ftContacts: FunnelContact[];

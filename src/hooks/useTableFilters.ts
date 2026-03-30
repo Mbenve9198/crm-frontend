@@ -20,7 +20,7 @@ export function useTableFilters({ contacts, dynamicProperties }: UseTableFilters
       case 'Phone':
         return contact.phone || '';
       case 'Owner':
-        return `${contact.owner.firstName} ${contact.owner.lastName}`;
+        return contact.owner ? `${contact.owner.firstName} ${contact.owner.lastName}` : 'Non assegnato';
       case 'Lists':
         return contact.lists.join(', ');
       case 'Created':
@@ -99,7 +99,7 @@ export function useTableFilters({ contacts, dynamicProperties }: UseTableFilters
     values['Contact'] = contacts.map(c => c.name);
     values['Email'] = contacts.map(c => c.email || '');
     values['Phone'] = contacts.map(c => c.phone || '');
-    values['Owner'] = contacts.map(c => `${c.owner.firstName} ${c.owner.lastName}`);
+    values['Owner'] = contacts.map(c => c.owner ? `${c.owner.firstName} ${c.owner.lastName}` : 'Non assegnato');
     values['Lists'] = contacts.flatMap(c => c.lists);
     values['Created'] = contacts.map(c => new Date(c.createdAt).toLocaleDateString('it-IT'));
     values['Status'] = contacts.map(c => c.status);

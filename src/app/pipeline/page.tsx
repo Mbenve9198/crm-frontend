@@ -70,7 +70,7 @@ function ContactCard({
             {formatMRR(contact.mrr)}
           </div>
           <div className="text-xs text-gray-600 truncate max-w-[60px]">
-            {contact.owner.firstName}
+            {contact.owner?.firstName || '—'}
           </div>
         </div>
         

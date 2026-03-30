@@ -1007,15 +1007,15 @@ function ContactsTable({
                         <TooltipTrigger asChild>
                           <div className="cursor-pointer">
                             <span className="text-sm">
-                              {contact.owner.firstName} {contact.owner.lastName}
+                              {contact.owner ? `${contact.owner.firstName} ${contact.owner.lastName}` : 'Non assegnato'}
                             </span>
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
                           <div className="text-sm">
-                            <p className="font-semibold">{contact.owner.firstName} {contact.owner.lastName}</p>
-                            <p className="text-xs text-muted-foreground">{contact.owner.email}</p>
-                            <p className="text-xs">Ruolo: {contact.owner.role}</p>
+                            <p className="font-semibold">{contact.owner ? `${contact.owner.firstName} ${contact.owner.lastName}` : 'Non assegnato'}</p>
+                            <p className="text-xs text-muted-foreground">{contact.owner?.email || '—'}</p>
+                            <p className="text-xs">Ruolo: {contact.owner?.role || '—'}</p>
                           </div>
                         </TooltipContent>
                       </Tooltip>

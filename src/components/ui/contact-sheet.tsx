@@ -11,9 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import apiClient from "@/lib/api";
-import { Contact } from "@/types/contact";
+import { Contact, ContactStatus } from "@/types/contact";
 import { Activity } from "@/types/activity";
-import { getStatusLabel, getStatusColor } from "@/lib/status-utils";
+import { getStatusLabel, getStatusColor, getAllStatuses } from "@/lib/status-utils";
 import {
   Phone,
   MessageCircle,
@@ -103,6 +103,7 @@ export function ContactSheet({
   const [note, setNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const loadContact = useCallback(async (id: string) => {
     setLoading(true);
@@ -165,6 +166,19 @@ export function ContactSheet({
     }
   };
 
+  const handleStatusChange = async (newStatus: ContactStatus) => {
+    if (!contact || newStatus === contact.status) return;
+    setUpdatingStatus(true);
+    try {
+      await apiClient.updateContactStatus(contact._id, { status: newStatus });
+      await loadContact(contact._id);
+    } catch {
+      // silent
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const ownerName = contact?.owner
     ? `${contact.owner.firstName || ""} ${contact.owner.lastName || ""}`.trim() || contact.owner.email
     : "Non assegnato";
@@ -195,11 +209,20 @@ export function ContactSheet({
                 {contact.name}
               </SheetTitle>
               <SheetDescription className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 relative">
                   <span className={`h-2 w-2 rounded-full ${getStatusColor(contact.status)}`} />
-                  <span className="text-sm font-medium text-gray-700">
-                    {getStatusLabel(contact.status)}
-                  </span>
+                  <select
+                    value={contact.status}
+                    onChange={(e) => handleStatusChange(e.target.value as ContactStatus)}
+                    disabled={updatingStatus}
+                    className="text-sm font-medium text-gray-700 bg-transparent border-none outline-none cursor-pointer hover:text-blue-600 pr-4 appearance-none"
+                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0 center' }}
+                  >
+                    {getAllStatuses().map((s) => (
+                      <option key={s} value={s}>{getStatusLabel(s)}</option>
+                    ))}
+                  </select>
+                  {updatingStatus && <Loader2 className="h-3 w-3 animate-spin text-blue-500" />}
                 </span>
                 <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sourceBadgeColor(contact.source)}`}>
                   {sourceLabel(contact.source)}

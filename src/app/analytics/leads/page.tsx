@@ -196,6 +196,7 @@ export default function LeadAnalyticsPage() {
   const [isLoadingTrials, setIsLoadingTrials] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedOwner, setExpandedOwner] = useState<string | null>(null);
+  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("cohort");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -281,9 +282,19 @@ export default function LeadAnalyticsPage() {
     }
   };
 
-  const sorted = useMemo(() => {
+  const availableOwners = useMemo(() => {
     if (!data) return [];
-    const rows = [...data.owners];
+    return data.owners.map(o => ({ id: o.ownerId, name: o.ownerName }));
+  }, [data]);
+
+  const filteredOwners = useMemo(() => {
+    if (!data) return [];
+    if (selectedOwners.length === 0) return data.owners;
+    return data.owners.filter(o => selectedOwners.includes(o.ownerId));
+  }, [data, selectedOwners]);
+
+  const sorted = useMemo(() => {
+    const rows = [...filteredOwners];
     rows.sort((a, b) => {
       const av = a[sortKey] ?? -Infinity;
       const bv = b[sortKey] ?? -Infinity;
@@ -291,11 +302,11 @@ export default function LeadAnalyticsPage() {
       return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
     return rows;
-  }, [data, sortKey, sortDir]);
+  }, [filteredOwners, sortKey, sortDir]);
 
   const team = useMemo((): OwnerPerformanceRow | null => {
-    if (!data || data.owners.length === 0) return null;
-    const o = data.owners;
+    if (filteredOwners.length === 0) return null;
+    const o = filteredOwners;
     const cohort = o.reduce((s, r) => s + r.cohort, 0);
     const notTouched = o.reduce((s, r) => s + r.notTouched, 0);
     const qrCodeSent = o.reduce((s, r) => s + r.qrCodeSent, 0);
@@ -336,21 +347,20 @@ export default function LeadAnalyticsPage() {
       lostBFTContacts: [],
       lostAFTContacts: [],
     };
-  }, [data]);
+  }, [filteredOwners]);
 
   const visibleCols = useMemo(() => {
-    if (!data || data.owners.length === 0) return { won: true, convFTtoWon: true, lostBFT: true, lostAFT: true, stalled: true, mrrWon: true, avgSalesCycleDays: true };
-    const o = data.owners;
+    if (filteredOwners.length === 0) return { won: true, convFTtoWon: true, lostBFT: true, lostAFT: true, stalled: true, mrrWon: true, avgSalesCycleDays: true };
     return {
       won: true,
       convFTtoWon: true,
-      lostBFT: o.some((r) => r.lostBFT > 0),
-      lostAFT: o.some((r) => r.lostAFT > 0),
-      stalled: o.some((r) => r.stalled > 0),
-      mrrWon: o.some((r) => r.mrrWon > 0),
-      avgSalesCycleDays: o.some((r) => r.avgSalesCycleDays !== null),
+      lostBFT: filteredOwners.some((r) => r.lostBFT > 0),
+      lostAFT: filteredOwners.some((r) => r.lostAFT > 0),
+      stalled: filteredOwners.some((r) => r.stalled > 0),
+      mrrWon: filteredOwners.some((r) => r.mrrWon > 0),
+      avgSalesCycleDays: filteredOwners.some((r) => r.avgSalesCycleDays !== null),
     };
-  }, [data]);
+  }, [filteredOwners]);
 
   const funnelColCount = useMemo(() => {
     const v = visibleCols;
@@ -1053,6 +1063,46 @@ export default function LeadAnalyticsPage() {
                 Applica
               </Button>
             </form>
+            {availableOwners.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 px-5 py-2.5 bg-gray-50/80 border-b">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide mr-1">Owner</span>
+                {availableOwners.map(o => {
+                  const active = selectedOwners.length === 0 || selectedOwners.includes(o.id);
+                  return (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedOwners(prev => {
+                          if (prev.length === 0) return [o.id];
+                          if (prev.includes(o.id)) {
+                            const next = prev.filter(id => id !== o.id);
+                            return next;
+                          }
+                          return [...prev, o.id];
+                        });
+                      }}
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? "bg-blue-100 text-blue-800 ring-1 ring-blue-300"
+                          : "bg-gray-100 text-gray-400"
+                      }`}
+                    >
+                      {o.name}
+                    </button>
+                  );
+                })}
+                {selectedOwners.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOwners([])}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
+                  >
+                    Tutti
+                  </button>
+                )}
+              </div>
+            )}
           {data && (
             <>
               <CardContent className="p-0">

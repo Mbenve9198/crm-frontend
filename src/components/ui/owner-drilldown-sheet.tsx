@@ -8,10 +8,8 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { ContactSheet } from "@/components/ui/contact-sheet";
 import {
-  ArrowLeft,
   Mail,
   Globe,
   DollarSign,
@@ -25,9 +23,12 @@ export type DrilldownCategory =
   | "won"
   | "lostBFT"
   | "lostAFT"
-  | "stalled";
+  | "stalled"
+  | "created"
+  | "reactivated"
+  | "activeTrial";
 
-type DrilldownContact = {
+export type DrilldownContact = {
   id: string;
   name: string;
   email?: string;
@@ -38,11 +39,12 @@ type DrilldownContact = {
   mrr?: number;
 };
 
-type OwnerDrilldownSheetProps = {
+type LeadDrilldownSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ownerName: string;
-  category: DrilldownCategory;
+  title: string;
+  subtitle?: string;
+  dotColor?: string;
   contacts: DrilldownContact[];
 };
 
@@ -54,6 +56,9 @@ const categoryLabels: Record<DrilldownCategory, string> = {
   lostBFT: "Lost pre Free Trial",
   lostAFT: "Lost post Free Trial",
   stalled: "In stallo",
+  created: "Creati",
+  reactivated: "Riattivati",
+  activeTrial: "Prova attiva",
 };
 
 const categoryColors: Record<DrilldownCategory, string> = {
@@ -64,7 +69,18 @@ const categoryColors: Record<DrilldownCategory, string> = {
   lostBFT: "bg-red-400",
   lostAFT: "bg-red-600",
   stalled: "bg-orange-500",
+  created: "bg-indigo-500",
+  reactivated: "bg-teal-500",
+  activeTrial: "bg-violet-500",
 };
+
+export function getCategoryLabel(cat: DrilldownCategory) {
+  return categoryLabels[cat];
+}
+
+export function getCategoryColor(cat: DrilldownCategory) {
+  return categoryColors[cat];
+}
 
 const sourceLabel = (src?: string) => {
   if (src === "smartlead_outbound") return "Smartlead";
@@ -73,13 +89,14 @@ const sourceLabel = (src?: string) => {
   return src || "—";
 };
 
-export function OwnerDrilldownSheet({
+export function LeadDrilldownSheet({
   open,
   onOpenChange,
-  ownerName,
-  category,
+  title,
+  subtitle,
+  dotColor = "bg-blue-500",
   contacts,
-}: OwnerDrilldownSheetProps) {
+}: LeadDrilldownSheetProps) {
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -101,21 +118,16 @@ export function OwnerDrilldownSheet({
     setDetailOpen(false);
   };
 
-  const label = categoryLabels[category];
-  const color = categoryColors[category];
-
   return (
     <>
       <Sheet open={open && !detailOpen} onOpenChange={handleClose}>
         <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
           <SheetHeader className="pb-4 border-b">
             <SheetTitle className="flex items-center gap-2 text-base">
-              <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />
-              {ownerName} · {label}
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotColor}`} />
+              {title}
             </SheetTitle>
-            <SheetDescription>
-              {contacts.length} {contacts.length === 1 ? "lead" : "lead"}
-            </SheetDescription>
+            {subtitle && <SheetDescription>{subtitle}</SheetDescription>}
           </SheetHeader>
 
           <div className="mt-4 space-y-1">
@@ -146,6 +158,9 @@ export function OwnerDrilldownSheet({
                           <DollarSign className="h-3 w-3 shrink-0" /> €{c.mrr}
                         </span>
                       )}
+                      {c.status && (
+                        <span className="text-xs text-gray-400">{c.status}</span>
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 shrink-0 ml-2" />
@@ -162,9 +177,34 @@ export function OwnerDrilldownSheet({
         onOpenChange={(v) => {
           if (!v) handleClose(false);
         }}
-        backLabel={`← ${label} (${contacts.length})`}
+        backLabel={`← ${title}`}
         onBack={handleBackToList}
       />
     </>
+  );
+}
+
+export function OwnerDrilldownSheet({
+  open,
+  onOpenChange,
+  ownerName,
+  category,
+  contacts,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  ownerName: string;
+  category: DrilldownCategory;
+  contacts: DrilldownContact[];
+}) {
+  return (
+    <LeadDrilldownSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`${ownerName} · ${categoryLabels[category]}`}
+      subtitle={`${contacts.length} lead`}
+      dotColor={categoryColors[category]}
+      contacts={contacts}
+    />
   );
 }

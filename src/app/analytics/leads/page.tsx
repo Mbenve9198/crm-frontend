@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import {
@@ -9,10 +8,8 @@ import {
   OwnerPerformanceRow,
   ForecastData,
   LeadCohortFunnelAnalyticsData,
-  LeadCohortContact,
-  LeadFunnelStepContact,
 } from "@/types/analytics";
-import { OwnerDrilldownSheet, DrilldownCategory } from "@/components/ui/owner-drilldown-sheet";
+import { OwnerDrilldownSheet, LeadDrilldownSheet, DrilldownCategory, DrilldownContact } from "@/components/ui/owner-drilldown-sheet";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -112,60 +109,6 @@ function TrendArrow({ delta }: { delta: number | null }) {
   );
 }
 
-function CohortContactTable({ contacts, dateLabel, dateKey }: { contacts: LeadCohortContact[]; dateLabel: string; dateKey: "cohortStartAt" }) {
-  return (
-    <table className="w-full text-xs">
-      <thead>
-        <tr className="border-b">
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Nome</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Email</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Sorgente</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">MRR</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">{dateLabel}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {contacts.map((c) => (
-          <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
-            <td className="py-1 px-2"><Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link></td>
-            <td className="py-1 px-2 text-gray-600">{c.email}</td>
-            <td className="py-1 px-2 text-gray-600">{c.source}</td>
-            <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
-            <td className="py-1 px-2 text-gray-600">{c[dateKey] ? new Date(c[dateKey]!).toLocaleDateString("it-IT") : "—"}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function FunnelContactTable({ contacts }: { contacts: LeadFunnelStepContact[] }) {
-  return (
-    <table className="w-full text-xs">
-      <thead>
-        <tr className="border-b">
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Nome</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Email</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Sorgente</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">MRR</th>
-          <th className="text-left py-1 px-2 font-semibold text-gray-600">Data</th>
-        </tr>
-      </thead>
-      <tbody>
-        {contacts.map((c) => (
-          <tr key={c.id} className="border-b last:border-0 hover:bg-white/60">
-            <td className="py-1 px-2"><Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link></td>
-            <td className="py-1 px-2 text-gray-600">{c.email}</td>
-            <td className="py-1 px-2 text-gray-600">{c.source}</td>
-            <td className="py-1 px-2 text-gray-900">{c.mrr != null ? `€${c.mrr}` : "—"}</td>
-            <td className="py-1 px-2 text-gray-600">{c.enteredAt ? new Date(c.enteredAt).toLocaleDateString("it-IT") : "—"}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -193,14 +136,14 @@ export default function LeadAnalyticsPage() {
     category: DrilldownCategory;
     contacts: { id: string; name: string; email?: string; source?: string; mrr?: number; createdAt?: string; status?: string; lastActivityAt?: string }[];
   } | null>(null);
+  const [genericDrilldown, setGenericDrilldown] = useState<{
+    title: string;
+    dotColor: string;
+    contacts: DrilldownContact[];
+  } | null>(null);
   const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("cohort");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  type CohortExpandedPanel =
-    | { source: string; key: "created" | "reactivated" | "notTouched" | "qr" | "ft" | "won" }
-    | null;
-  const [cohortExpanded, setCohortExpanded] = useState<CohortExpandedPanel>(null);
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
@@ -434,6 +377,9 @@ export default function LeadAnalyticsPage() {
       lostBFT: () => (r.lostBFTContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
       lostAFT: () => (r.lostAFTContacts || []).map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source })),
       stalled: () => (r.stalledContacts || []).map(c => ({ id: String(c.id || (c as any)._id), name: c.name, email: c.email, source: c.source, status: c.status, lastActivityAt: c.lastActivityAt })),
+      created: () => [],
+      reactivated: () => [],
+      activeTrial: () => [],
     };
     setDrilldown({ ownerName: r.ownerName, category, contacts: contactMap[category]() });
   };
@@ -632,110 +578,42 @@ export default function LeadAnalyticsPage() {
                     </thead>
                     <tbody>
                       {Object.entries(cohortData.sources).map(([srcKey, src]) => {
-                        const sourceLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey;
-                        const toggleKey = (source: string, key: CohortExpandedPanel extends null ? never : Exclude<CohortExpandedPanel, null>["key"]) => {
-                          setCohortExpanded((prev) =>
-                            prev && prev.source === source && prev.key === key ? null : { source, key }
-                          );
+                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey;
+                        const openFunnelDrilldown = (label: string, color: string, contacts: { id: string; name: string; email?: string; source?: string; mrr?: number | null }[]) => {
+                          setGenericDrilldown({
+                            title: `${srcLabel} · ${label}`,
+                            dotColor: color,
+                            contacts: contacts.map(c => ({ id: c.id, name: c.name, email: c.email, source: c.source, mrr: c.mrr ?? undefined })),
+                          });
                         };
-                        const isExp = (key: Exclude<CohortExpandedPanel, null>["key"]) => cohortExpanded?.source === srcKey && cohortExpanded?.key === key;
+                        const CCell = ({ count, label, color, contacts }: { count: number; label: string; color: string; contacts: { id: string; name: string; email?: string; source?: string; mrr?: number | null }[] }) => (
+                          count > 0 ? (
+                            <button className="hover:underline hover:text-blue-600 cursor-pointer" onClick={() => openFunnelDrilldown(label, color, contacts)}>{count}</button>
+                          ) : <span>{count}</span>
+                        );
                         return (
-                          <React.Fragment key={srcKey}>
-                            <tr className="border-b hover:bg-gray-50/60">
-                              <td className="px-4 py-2.5 font-medium text-gray-900">{sourceLabel}</td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-indigo-600 hover:text-indigo-800" onClick={() => toggleKey(srcKey, "created")}>{src.cohort.created.count}</button>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-indigo-600 hover:text-indigo-800" onClick={() => toggleKey(srcKey, "reactivated")}>{src.cohort.reactivated.count}</button>
-                              </td>
-                              <td className="px-4 py-2.5 text-right font-semibold">{src.cohort.total.count}</td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-amber-600 hover:text-amber-800" onClick={() => toggleKey(srcKey, "notTouched")}>{src.steps.notTouched.count}</button>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-purple-600 hover:text-purple-800" onClick={() => toggleKey(srcKey, "qr")}>{src.steps.qrCodeSent.count}</button>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-blue-600 hover:text-blue-800" onClick={() => toggleKey(srcKey, "ft")}>{src.steps.freeTrialStarted.count}</button>
-                              </td>
-                              <td className="px-4 py-2.5 text-right">
-                                <button className="underline text-emerald-600 hover:text-emerald-800" onClick={() => toggleKey(srcKey, "won")}>{src.steps.won.count}</button>
-                              </td>
-                            </tr>
-                            {isExp("created") && (
-                              <tr>
-                                <td colSpan={8} className="bg-indigo-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-indigo-700 mb-2">Lead creati — {sourceLabel}</p>
-                                  {src.cohort.created.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <CohortContactTable contacts={src.cohort.created.contacts} dateLabel="Creato il" dateKey="cohortStartAt" />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                            {isExp("reactivated") && (
-                              <tr>
-                                <td colSpan={8} className="bg-indigo-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-indigo-700 mb-2">Lead riattivati — {sourceLabel}</p>
-                                  {src.cohort.reactivated.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <CohortContactTable contacts={src.cohort.reactivated.contacts} dateLabel="Riattivato il" dateKey="cohortStartAt" />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                            {isExp("notTouched") && (
-                              <tr>
-                                <td colSpan={8} className="bg-amber-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-amber-700 mb-2">Not touched — {sourceLabel}</p>
-                                  {src.steps.notTouched.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <FunnelContactTable contacts={src.steps.notTouched.contacts} />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                            {isExp("qr") && (
-                              <tr>
-                                <td colSpan={8} className="bg-purple-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-purple-700 mb-2">QR code inviato — {sourceLabel}</p>
-                                  {src.steps.qrCodeSent.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <FunnelContactTable contacts={src.steps.qrCodeSent.contacts} />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                            {isExp("ft") && (
-                              <tr>
-                                <td colSpan={8} className="bg-blue-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-blue-700 mb-2">Free trial iniziato — {sourceLabel}</p>
-                                  {src.steps.freeTrialStarted.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <FunnelContactTable contacts={src.steps.freeTrialStarted.contacts} />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                            {isExp("won") && (
-                              <tr>
-                                <td colSpan={8} className="bg-emerald-50/40 px-6 py-3">
-                                  <p className="text-xs font-semibold text-emerald-700 mb-2">Won — {sourceLabel}</p>
-                                  {src.steps.won.contacts.length === 0 ? (
-                                    <p className="text-xs text-gray-500">Nessun lead</p>
-                                  ) : (
-                                    <FunnelContactTable contacts={src.steps.won.contacts} />
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
+                          <tr key={srcKey} className="border-b hover:bg-gray-50/60">
+                            <td className="px-4 py-2.5 font-medium text-gray-900">{srcLabel}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.cohort.created.count} label="Creati" color="bg-indigo-500" contacts={src.cohort.created.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.cohort.reactivated.count} label="Riattivati" color="bg-teal-500" contacts={src.cohort.reactivated.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-semibold">{src.cohort.total.count}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.steps.notTouched.count} label="Non lavorati" color="bg-amber-500" contacts={src.steps.notTouched.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.steps.qrCodeSent.count} label="QR inviato" color="bg-purple-500" contacts={src.steps.qrCodeSent.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.steps.freeTrialStarted.count} label="Free Trial" color="bg-blue-500" contacts={src.steps.freeTrialStarted.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.steps.won.count} label="Won" color="bg-emerald-500" contacts={src.steps.won.contacts} />
+                            </td>
+                          </tr>
                         );
                       })}
                       {/* Riga totale */}
@@ -820,7 +698,16 @@ export default function LeadAnalyticsPage() {
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
                           <p className="text-xs font-medium text-gray-500 uppercase">Prove attive</p>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">{fc.totals.deals}</p>
+                          <button
+                            className="text-2xl font-bold text-gray-900 mt-1 hover:text-violet-700 hover:underline cursor-pointer"
+                            onClick={() => setGenericDrilldown({
+                              title: `Prove attive (${fc.contacts.length})`,
+                              dotColor: "bg-violet-500",
+                              contacts: fc.contacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
+                            })}
+                          >
+                            {fc.totals.deals}
+                          </button>
                         </div>
                         <div className="text-center">
                           <p className="text-xs font-medium text-gray-500 uppercase">MRR potenziale (100%)</p>
@@ -847,7 +734,21 @@ export default function LeadAnalyticsPage() {
                               {fc.owners.map((o) => (
                                 <tr key={o.ownerId} className="border-b last:border-0">
                                   <td className="px-3 py-2 font-medium text-gray-900">{o.ownerName}</td>
-                                  <td className="px-3 py-2 text-right">{o.deals}</td>
+                                  <td className="px-3 py-2 text-right">
+                                    <button
+                                      className="hover:underline hover:text-violet-600 cursor-pointer"
+                                      onClick={() => {
+                                        const ownerContacts = fc.contacts.filter(c => c.owner === o.ownerId);
+                                        setGenericDrilldown({
+                                          title: `${o.ownerName} · Prove attive`,
+                                          dotColor: "bg-violet-500",
+                                          contacts: ownerContacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
+                                        });
+                                      }}
+                                    >
+                                      {o.deals}
+                                    </button>
+                                  </td>
                                   <td className="px-3 py-2 text-right text-gray-500">{formatEur(o.mrrPotential)}</td>
                                   <td className="px-3 py-2 text-right font-medium text-violet-700">{formatEur(o.mrrForecast)}</td>
                                 </tr>
@@ -857,47 +758,16 @@ export default function LeadAnalyticsPage() {
                         </div>
                       )}
 
-                      <details className="group">
-                        <summary className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700">
-                          Dettaglio lead ({fc.contacts.length})
-                        </summary>
-                        <div className="mt-2 overflow-x-auto">
-                          <table className="min-w-full text-xs">
-                            <thead>
-                              <tr className="bg-violet-50/50">
-                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Lead</th>
-                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Status</th>
-                                <th className="px-2 py-1.5 text-right font-medium text-gray-500">MRR</th>
-                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">QR inviato</th>
-                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Inizio FT</th>
-                                <th className="px-2 py-1.5 text-left font-medium text-gray-500">Close date</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {fc.contacts.map((c) => (
-                                <tr key={c.id} className="border-b last:border-0">
-                                  <td className="px-2 py-1.5">
-                                    <Link href={`/?search=${encodeURIComponent(c.name)}`} className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline">{c.name}</Link>
-                                    {c.email && <span className="ml-1 text-gray-400">{c.email}</span>}
-                                  </td>
-                                  <td className="px-2 py-1.5">
-                                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${c.status === "free trial iniziato" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}>
-                                      {statusLabel(c.status)}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 py-1.5 text-right">{formatEur(c.mrr)}</td>
-                                  <td className="px-2 py-1.5 text-gray-500">{c.qrEnteredAt ? new Date(c.qrEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
-                                  <td className="px-2 py-1.5 text-gray-500">{c.ftEnteredAt ? new Date(c.ftEnteredAt).toLocaleDateString("it-IT") : "—"}</td>
-                                  <td className="px-2 py-1.5 text-gray-500">
-                                    {(() => { const d = new Date(c.closeDateAt || (c as any).deadlineAt); return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("it-IT"); })()}
-                                    {c.isManualCloseDate && <span className="ml-1 text-violet-500 text-[9px]" title="Impostata manualmente">✎</span>}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </details>
+                      <button
+                        className="text-xs font-medium text-violet-600 hover:text-violet-800 hover:underline cursor-pointer"
+                        onClick={() => setGenericDrilldown({
+                          title: `Prove attive (${fc.contacts.length})`,
+                          dotColor: "bg-violet-500",
+                          contacts: fc.contacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
+                        })}
+                      >
+                        Vedi tutti i lead ({fc.contacts.length}) →
+                      </button>
                     </>
                   )}
                 </CardContent>
@@ -1083,6 +953,16 @@ export default function LeadAnalyticsPage() {
           ownerName={drilldown.ownerName}
           category={drilldown.category}
           contacts={drilldown.contacts}
+        />
+      )}
+
+      {genericDrilldown && (
+        <LeadDrilldownSheet
+          open={!!genericDrilldown}
+          onOpenChange={(v) => { if (!v) setGenericDrilldown(null); }}
+          title={genericDrilldown.title}
+          dotColor={genericDrilldown.dotColor}
+          contacts={genericDrilldown.contacts}
         />
       )}
     </div>

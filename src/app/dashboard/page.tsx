@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CallbackDialog } from "@/components/ui/callback-dialog";
-import { ContactSheet } from "@/components/ui/contact-sheet";
+import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Loader2,
@@ -545,8 +545,8 @@ export default function DashboardPage() {
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
-  const [sheetContactId, setSheetContactId] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
 
   const defaultOwnerId = useMemo(() => (user?._id ? user._id : "all"), [user?._id]);
 
@@ -595,24 +595,26 @@ export default function DashboardPage() {
     loadDashboard(owner);
   };
 
-  const handleContactClick = (id: string) => {
-    setSheetContactId(id);
-    setSheetOpen(true);
+  const handleContactClick = async (id: string) => {
+    try {
+      const res = await apiClient.getContact(id);
+      if (res.success && res.data) {
+        setSelectedContact(res.data);
+        setIsContactSidebarOpen(true);
+      }
+    } catch {
+      // silent
+    }
   };
 
-  const handleSheetCallbackRequest = (contact: Contact) => {
-    setSelectedCallbackItem({
-      _id: contact._id,
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone,
-      status: contact.status,
-      source: contact.source,
-      createdAt: contact.createdAt,
-      updatedAt: contact.updatedAt,
-      properties: contact.properties as DashboardListItem["properties"],
-    });
-    setCallbackDialogOpen(true);
+  const handleCloseSidebar = () => {
+    setIsContactSidebarOpen(false);
+    setSelectedContact(null);
+  };
+
+  const handleContactUpdate = (updatedContact: Contact) => {
+    setSelectedContact(updatedContact);
+    loadDashboard(owner);
   };
 
   if (authLoading) {
@@ -641,9 +643,11 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <ModernSidebar />
+      <div className={`transition-all duration-300 ${isContactSidebarOpen ? 'blur-sm' : ''}`}>
+        <ModernSidebar />
+      </div>
 
-      <main className="pl-16">
+      <main className={`pl-16 transition-all duration-300 ${isContactSidebarOpen ? 'blur-sm' : ''}`}>
         <div className="container mx-auto py-6 px-6 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -858,12 +862,12 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Contact Detail Sheet */}
-      <ContactSheet
-        contactId={sheetContactId}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        onCallbackRequest={handleSheetCallbackRequest}
+      {/* Sidebar dettaglio contatto */}
+      <ContactDetailSidebar
+        contact={selectedContact}
+        isOpen={isContactSidebarOpen}
+        onClose={handleCloseSidebar}
+        onContactUpdate={handleContactUpdate}
       />
     </div>
   );

@@ -361,7 +361,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   // Funzione per aggiornare l'owner del contatto
   const handleOwnerChange = async (newOwnerId: string) => {
-    if (!contact || !editedContact || newOwnerId === contact.owner._id) return;
+    if (!contact || !editedContact || newOwnerId === contact.owner?._id) return;
 
     try {
       setIsUpdatingOwner(true);
@@ -612,7 +612,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       Proprietario
                     </label>
                     <Select 
-                      value={editedContact.owner._id} 
+                      value={editedContact.owner?._id || ""} 
                       onValueChange={handleOwnerChange}
                       disabled={isUpdatingOwner || isLoadingUsers}
                     >

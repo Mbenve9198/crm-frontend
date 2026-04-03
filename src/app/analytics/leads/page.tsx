@@ -582,7 +582,7 @@ export default function LeadAnalyticsPage() {
                     </thead>
                     <tbody>
                       {Object.entries(cohortData.sources).map(([srcKey, src]) => {
-                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey;
+                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey === "manual" ? "Manuale" : srcKey === "csv_import" ? "CSV Import" : srcKey;
                         const openFunnelDrilldown = (label: string, color: string, contacts: { id: string; name: string; email?: string; source?: string; mrr?: number | null }[]) => {
                           setGenericDrilldown({
                             title: `${srcLabel} · ${label}`,
@@ -796,6 +796,8 @@ export default function LeadAnalyticsPage() {
                 <option value="all">Tutte le sorgenti</option>
                 <option value="smartlead_outbound">Smartlead Outbound</option>
                 <option value="inbound_rank_checker">Rank Checker Inbound</option>
+                <option value="manual">Manuale</option>
+                <option value="csv_import">CSV Import</option>
               </select>
               <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
                 {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}

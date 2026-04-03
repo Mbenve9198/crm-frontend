@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote } from "lucide-react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
@@ -46,6 +46,20 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   // Stato per il dialog callback/richiamo
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
+
+  // Stato per conversazioni AI Agent
+  const [agentConversations, setAgentConversations] = useState<Array<{
+    _id: string;
+    status: string;
+    stage: string;
+    channel: string;
+    agentIdentity: { name: string; surname: string };
+    messages: Array<{ role: string; content: string; channel: string; createdAt: string }>;
+    metrics: { messagesCount: number; agentMessagesCount: number; humanInterventions: number };
+    context: { nextAction?: string };
+    updatedAt: string;
+  }>>([]);
+  const [isLoadingAgent, setIsLoadingAgent] = useState(false);
 
   // Stato per nuova activity
   const [newActivity, setNewActivity] = useState<CreateActivityRequest>({
@@ -109,10 +123,28 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   }, [contact]);
 
+  const loadAgentConversations = useCallback(async () => {
+    if (!contact) return;
+    try {
+      setIsLoadingAgent(true);
+      const res = await apiClient.request<{ data: typeof agentConversations; total: number }>(
+        `/agent/conversations?contactId=${contact._id}&status=all&limit=10`
+      );
+      if (res.success && res.data) {
+        setAgentConversations(res.data.data || []);
+      }
+    } catch {
+      // Agent endpoint potrebbe non esistere ancora
+    } finally {
+      setIsLoadingAgent(false);
+    }
+  }, [contact]);
+
   // Carica activities quando cambia il contatto
   useEffect(() => {
     if (contact && isOpen) {
       loadActivities();
+      loadAgentConversations();
       setEditedContact({ ...contact });
       
       // Se c'è un'activity iniziale, apri il form e precompilalo
@@ -878,6 +910,77 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
           {/* Colonna destra - Activities */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
+
+            {/* Sezione AI Agent */}
+            {agentConversations.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <Bot className="h-4 w-4 text-purple-600" />
+                  <h4 className="font-semibold text-purple-900">AI Agent</h4>
+                </div>
+                {agentConversations.map((conv) => {
+                  const statusColors: Record<string, string> = {
+                    active: 'bg-green-100 text-green-700',
+                    awaiting_human: 'bg-orange-100 text-orange-700',
+                    paused: 'bg-gray-100 text-gray-600',
+                    escalated: 'bg-blue-100 text-blue-700',
+                    converted: 'bg-emerald-100 text-emerald-700',
+                    dead: 'bg-red-100 text-red-600',
+                  };
+                  const stageLabels: Record<string, string> = {
+                    initial_reply: 'Prima risposta',
+                    objection_handling: 'Gestione obiezioni',
+                    qualification: 'Qualificazione',
+                    scheduling: 'Prenotazione call',
+                    handoff: 'Passaggio al team',
+                  };
+                  return (
+                    <div key={conv._id} className="border border-purple-200 rounded-lg p-3 mb-2 bg-purple-50/50">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[conv.status] || 'bg-gray-100'}`}>
+                            {conv.status === 'awaiting_human' ? 'In attesa review' : conv.status}
+                          </span>
+                          <span className="text-xs text-gray-500">{stageLabels[conv.stage] || conv.stage}</span>
+                        </div>
+                        {conv.status === 'awaiting_human' && (
+                          <a href={`/agent/review?id=${conv._id}`} className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1">
+                            Review <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mb-2">
+                        Agent: {conv.agentIdentity?.name} | {conv.metrics.messagesCount} msg | {conv.metrics.humanInterventions} interventi umani
+                      </div>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                        {conv.messages.slice(-6).map((msg, i) => (
+                          <div key={i} className={`text-xs p-1.5 rounded ${
+                            msg.role === 'lead' ? 'bg-white border' :
+                            msg.role === 'human' ? 'bg-blue-50 border border-blue-200' :
+                            'bg-purple-100 border border-purple-200'
+                          }`}>
+                            <span className="font-medium text-gray-500">
+                              {msg.role === 'lead' ? 'Lead' : msg.role === 'human' ? 'Marco' : 'AI'}
+                            </span>
+                            <span className="text-gray-400 ml-1">
+                              {new Date(msg.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {msg.channel === 'whatsapp' && <MessageCircle className="inline h-3 w-3 text-green-500 ml-1" />}
+                            <p className="text-gray-700 mt-0.5 line-clamp-2">{msg.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {conv.context?.nextAction && (
+                        <div className="mt-2 text-xs text-orange-600 bg-orange-50 rounded p-1.5">
+                          Prossima azione: {conv.context.nextAction}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold">Cronologia Activities</h4>
               <Button 

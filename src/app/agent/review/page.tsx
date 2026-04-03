@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api";
@@ -59,7 +59,15 @@ interface Conversation {
   updatedAt: string;
 }
 
-export default function AgentReviewPage() {
+export default function AgentReviewPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-purple-600" /></div>}>
+      <AgentReviewPage />
+    </Suspense>
+  );
+}
+
+function AgentReviewPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const focusId = searchParams.get("id");

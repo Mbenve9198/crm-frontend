@@ -12,7 +12,7 @@ export type ContactStatus =
   | 'bad_data'
   | 'non_qualificato';
 
-export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api';
+export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api' | 'smartlead_outbound';
 
 export type RankCheckerData = {
   placeId?: string;

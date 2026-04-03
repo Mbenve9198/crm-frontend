@@ -648,6 +648,29 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     )}
                   </div>
 
+                  {/* Source */}
+                  {contact.source && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 block mb-1">Sorgente</label>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                        contact.source === 'smartlead_outbound' ? 'bg-blue-100 text-blue-700' :
+                        contact.source === 'inbound_rank_checker' ? 'bg-teal-100 text-teal-700' :
+                        contact.source === 'inbound_form' ? 'bg-violet-100 text-violet-700' :
+                        contact.source === 'inbound_api' ? 'bg-cyan-100 text-cyan-700' :
+                        contact.source === 'csv_import' ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {contact.source === 'smartlead_outbound' ? 'Smartlead Outbound' :
+                         contact.source === 'inbound_rank_checker' ? 'Rank Checker Inbound' :
+                         contact.source === 'inbound_form' ? 'Form Inbound' :
+                         contact.source === 'inbound_api' ? 'API Inbound' :
+                         contact.source === 'csv_import' ? 'CSV Import' :
+                         contact.source === 'manual' ? 'Manuale' :
+                         contact.source}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Sezione Richiamo - visibile se status "da richiamare" */}
                   {contact.status === 'da richiamare' && (
                     <div className="border-t pt-4">

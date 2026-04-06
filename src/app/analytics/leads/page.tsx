@@ -125,6 +125,7 @@ export default function LeadAnalyticsPage() {
   const [closeDateFrom, setCloseDateFrom] = useState(defaultFrom);
   const [closeDateTo, setCloseDateTo] = useState(defaultTo);
 
+  const [wonFilterEnabled, setWonFilterEnabled] = useState(false);
   const [wonFrom, setWonFrom] = useState(defaultFrom);
   const [wonTo, setWonTo] = useState(defaultTo);
 
@@ -167,7 +168,7 @@ export default function LeadAnalyticsPage() {
       setIsLoadingOwner(true);
       setError(null);
       setDrilldown(null);
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, wonFrom, wonTo });
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
       if (res.success && res.data) setData(res.data);
       else setError(res.message || "Errore nel caricamento");
     } catch (err) {
@@ -180,7 +181,7 @@ export default function LeadAnalyticsPage() {
   const loadTrials = async () => {
     try {
       setIsLoadingTrials(true);
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, wonFrom, wonTo });
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
       if (res.success && res.data) setData(prev => prev ? { ...prev, forecast: res.data!.forecast } : res.data!);
     } catch {
       // silent
@@ -196,7 +197,7 @@ export default function LeadAnalyticsPage() {
       setIsLoadingTrials(true);
       setError(null);
       const [ownerRes, cohortRes] = await Promise.all([
-        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, wonFrom, wonTo }),
+        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) }),
         apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo }),
       ]);
       if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
@@ -796,10 +797,22 @@ export default function LeadAnalyticsPage() {
               <span className="text-xs text-gray-400">–</span>
               <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={ownerTo} onChange={(e) => setOwnerTo(e.target.value)} />
               <span className="text-xs text-gray-300">|</span>
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data chiusura (Won)</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonFrom} onChange={(e) => setWonFrom(e.target.value)} />
-              <span className="text-xs text-gray-400">–</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonTo} onChange={(e) => setWonTo(e.target.value)} />
+              <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={wonFilterEnabled}
+                  onChange={(e) => setWonFilterEnabled(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data chiusura (Won)</span>
+              </label>
+              {wonFilterEnabled && (
+                <>
+                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonFrom} onChange={(e) => setWonFrom(e.target.value)} />
+                  <span className="text-xs text-gray-400">–</span>
+                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonTo} onChange={(e) => setWonTo(e.target.value)} />
+                </>
+              )}
               <select className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={source} onChange={(e) => setSource(e.target.value)}>
                 <option value="all">Tutte le sorgenti</option>
                 <option value="smartlead_outbound">Smartlead Outbound</option>

@@ -43,6 +43,7 @@ export type DashboardData = {
     callback: DashboardListItem[];
     freeTrial: DashboardListItem[];
     qrFollowUp: DashboardListItem[];
+    won: DashboardListItem[];
   };
 };
 

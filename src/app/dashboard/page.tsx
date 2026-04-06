@@ -840,6 +840,20 @@ export default function DashboardPage() {
               onContactClick={handleContactClick}
             />
 
+            <ThemedLeadsTable
+              title="Won"
+              count={data?.lists.won?.length || 0}
+              items={data?.lists.won || []}
+              headerBg="bg-green-50"
+              headerText="text-green-800"
+              badgeBg="bg-green-100"
+              badgeText="text-green-700"
+              accentBorder="border-t-green-600"
+              emptyIcon={<Trophy className="h-8 w-8" />}
+              emptyMessage="Nessun deal vinto — il prossimo è dietro l'angolo!"
+              onContactClick={handleContactClick}
+            />
+
             <CallbackTable
               items={data?.lists.callback || []}
               onSetCallback={handleOpenCallbackDialog}

@@ -187,9 +187,9 @@ function AgentReviewPage() {
   const getAgentDraft = (conv: Conversation) => conv.messages.filter((m) => m.role === "agent").pop();
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50">
       <ModernSidebar />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="pl-16 flex h-full overflow-hidden">
         {/* Lista conversazioni */}
         <div className="w-96 border-r bg-white overflow-y-auto">
           <div className="p-4 border-b">

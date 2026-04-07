@@ -120,7 +120,7 @@ export default function LeadAnalyticsPage() {
 
   const [ownerFrom, setOwnerFrom] = useState(defaultFrom);
   const [ownerTo, setOwnerTo] = useState(defaultTo);
-  const [source, setSource] = useState("all");
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
 
   const [closeDateFrom, setCloseDateFrom] = useState(defaultFrom);
   const [closeDateTo, setCloseDateTo] = useState(defaultTo);
@@ -168,7 +168,8 @@ export default function LeadAnalyticsPage() {
       setIsLoadingOwner(true);
       setError(null);
       setDrilldown(null);
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
+      const sourceParam = selectedSources.length > 0 ? selectedSources.join(",") : "all";
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
       if (res.success && res.data) setData(res.data);
       else setError(res.message || "Errore nel caricamento");
     } catch (err) {
@@ -181,7 +182,8 @@ export default function LeadAnalyticsPage() {
   const loadTrials = async () => {
     try {
       setIsLoadingTrials(true);
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
+      const sourceParam = selectedSources.length > 0 ? selectedSources.join(",") : "all";
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
       if (res.success && res.data) setData(prev => prev ? { ...prev, forecast: res.data!.forecast } : res.data!);
     } catch {
       // silent
@@ -197,7 +199,7 @@ export default function LeadAnalyticsPage() {
       setIsLoadingTrials(true);
       setError(null);
       const [ownerRes, cohortRes] = await Promise.all([
-        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) }),
+        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: selectedSources.length > 0 ? selectedSources.join(",") : "all", closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) }),
         apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo }),
       ]);
       if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
@@ -813,13 +815,40 @@ export default function LeadAnalyticsPage() {
                   <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonTo} onChange={(e) => setWonTo(e.target.value)} />
                 </>
               )}
-              <select className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={source} onChange={(e) => setSource(e.target.value)}>
-                <option value="all">Tutte le sorgenti</option>
-                <option value="smartlead_outbound">Smartlead Outbound</option>
-                <option value="inbound_rank_checker">Rank Checker Inbound</option>
-                <option value="manual">Manuale</option>
-                <option value="csv_import">CSV Import</option>
-              </select>
+              <span className="text-xs text-gray-300">|</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {([
+                  ["smartlead_outbound", "Smartlead"],
+                  ["inbound_rank_checker", "Rank Checker"],
+                  ["manual", "Manuale"],
+                  ["csv_import", "CSV"],
+                ] as const).map(([key, label]) => {
+                  const active = selectedSources.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedSources(prev => active ? prev.filter(s => s !== key) : [...prev, key])}
+                      className={`h-7 rounded-full px-2.5 text-xs font-medium border transition-colors ${
+                        active
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                {selectedSources.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSources([])}
+                    className="h-7 px-2 text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
                 {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica
@@ -959,6 +988,21 @@ export default function LeadAnalyticsPage() {
                     <tbody>
                       {sorted.map((r) => renderOwnerRow(r))}
                       {team && renderOwnerRow(team, true)}
+                      {team && team.cohort > 0 && (
+                        <tr className="bg-gradient-to-r from-emerald-50/80 to-green-50/80 border-t-2 border-emerald-300">
+                          <td colSpan={100} className="px-4 py-3">
+                            <div className="flex items-center gap-6 text-sm">
+                              <span className="font-semibold text-emerald-800 uppercase text-xs tracking-wide">Conversion Rate Lead → Won</span>
+                              <span className="text-emerald-700 font-bold text-lg">
+                                {(team.cohort > 0 ? (team.won / team.cohort * 100) : 0).toFixed(1)}%
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                ({team.won} won su {team.cohort} lead)
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

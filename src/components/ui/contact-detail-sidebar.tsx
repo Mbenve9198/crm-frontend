@@ -7,7 +7,7 @@ import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Badge } from "./badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { Contact, ContactStatus, User } from "@/types/contact";
+import { Contact, ContactStatus, ContactSource, User } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
@@ -361,6 +361,25 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   }, []);
 
+  const [isUpdatingSource, setIsUpdatingSource] = useState(false);
+
+  const handleSourceChange = async (newSource: ContactSource) => {
+    if (!contact || !editedContact || newSource === contact.source) return;
+    try {
+      setIsUpdatingSource(true);
+      const response = await apiClient.updateContact(contact._id, { source: newSource });
+      if (response.success && response.data) {
+        onContactUpdate(response.data);
+        setEditedContact(response.data);
+      }
+    } catch (error) {
+      console.error('Errore aggiornamento sorgente:', error);
+      if (contact) setEditedContact({ ...contact });
+    } finally {
+      setIsUpdatingSource(false);
+    }
+  };
+
   // Funzione per aggiornare l'owner del contatto
   const handleOwnerChange = async (newOwnerId: string) => {
     if (!contact || !editedContact || newOwnerId === contact.owner?._id) return;
@@ -651,27 +670,41 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   </div>
 
                   {/* Source */}
-                  {contact.source && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 block mb-1">Sorgente</label>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                        contact.source === 'smartlead_outbound' ? 'bg-blue-100 text-blue-700' :
-                        contact.source === 'inbound_rank_checker' ? 'bg-teal-100 text-teal-700' :
-                        contact.source === 'inbound_form' ? 'bg-violet-100 text-violet-700' :
-                        contact.source === 'inbound_api' ? 'bg-cyan-100 text-cyan-700' :
-                        contact.source === 'csv_import' ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
-                        {contact.source === 'smartlead_outbound' ? 'Smartlead Outbound' :
-                         contact.source === 'inbound_rank_checker' ? 'Rank Checker Inbound' :
-                         contact.source === 'inbound_form' ? 'Form Inbound' :
-                         contact.source === 'inbound_api' ? 'API Inbound' :
-                         contact.source === 'csv_import' ? 'CSV Import' :
-                         contact.source === 'manual' ? 'Manuale' :
-                         contact.source}
-                      </span>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-1">Sorgente</label>
+                    <Select
+                      value={editedContact?.source || contact.source || 'manual'}
+                      onValueChange={(v) => handleSourceChange(v as ContactSource)}
+                      disabled={isUpdatingSource}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {([
+                          ['smartlead_outbound', 'Smartlead Outbound', 'bg-blue-500'],
+                          ['inbound_rank_checker', 'Rank Checker Inbound', 'bg-teal-500'],
+                          ['inbound_form', 'Form Inbound', 'bg-violet-500'],
+                          ['inbound_api', 'API Inbound', 'bg-cyan-500'],
+                          ['csv_import', 'CSV Import', 'bg-orange-500'],
+                          ['manual', 'Manuale', 'bg-gray-500'],
+                        ] as const).map(([value, label, dot]) => (
+                          <SelectItem key={value} value={value}>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${dot}`} />
+                              {label}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isUpdatingSource && (
+                      <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b border-blue-600"></div>
+                        Aggiornamento in corso...
+                      </div>
+                    )}
+                  </div>
 
                   {/* Sezione Richiamo - visibile se status "da richiamare" */}
                   {contact.status === 'da richiamare' && (

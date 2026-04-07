@@ -84,8 +84,9 @@ export type UpdateContactRequest = {
   lists?: string[];
   properties?: Record<string, string | number | boolean>;
   status?: ContactStatus;
+  source?: ContactSource;
   mrr?: number;
-  owner?: string; // Owner come ID stringa per l'aggiornamento
+  owner?: string;
 };
 
 export type User = {

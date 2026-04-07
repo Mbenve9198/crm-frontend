@@ -82,9 +82,9 @@ function AgentReviewPage() {
 
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await apiClient.request<{ data: Conversation[]; total: number }>("/agent/conversations?status=awaiting_human&limit=50");
+      const res = await apiClient.request<Conversation[]>("/agent/conversations?status=awaiting_human&limit=50");
       if (res.success && res.data) {
-        setConversations(res.data.data || []);
+        setConversations(Array.isArray(res.data) ? res.data : []);
       }
     } catch (err) {
       console.error("Errore fetch conversazioni:", err);
@@ -93,9 +93,9 @@ function AgentReviewPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await apiClient.request<{ data: { active: number; awaitingHuman: number; converted: number; lost: number } }>("/agent/stats");
+      const res = await apiClient.request<{ active: number; awaitingHuman: number; converted: number; lost: number }>("/agent/stats");
       if (res.success && res.data) {
-        setStats(res.data.data);
+        setStats(res.data);
       }
     } catch (err) {
       console.error("Errore fetch stats:", err);
@@ -104,9 +104,9 @@ function AgentReviewPage() {
 
   const fetchConversationDetail = useCallback(async (id: string) => {
     try {
-      const res = await apiClient.request<{ data: Conversation }>(`/agent/conversations/${id}`);
+      const res = await apiClient.request<Conversation>(`/agent/conversations/${id}`);
       if (res.success && res.data) {
-        setSelectedConv(res.data.data);
+        setSelectedConv(res.data);
       }
     } catch (err) {
       console.error("Errore fetch dettaglio:", err);
@@ -121,10 +121,10 @@ function AgentReviewPage() {
   }, [authLoading, isAuthenticated, fetchConversations, fetchStats]);
 
   useEffect(() => {
-    if (focusId && conversations.length > 0) {
+    if (focusId) {
       fetchConversationDetail(focusId);
     }
-  }, [focusId, conversations, fetchConversationDetail]);
+  }, [focusId, fetchConversationDetail]);
 
   const handleApprove = async () => {
     if (!selectedConv) return;

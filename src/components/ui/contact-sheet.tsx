@@ -87,6 +87,7 @@ const activityTypeConfig: Record<string, { label: string; color: string }> = {
   instagram_dm: { label: "Instagram", color: "bg-pink-500" },
   status_change: { label: "Status", color: "bg-gray-400" },
   note: { label: "Nota", color: "bg-yellow-500" },
+  ai_agent: { label: "AI Agent", color: "bg-violet-500" },
 };
 
 export function ContactSheet({

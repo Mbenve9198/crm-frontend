@@ -288,7 +288,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       whatsapp: MessageCircle,
       instagram_dm: Instagram,
       status_change: ArrowRight,
-      note: StickyNote
+      note: StickyNote,
+      ai_agent: Bot
     };
     return iconMap[type] || Mail;
   };
@@ -300,7 +301,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       whatsapp: 'bg-emerald-100 text-emerald-800',
       instagram_dm: 'bg-purple-100 text-purple-800',
       status_change: 'bg-orange-100 text-orange-800',
-      note: 'bg-yellow-100 text-yellow-800'
+      note: 'bg-yellow-100 text-yellow-800',
+      ai_agent: 'bg-violet-100 text-violet-800'
     };
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };

@@ -1,6 +1,6 @@
 import { User } from './contact';
 
-export type ActivityType = 'email' | 'call' | 'whatsapp' | 'instagram_dm' | 'status_change' | 'note';
+export type ActivityType = 'email' | 'call' | 'whatsapp' | 'instagram_dm' | 'status_change' | 'note' | 'ai_agent';
 
 export type CallOutcome = 'interested' | 'not-interested' | 'callback' | 'voicemail' | 'wrong-number' | 'meeting-set' | 'sale-made' | 'no-answer' | 'busy';
 export type ActivityStatus = 'completed' | 'pending' | 'failed';

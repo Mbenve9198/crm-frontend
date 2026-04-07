@@ -7,7 +7,8 @@ import { apiClient } from "@/lib/api";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import {
   Loader2, Bot, CheckCircle, XCircle, Edit3, Send, Clock,
-  AlertTriangle, MessageSquare, Mail, Phone, Search, Filter
+  AlertTriangle, MessageSquare, Mail, Phone, Search, Filter,
+  ChevronDown, ChevronRight, Sparkles, Target, FileSearch
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +30,7 @@ interface ConversationMessage {
     isDraft?: boolean;
     draftSubject?: string;
     whatsappDraft?: string;
+    supersededBy?: string;
   };
 }
 
@@ -55,6 +57,13 @@ interface Conversation {
     objections?: string[];
     nextAction?: string;
     humanNotes?: Array<{ note: string; at: string }>;
+    aiProcess?: {
+      researchSummary?: string;
+      strategy?: string;
+      reasoning?: string;
+      generatedAt?: string;
+    };
+    lastResearchSummary?: string;
   };
   metrics: {
     messagesCount: number;
@@ -110,6 +119,7 @@ function AgentReviewPage() {
   const [editEmailContent, setEditEmailContent] = useState("");
   const [editEmailSubject, setEditEmailSubject] = useState("");
   const [editWaContent, setEditWaContent] = useState("");
+  const [aiProcessOpen, setAiProcessOpen] = useState(false);
 
   const fetchConversations = useCallback(async (status: string, search?: string) => {
     try {
@@ -161,6 +171,46 @@ function AgentReviewPage() {
       fetchConversationDetail(focusId);
     }
   }, [focusId, fetchConversationDetail]);
+
+  const filterThreadMessages = (conv: Conversation) => {
+    const msgs = conv.messages;
+    const visible: Array<{ type: "lead" | "sent" | "draft-pending"; msg: ConversationMessage }> = [];
+
+    for (let i = 0; i < msgs.length; i++) {
+      const m = msgs[i];
+
+      if (m.role === "lead") {
+        visible.push({ type: "lead", msg: m });
+        continue;
+      }
+
+      if (m.metadata?.supersededBy) continue;
+
+      if (m.metadata?.isDraft && conv.status === "awaiting_human") continue;
+
+      if (m.role === "agent" && !m.metadata?.wasAutoSent && !m.metadata?.isDraft) {
+        const hasLaterSent = msgs.slice(i + 1).some(
+          n => n.role === "agent" && (n.metadata?.wasAutoSent || n.metadata?.humanEdited)
+        );
+        if (hasLaterSent) continue;
+
+        const hasLaterHuman = msgs.slice(i + 1).some(
+          n => n.role === "human" && n.metadata?.humanEdited
+        );
+        if (hasLaterHuman) continue;
+
+        if (conv.status === "awaiting_human") continue;
+      }
+
+      if (m.role === "human" && m.metadata?.humanEdited) {
+        const prevAgent = msgs.slice(0, i).reverse().find(n => n.role === "agent");
+        if (prevAgent && prevAgent.content === m.content) continue;
+      }
+
+      visible.push({ type: "sent", msg: m });
+    }
+    return visible;
+  };
 
   const resetEditState = () => {
     setEditEmailMode(false);
@@ -415,27 +465,96 @@ function AgentReviewPage() {
 
                 {/* Thread */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {selectedConv.messages.map((msg) => (
-                    <div key={msg._id} className={`flex ${msg.role === "lead" ? "justify-start" : "justify-end"}`}>
-                      <div className={`max-w-[70%] rounded-lg p-3 ${
-                        msg.role === "lead" ? "bg-white border shadow-sm" :
-                        msg.role === "human" ? "bg-blue-50 border border-blue-200" :
-                        "bg-purple-50 border border-purple-200"
-                      }`}>
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-[10px] font-medium text-gray-500">
-                            {msg.role === "lead" ? "Lead" : msg.role === "human" ? "Umano" : "AI"}
-                          </span>
-                          {msg.channel === "whatsapp" ? <MessageSquare className="h-3 w-3 text-green-500" /> : <Mail className="h-3 w-3 text-blue-400" />}
-                          <span className="text-[10px] text-gray-300">
-                            {new Date(msg.createdAt).toLocaleString("it-IT", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
-                          </span>
-                          {msg.metadata?.isDraft && <Badge variant="outline" className="text-[9px] h-4 px-1 text-orange-600 border-orange-300">bozza</Badge>}
+                  {(() => {
+                    const visibleMsgs = filterThreadMessages(selectedConv);
+                    const aiProcess = selectedConv.context?.aiProcess;
+                    const research = aiProcess?.researchSummary || selectedConv.context?.lastResearchSummary;
+                    let aiCardShown = false;
+
+                    return visibleMsgs.map(({ type, msg }, idx) => {
+                      const showAiCard = !aiCardShown && type === "sent" && msg.role === "agent" && (research || aiProcess?.strategy);
+
+                      if (showAiCard) aiCardShown = true;
+
+                      return (
+                        <div key={msg._id}>
+                          {showAiCard && (
+                            <div className="flex justify-center mb-2">
+                              <Card className="w-full max-w-[85%] border-purple-200 bg-purple-50/50">
+                                <CardContent className="p-3">
+                                  <button
+                                    className="flex items-center gap-2 w-full text-left"
+                                    onClick={() => setAiProcessOpen(!aiProcessOpen)}
+                                  >
+                                    {aiProcessOpen ? <ChevronDown className="h-3.5 w-3.5 text-purple-500" /> : <ChevronRight className="h-3.5 w-3.5 text-purple-500" />}
+                                    <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                                    <span className="text-xs font-semibold text-purple-700">Processo AI</span>
+                                    <span className="text-[10px] text-purple-400 ml-auto">
+                                      {aiProcess?.generatedAt ? new Date(aiProcess.generatedAt).toLocaleString("it-IT", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" }) : ""}
+                                    </span>
+                                  </button>
+                                  {aiProcessOpen && (
+                                    <div className="mt-2 space-y-2 text-xs">
+                                      {research && (
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-0.5">
+                                            <FileSearch className="h-3 w-3 text-blue-500" />
+                                            <span className="font-semibold text-gray-600">Ricerca</span>
+                                          </div>
+                                          <p className="text-gray-600 whitespace-pre-wrap pl-4 text-[11px] leading-relaxed">{research}</p>
+                                        </div>
+                                      )}
+                                      {aiProcess?.strategy && (
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-0.5">
+                                            <Target className="h-3 w-3 text-orange-500" />
+                                            <span className="font-semibold text-gray-600">Strategia</span>
+                                          </div>
+                                          <p className="text-gray-600 pl-4 text-[11px]">{aiProcess.strategy}</p>
+                                        </div>
+                                      )}
+                                      {aiProcess?.reasoning && (
+                                        <div>
+                                          <div className="flex items-center gap-1 mb-0.5">
+                                            <Bot className="h-3 w-3 text-purple-500" />
+                                            <span className="font-semibold text-gray-600">Ragionamento</span>
+                                          </div>
+                                          <p className="text-gray-600 pl-4 text-[11px] italic">{aiProcess.reasoning}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            </div>
+                          )}
+
+                          <div className={`flex ${msg.role === "lead" ? "justify-start" : "justify-end"}`}>
+                            <div className={`max-w-[70%] rounded-lg p-3 ${
+                              msg.role === "lead" ? "bg-white border shadow-sm" :
+                              "bg-purple-50 border border-purple-200"
+                            }`}>
+                              <div className="flex items-center gap-1.5 mb-1">
+                                <span className="text-[10px] font-medium text-gray-500">
+                                  {msg.role === "lead" ? "Lead" : "AI Agent"}
+                                </span>
+                                {msg.channel === "whatsapp" ? <MessageSquare className="h-3 w-3 text-green-500" /> : <Mail className="h-3 w-3 text-blue-400" />}
+                                <span className="text-[10px] text-gray-300">
+                                  {new Date(msg.createdAt).toLocaleString("it-IT", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
+                                </span>
+                                {msg.metadata?.wasAutoSent && (
+                                  <Badge variant="outline" className="text-[9px] h-4 px-1 text-green-600 border-green-300">
+                                    {msg.metadata?.humanEdited ? "Modificato e inviato" : "Inviato"}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">{msg.content}</p>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* Approval Panel */}

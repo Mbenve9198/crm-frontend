@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Loader2,
   BarChart3,
@@ -26,6 +27,9 @@ import {
   Pause,
   DollarSign,
   Target,
+  CalendarRange,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 
 function formatDateInput(date: Date): string {
@@ -106,6 +110,134 @@ function TrendArrow({ delta }: { delta: number | null }) {
     <span className="inline-flex items-center justify-end w-[42px] text-red-600 text-[10px] font-bold">
       <TrendingDown className="h-3 w-3 mr-0.5" />{delta}
     </span>
+  );
+}
+
+const ALL_SOURCES = [
+  ["smartlead_outbound", "Smartlead Outbound"],
+  ["inbound_rank_checker", "Rank Checker Inbound"],
+  ["inbound_form", "Form Inbound"],
+  ["inbound_api", "API Inbound"],
+  ["csv_import", "CSV Import"],
+  ["manual", "Manuale"],
+] as const;
+
+function formatRange(from: string, to: string) {
+  const fmt = (d: string) => {
+    const [y, m, dd] = d.split("-");
+    return `${dd}/${m}/${y}`;
+  };
+  if (!from && !to) return "Seleziona";
+  if (from && to) return `${fmt(from)} – ${fmt(to)}`;
+  if (from) return `da ${fmt(from)}`;
+  return `fino a ${fmt(to)}`;
+}
+
+function DateRangePopover({
+  label,
+  from,
+  to,
+  onFromChange,
+  onToChange,
+  color = "blue",
+}: {
+  label: string;
+  from: string;
+  to: string;
+  onFromChange: (v: string) => void;
+  onToChange: (v: string) => void;
+  color?: string;
+}) {
+  const ringClass = `focus-visible:ring-${color}-500`;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`inline-flex items-center gap-1.5 h-8 rounded-md border border-gray-200 bg-white px-2.5 text-xs shadow-xs hover:border-${color}-300 hover:bg-${color}-50/30 transition-colors`}
+        >
+          <CalendarRange className={`h-3.5 w-3.5 text-${color}-500`} />
+          <span className="font-medium text-gray-600">{label}:</span>
+          <span className={`font-semibold text-${color}-700`}>{formatRange(from, to)}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3 space-y-2">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+        <div className="flex items-center gap-2">
+          <div className="space-y-1">
+            <label className="text-[10px] text-gray-400 uppercase">Da</label>
+            <input type="date" className={`h-8 w-36 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 ${ringClass}`} value={from} onChange={(e) => onFromChange(e.target.value)} />
+          </div>
+          <span className="text-gray-300 mt-4">–</span>
+          <div className="space-y-1">
+            <label className="text-[10px] text-gray-400 uppercase">A</label>
+            <input type="date" className={`h-8 w-36 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 ${ringClass}`} value={to} onChange={(e) => onToChange(e.target.value)} />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function SourceMultiSelect({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const label = selected.length === 0
+    ? "Tutte le sorgenti"
+    : selected.length === 1
+      ? (ALL_SOURCES.find(([k]) => k === selected[0])?.[1] ?? selected[0])
+      : `${selected.length} sorgenti`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 h-8 rounded-md border border-gray-200 bg-white px-2.5 text-xs shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
+        >
+          <span className="font-medium text-gray-600">Sorgente:</span>
+          <span className="font-semibold text-blue-700">{label}</span>
+          <ChevronDown className="h-3 w-3 text-gray-400" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2">
+        <div className="space-y-0.5">
+          {ALL_SOURCES.map(([key, lbl]) => {
+            const active = selected.includes(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onChange(active ? selected.filter(s => s !== key) : [...selected, key])}
+                className={`w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                  active ? "bg-blue-50 text-blue-800" : "text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <div className={`h-4 w-4 rounded border flex items-center justify-center ${
+                  active ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                }`}>
+                  {active && <Check className="h-3 w-3 text-white" />}
+                </div>
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full mt-1.5 pt-1.5 border-t text-xs text-gray-500 hover:text-gray-700 text-center"
+          >
+            Rimuovi filtri
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -543,12 +675,9 @@ export default function LeadAnalyticsPage() {
             </div>
             <form
               onSubmit={(e) => { e.preventDefault(); loadFunnel(); }}
-              className="flex flex-wrap items-center gap-3 px-5 py-3 bg-indigo-50/40 border-b"
+              className="flex flex-wrap items-center gap-2 px-5 py-2.5 bg-indigo-50/40 border-b"
             >
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data creazione</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" value={funnelFrom} onChange={(e) => setFunnelFrom(e.target.value)} />
-              <span className="text-xs text-gray-400">–</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500" value={funnelTo} onChange={(e) => setFunnelTo(e.target.value)} />
+              <DateRangePopover label="Data creazione" from={funnelFrom} to={funnelTo} onFromChange={setFunnelFrom} onToChange={setFunnelTo} color="indigo" />
               <Button type="submit" size="sm" disabled={isLoadingFunnel} className="h-8 text-xs">
                 {isLoadingFunnel && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica
@@ -674,12 +803,9 @@ export default function LeadAnalyticsPage() {
                 </div>
                 <form
                   onSubmit={(e) => { e.preventDefault(); loadTrials(); }}
-                  className="flex flex-wrap items-center gap-3 px-5 py-3 bg-violet-50/40 border-b"
+                  className="flex flex-wrap items-center gap-2 px-5 py-2.5 bg-violet-50/40 border-b"
                 >
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data chiusura prevista</span>
-                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateFrom} onChange={(e) => setCloseDateFrom(e.target.value)} />
-                  <span className="text-xs text-gray-400">–</span>
-                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500" value={closeDateTo} onChange={(e) => setCloseDateTo(e.target.value)} />
+                  <DateRangePopover label="Data chiusura prevista" from={closeDateFrom} to={closeDateTo} onFromChange={setCloseDateFrom} onToChange={setCloseDateTo} color="violet" />
                   <Button type="submit" size="sm" disabled={isLoadingTrials} className="h-8 text-xs bg-violet-600 hover:bg-violet-700">
                     {isLoadingTrials && <Loader2 className="h-3 w-3 animate-spin" />}
                     Applica
@@ -792,63 +918,27 @@ export default function LeadAnalyticsPage() {
             </div>
             <form
               onSubmit={(e) => { e.preventDefault(); loadOwner(); }}
-              className="flex flex-wrap items-center gap-3 px-5 py-3 bg-blue-50/40 border-b"
+              className="flex flex-wrap items-center gap-2 px-5 py-2.5 bg-blue-50/40 border-b"
             >
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data creazione</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={ownerFrom} onChange={(e) => setOwnerFrom(e.target.value)} />
-              <span className="text-xs text-gray-400">–</span>
-              <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" value={ownerTo} onChange={(e) => setOwnerTo(e.target.value)} />
-              <span className="text-xs text-gray-300">|</span>
-              <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={wonFilterEnabled}
-                  onChange={(e) => setWonFilterEnabled(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                />
-                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Data chiusura (Won)</span>
-              </label>
-              {wonFilterEnabled && (
-                <>
-                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonFrom} onChange={(e) => setWonFrom(e.target.value)} />
-                  <span className="text-xs text-gray-400">–</span>
-                  <input type="date" className="h-8 rounded-md border border-gray-200 bg-white px-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500" value={wonTo} onChange={(e) => setWonTo(e.target.value)} />
-                </>
-              )}
-              <span className="text-xs text-gray-300">|</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {([
-                  ["smartlead_outbound", "Smartlead"],
-                  ["inbound_rank_checker", "Rank Checker"],
-                  ["manual", "Manuale"],
-                  ["csv_import", "CSV"],
-                ] as const).map(([key, label]) => {
-                  const active = selectedSources.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSelectedSources(prev => active ? prev.filter(s => s !== key) : [...prev, key])}
-                      className={`h-7 rounded-full px-2.5 text-xs font-medium border transition-colors ${
-                        active
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                {selectedSources.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSources([])}
-                    className="h-7 px-2 text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
+              <DateRangePopover label="Data creazione" from={ownerFrom} to={ownerTo} onFromChange={setOwnerFrom} onToChange={setOwnerTo} color="blue" />
+
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={wonFilterEnabled}
+                    onChange={(e) => setWonFilterEnabled(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap">Data chiusura (Won)</span>
+                </label>
+                {wonFilterEnabled && (
+                  <DateRangePopover label="Chiusura Won" from={wonFrom} to={wonTo} onFromChange={setWonFrom} onToChange={setWonTo} color="green" />
                 )}
               </div>
+
+              <SourceMultiSelect selected={selectedSources} onChange={setSelectedSources} />
+
               <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
                 {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica

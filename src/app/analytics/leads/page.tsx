@@ -717,7 +717,7 @@ export default function LeadAnalyticsPage() {
                     </thead>
                     <tbody>
                       {Object.entries(cohortData.sources).map(([srcKey, src]) => {
-                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey === "manual" ? "Manuale" : srcKey === "csv_import" ? "CSV Import" : srcKey;
+                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey === "inbound_form" ? "Form Inbound" : srcKey === "inbound_api" ? "API Inbound" : srcKey === "manual" ? "Manuale" : srcKey === "csv_import" ? "CSV Import" : srcKey;
                         const openFunnelDrilldown = (label: string, color: string, contacts: { id: string; name: string; email?: string; source?: string; mrr?: number | null }[]) => {
                           setGenericDrilldown({
                             title: `${srcLabel} · ${label}`,

@@ -46,7 +46,8 @@ import {
   Loader2,
   Tag,
   Upload,
-  UserCheck
+  UserCheck,
+  UserPlus
 } from "lucide-react";
 import { Contact, User, ColumnFilter, SortingState } from "@/types/contact";
 import { apiClient } from "@/lib/api";
@@ -55,6 +56,7 @@ import { PhoneActionDialog } from "./phone-action-dialog";
 import { CsvImportDialog } from "./csv-import";
 import { CallDialog } from "./call-dialog";
 import { BulkChangeOwnerDialog } from "./bulk-change-owner-dialog";
+import { CreateContactDialog } from "./create-contact-dialog";
 import { getStatusColor, getStatusLabel } from "@/lib/status-utils";
 import { ColumnFilterComponent } from "./column-filter";
 import { useTableFilters } from "@/hooks/useTableFilters";
@@ -155,6 +157,8 @@ function ContactsTable({
   // Stato per gli utenti disponibili per il filtro owner
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
   // 📋 NUOVO: Stato per tutte le liste disponibili (caricato da API separata)
   const [allAvailableLists, setAllAvailableLists] = useState<string[]>([]);
@@ -667,6 +671,16 @@ function ContactsTable({
               </Button>
             </div>
           )}
+
+          {/* Pulsante Nuovo contatto */}
+          <Button
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <UserPlus className="h-4 w-4" />
+            Nuovo contatto
+          </Button>
 
           {/* Pulsante Importa CSV */}
           <CsvImportDialog onImportComplete={onImportComplete}>
@@ -1337,6 +1351,13 @@ function ContactsTable({
           onAction={handlePhoneAction}
         />
       )}
+
+      {/* Dialog creazione contatto */}
+      <CreateContactDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onCreated={() => onRefresh?.()}
+      />
     </div>
   );
 }

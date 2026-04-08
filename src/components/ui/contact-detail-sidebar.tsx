@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink } from "lucide-react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink, CreditCard, RefreshCw, ExternalLink as LinkIcon } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
 import { Badge } from "./badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
-import { Contact, ContactStatus, ContactSource, User } from "@/types/contact";
+import { Contact, ContactStatus, ContactSource, User, StripeInvoice } from "@/types/contact";
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
@@ -24,6 +24,182 @@ interface ContactDetailSidebarProps {
     type: ActivityType;
     data?: object;
   };
+}
+
+const STRIPE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  active: { label: "Attivo", color: "bg-emerald-100 text-emerald-800" },
+  trialing: { label: "Trial", color: "bg-blue-100 text-blue-800" },
+  past_due: { label: "Pagamento in ritardo", color: "bg-amber-100 text-amber-800" },
+  canceled: { label: "Cancellato", color: "bg-red-100 text-red-800" },
+  incomplete: { label: "Incompleto", color: "bg-gray-100 text-gray-600" },
+  unpaid: { label: "Non pagato", color: "bg-red-100 text-red-700" },
+  paused: { label: "In pausa", color: "bg-gray-100 text-gray-600" },
+};
+
+function StripeSection({ contact, onContactUpdate }: { contact: Contact; onContactUpdate: (c: Contact) => void }) {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [invoices, setInvoices] = useState<StripeInvoice[]>([]);
+  const [showInvoices, setShowInvoices] = useState(false);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+
+  const sd = contact.stripeData;
+  const hasData = !!sd?.subscriptionId;
+
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await apiClient.stripeSyncContact(contact._id);
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+      }
+    } catch (err) {
+      console.error("Stripe sync error:", err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (showInvoices) { setShowInvoices(false); return; }
+    try {
+      setLoadingInvoices(true);
+      const res = await apiClient.stripeGetInvoices(contact._id);
+      if (res.success && res.data) setInvoices(res.data);
+      setShowInvoices(true);
+    } catch (err) {
+      console.error("Invoice load error:", err);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  };
+
+  const statusInfo = sd?.subscriptionStatus ? STRIPE_STATUS_LABELS[sd.subscriptionStatus] : null;
+
+  return (
+    <div className="border-t pt-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-indigo-600" />
+          <h4 className="font-medium text-gray-900">Stripe</h4>
+        </div>
+        <button
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+        >
+          <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
+          {isSyncing ? "Sync..." : "Sincronizza"}
+        </button>
+      </div>
+
+      {!hasData ? (
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-xs text-gray-500">Nessun abbonamento Stripe collegato.</p>
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="mt-2 text-xs font-medium text-indigo-600 hover:underline"
+          >
+            Cerca su Stripe
+          </button>
+        </div>
+      ) : (
+        <div className="bg-indigo-50/50 rounded-lg p-3 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Stato</span>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo?.color || "bg-gray-100 text-gray-600"}`}>
+              {statusInfo?.label || sd?.subscriptionStatus || "—"}
+            </span>
+          </div>
+          {sd?.planName && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Piano</span>
+              <span className="text-sm font-medium text-gray-900">{sd.planName}</span>
+            </div>
+          )}
+          {typeof sd?.mrrFromStripe === "number" && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">MRR (Stripe)</span>
+              <span className="text-sm font-bold text-emerald-700">€{sd.mrrFromStripe}</span>
+            </div>
+          )}
+          {sd?.subscriptionStartDate && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Inizio</span>
+              <span className="text-xs text-gray-900">
+                {new Date(sd.subscriptionStartDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+            </div>
+          )}
+          {sd?.currentPeriodEnd && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Prossimo rinnovo</span>
+              <span className="text-xs text-gray-900">
+                {new Date(sd.currentPeriodEnd).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+            </div>
+          )}
+          {sd?.paymentMethodBrand && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Pagamento</span>
+              <span className="text-xs text-gray-900 capitalize">{sd.paymentMethodBrand} •••• {sd.paymentMethodLast4}</span>
+            </div>
+          )}
+          {sd?.lastPaymentDate && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Ultimo pagamento</span>
+              <span className="text-xs text-gray-900">
+                €{sd.lastPaymentAmount} — {new Date(sd.lastPaymentDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+              </span>
+            </div>
+          )}
+          {sd?.syncedAt && (
+            <p className="text-[10px] text-gray-400 pt-1 border-t">
+              Ultimo sync: {new Date(sd.syncedAt).toLocaleString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          )}
+
+          <button
+            onClick={loadInvoices}
+            disabled={loadingInvoices}
+            className="text-xs font-medium text-indigo-600 hover:underline flex items-center gap-1"
+          >
+            {loadingInvoices ? "Caricamento..." : showInvoices ? "Nascondi fatture" : "Vedi fatture"}
+          </button>
+
+          {showInvoices && invoices.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between text-xs bg-white rounded px-2 py-1.5">
+                  <div>
+                    <span className="font-medium text-gray-900">€{inv.amount}</span>
+                    <span className="text-gray-400 ml-1.5">
+                      {new Date(inv.date).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "2-digit" })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      inv.status === "paid" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                    }`}>
+                      {inv.status === "paid" ? "Pagata" : inv.status}
+                    </span>
+                    {inv.invoiceUrl && (
+                      <a href={inv.invoiceUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-500 hover:text-indigo-700">
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {showInvoices && invoices.length === 0 && (
+            <p className="text-xs text-gray-400 text-center">Nessuna fattura trovata.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
@@ -706,6 +882,11 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       </div>
                     )}
                   </div>
+
+                  {/* Sezione Stripe */}
+                  {contact.status === 'won' || contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
+                    <StripeSection contact={contact} onContactUpdate={onContactUpdate} />
+                  ) : null}
 
                   {/* Sezione Richiamo - visibile se status "da richiamare" */}
                   {contact.status === 'da richiamare' && (

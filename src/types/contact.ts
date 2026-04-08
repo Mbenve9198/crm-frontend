@@ -42,6 +42,33 @@ export type RankCheckerData = {
   leadCapturedAt?: string;
 };
 
+export type StripeData = {
+  subscriptionId?: string;
+  subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'incomplete' | 'trialing' | 'unpaid' | 'paused' | null;
+  planName?: string;
+  planInterval?: string;
+  mrrFromStripe?: number;
+  subscriptionStartDate?: string;
+  currentPeriodEnd?: string;
+  canceledAt?: string;
+  lastPaymentDate?: string;
+  lastPaymentAmount?: number;
+  paymentMethodBrand?: string;
+  paymentMethodLast4?: string;
+  syncedAt?: string;
+};
+
+export type StripeInvoice = {
+  id: string;
+  number: string;
+  status: string;
+  amount: number;
+  currency: string;
+  date: string;
+  paidAt: string | null;
+  invoiceUrl: string;
+};
+
 export type Contact = {
   _id: string;
   name: string;
@@ -52,6 +79,8 @@ export type Contact = {
   status: ContactStatus;
   mrr?: number;
   source?: ContactSource;
+  stripeCustomerId?: string;
+  stripeData?: StripeData;
   rankCheckerData?: RankCheckerData;
   owner: {
     _id: string;

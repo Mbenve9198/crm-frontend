@@ -1,4 +1,4 @@
-import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest } from '@/types/contact';
+import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
 import { 
   Call, 
@@ -369,6 +369,20 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(contact),
     });
+  }
+
+  // === STRIPE ===
+
+  async stripeSyncContact(contactId: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/stripe/sync/${contactId}`, { method: 'POST' });
+  }
+
+  async stripeSyncAllWon(): Promise<ApiResponse<{ total: number; synced: number; notFound: number; errors: number }>> {
+    return this.request('/stripe/sync-all-won', { method: 'POST' });
+  }
+
+  async stripeGetInvoices(contactId: string): Promise<ApiResponse<StripeInvoice[]>> {
+    return this.request(`/stripe/invoices/${contactId}`);
   }
 
   async deleteContact(id: string): Promise<ApiResponse<void>> {

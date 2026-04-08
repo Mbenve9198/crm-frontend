@@ -115,6 +115,26 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
     }
   };
 
+  const handleUnlink = async () => {
+    if (!confirm("Sei sicuro di voler scollegare questo abbonamento Stripe?")) return;
+    try {
+      setIsSyncing(true);
+      const res = await apiClient.stripeUnlinkCustomer(contact._id);
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+        setShowInvoices(false);
+        setInvoices([]);
+        setSyncMessage({ type: "success", text: "Abbonamento scollegato." });
+        setTimeout(() => setSyncMessage(null), 3000);
+      }
+    } catch (err) {
+      console.error("Stripe unlink error:", err);
+      setSyncMessage({ type: "error", text: err instanceof Error ? err.message : "Errore nello scollegamento" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const loadInvoices = async () => {
     if (showInvoices) { setShowInvoices(false); return; }
     try {
@@ -138,14 +158,26 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
           <CreditCard className="h-4 w-4 text-indigo-600" />
           <h4 className="font-medium text-gray-900">Stripe</h4>
         </div>
-        <button
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
-          {isSyncing ? "Sync..." : "Sincronizza"}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasData && (
+            <button
+              onClick={handleUnlink}
+              disabled={isSyncing}
+              className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+            >
+              <XCircle className="h-3 w-3" />
+              Scollega
+            </button>
+          )}
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3 w-3 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "Sync..." : "Sincronizza"}
+          </button>
+        </div>
       </div>
 
       {syncMessage && (

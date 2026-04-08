@@ -396,6 +396,10 @@ class ApiClient {
     });
   }
 
+  async stripeUnlinkCustomer(contactId: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/stripe/unlink/${contactId}`, { method: 'POST' });
+  }
+
   async deleteContact(id: string): Promise<ApiResponse<void>> {
     return this.request(`/contacts/${id}`, {
       method: 'DELETE',

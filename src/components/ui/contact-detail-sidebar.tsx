@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink, CreditCard, RefreshCw, ExternalLink as LinkIcon } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink, CreditCard, RefreshCw, ExternalLink as LinkIcon, Search, Loader2, Link } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Textarea } from "./textarea";
@@ -42,6 +42,12 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   const [showInvoices, setShowInvoices] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
+  const [showManualLink, setShowManualLink] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: string; email: string; name: string; created: string }[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const sd = contact.stripeData;
   const hasData = !!sd?.subscriptionId;
@@ -50,14 +56,17 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
     try {
       setIsSyncing(true);
       setSyncMessage(null);
+      setShowManualLink(false);
       const res = await apiClient.stripeSyncContact(contact._id);
       if (res.success && res.data) {
         onContactUpdate(res.data);
         const synced = res.data.stripeData?.subscriptionId;
-        setSyncMessage(synced
-          ? { type: "success", text: "Abbonamento sincronizzato!" }
-          : { type: "warning", text: "Nessun abbonamento trovato su Stripe per questa email." }
-        );
+        if (synced) {
+          setSyncMessage({ type: "success", text: "Abbonamento sincronizzato!" });
+        } else {
+          setSyncMessage({ type: "warning", text: "Nessun abbonamento trovato per questa email." });
+          setShowManualLink(true);
+        }
       } else {
         setSyncMessage({ type: "error", text: (res as { message?: string }).message || "Errore nella sincronizzazione" });
       }
@@ -66,7 +75,43 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
       setSyncMessage({ type: "error", text: err instanceof Error ? err.message : "Errore di connessione" });
     } finally {
       setIsSyncing(false);
-      setTimeout(() => setSyncMessage(null), 5000);
+    }
+  };
+
+  const handleSearch = (q: string) => {
+    setSearchQuery(q);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (q.length < 2) { setSearchResults([]); return; }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        setIsSearching(true);
+        const res = await apiClient.stripeSearchCustomers(q);
+        if (res.success && res.data) setSearchResults(res.data);
+      } catch (err) {
+        console.error("Stripe search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400);
+  };
+
+  const handleLink = async (stripeCustomerId: string) => {
+    try {
+      setIsLinking(true);
+      const res = await apiClient.stripeLinkCustomer(contact._id, stripeCustomerId);
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+        setShowManualLink(false);
+        setSearchQuery("");
+        setSearchResults([]);
+        setSyncMessage({ type: "success", text: "Cliente Stripe collegato!" });
+        setTimeout(() => setSyncMessage(null), 3000);
+      }
+    } catch (err) {
+      console.error("Stripe link error:", err);
+      setSyncMessage({ type: "error", text: err instanceof Error ? err.message : "Errore nel collegamento" });
+    } finally {
+      setIsLinking(false);
     }
   };
 
@@ -114,15 +159,62 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
       )}
 
       {!hasData ? (
-        <div className="bg-gray-50 rounded-lg p-3 text-center">
-          <p className="text-xs text-gray-500">Nessun abbonamento Stripe collegato.</p>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className="mt-2 text-xs font-medium text-indigo-600 hover:underline disabled:opacity-50"
-          >
-            {isSyncing ? "Ricerca in corso..." : "Cerca su Stripe"}
-          </button>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 text-center">Nessun abbonamento Stripe collegato.</p>
+          <div className="mt-2 flex items-center justify-center gap-3">
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="text-xs font-medium text-indigo-600 hover:underline disabled:opacity-50"
+            >
+              {isSyncing ? "Ricerca..." : "Cerca automatica"}
+            </button>
+            <span className="text-xs text-gray-300">|</span>
+            <button
+              onClick={() => { setShowManualLink(v => !v); setSyncMessage(null); }}
+              className="text-xs font-medium text-indigo-600 hover:underline"
+            >
+              Collega manualmente
+            </button>
+          </div>
+          {showManualLink && (
+            <div className="mt-3 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => handleSearch(e.target.value)}
+                  placeholder="Cerca per nome o email Stripe..."
+                  className="w-full pl-7 pr-3 py-1.5 text-xs border rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                />
+                {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 animate-spin" />}
+              </div>
+              {searchResults.length > 0 && (
+                <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md bg-white">
+                  {searchResults.map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => handleLink(c.id)}
+                      disabled={isLinking}
+                      className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-gray-900 truncate">{c.name || "—"}</p>
+                          <p className="text-[11px] text-gray-500 truncate">{c.email || "—"}</p>
+                        </div>
+                        <Link className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0 ml-2" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
+                <p className="text-[11px] text-gray-400 text-center py-1">Nessun cliente trovato</p>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="bg-indigo-50/50 rounded-lg p-3 space-y-2.5">

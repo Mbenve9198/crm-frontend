@@ -385,6 +385,17 @@ class ApiClient {
     return this.request(`/stripe/invoices/${contactId}`);
   }
 
+  async stripeSearchCustomers(query: string): Promise<ApiResponse<{ id: string; email: string; name: string; created: string }[]>> {
+    return this.request(`/stripe/search-customers?q=${encodeURIComponent(query)}`);
+  }
+
+  async stripeLinkCustomer(contactId: string, stripeCustomerId: string): Promise<ApiResponse<Contact>> {
+    return this.request(`/stripe/link/${contactId}`, {
+      method: 'POST',
+      body: JSON.stringify({ stripeCustomerId }),
+    });
+  }
+
   async deleteContact(id: string): Promise<ApiResponse<void>> {
     return this.request(`/contacts/${id}`, {
       method: 'DELETE',

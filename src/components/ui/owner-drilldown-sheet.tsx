@@ -92,6 +92,7 @@ const sourceLabel = (src?: string) => {
   if (src === "smartlead_outbound") return "Smartlead";
   if (src === "inbound_rank_checker") return "Rank Checker";
   if (src === "inbound_form") return "Form";
+  if (src === "referral") return "Referral";
   return src || "—";
 };
 

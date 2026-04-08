@@ -25,6 +25,7 @@ import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 
 const SOURCE_OPTIONS: { value: ContactSource; label: string }[] = [
   { value: "manual", label: "Manuale" },
+  { value: "referral", label: "Referral" },
   { value: "inbound_form", label: "Form Inbound" },
   { value: "inbound_rank_checker", label: "Rank Checker Inbound" },
   { value: "inbound_api", label: "API Inbound" },

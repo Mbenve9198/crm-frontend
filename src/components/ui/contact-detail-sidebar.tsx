@@ -688,6 +688,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           ['inbound_api', 'API Inbound', 'bg-cyan-500'],
                           ['csv_import', 'CSV Import', 'bg-orange-500'],
                           ['manual', 'Manuale', 'bg-gray-500'],
+                          ['referral', 'Referral', 'bg-pink-500'],
                         ] as const).map(([value, label, dot]) => (
                           <SelectItem key={value} value={value}>
                             <div className="flex items-center gap-2">

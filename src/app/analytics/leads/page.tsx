@@ -149,6 +149,65 @@ function DateRangePopover({
   color?: string;
 }) {
   const ringClass = `focus-visible:ring-${color}-500`;
+
+  const quickRanges: { label: string; getRange: () => [string, string] }[] = [
+    {
+      label: "Oggi",
+      getRange: () => {
+        const t = formatDateInput(new Date());
+        return [t, t];
+      },
+    },
+    {
+      label: "Questa settimana",
+      getRange: () => {
+        const now = new Date();
+        const day = now.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        const mon = new Date(now);
+        mon.setDate(now.getDate() - diff);
+        return [formatDateInput(mon), formatDateInput(now)];
+      },
+    },
+    {
+      label: "Questo mese",
+      getRange: () => {
+        const now = new Date();
+        const first = new Date(now.getFullYear(), now.getMonth(), 1);
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return [formatDateInput(first), formatDateInput(last)];
+      },
+    },
+    {
+      label: "Ultimo mese",
+      getRange: () => {
+        const now = new Date();
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        return [formatDateInput(first), formatDateInput(last)];
+      },
+    },
+    {
+      label: "Ultimi 3 mesi",
+      getRange: () => {
+        const now = new Date();
+        const first = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return [formatDateInput(first), formatDateInput(last)];
+      },
+    },
+    {
+      label: "Di sempre",
+      getRange: () => ["2020-01-01", formatDateInput(new Date())],
+    },
+  ];
+
+  const applyQuick = (getRange: () => [string, string]) => {
+    const [f, t] = getRange();
+    onFromChange(f);
+    onToChange(t);
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -161,8 +220,20 @@ function DateRangePopover({
           <span className={`font-semibold text-${color}-700`}>{formatRange(from, to)}</span>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-3 space-y-2">
+      <PopoverContent className="w-auto p-3 space-y-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {quickRanges.map((qr) => (
+            <button
+              key={qr.label}
+              type="button"
+              onClick={() => applyQuick(qr.getRange)}
+              className="h-7 rounded-full px-2.5 text-[11px] font-medium border border-gray-200 bg-gray-50 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+            >
+              {qr.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-2">
           <div className="space-y-1">
             <label className="text-[10px] text-gray-400 uppercase">Da</label>

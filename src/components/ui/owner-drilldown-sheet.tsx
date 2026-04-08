@@ -8,12 +8,15 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { ContactSheet } from "@/components/ui/contact-sheet";
+import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
+import { Contact } from "@/types/contact";
+import { apiClient } from "@/lib/api";
 import {
   Mail,
   Globe,
   DollarSign,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 
 export type DrilldownCategory =
@@ -100,24 +103,35 @@ export function LeadDrilldownSheet({
   dotColor = "bg-blue-500",
   contacts,
 }: LeadDrilldownSheetProps) {
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [loadingContactId, setLoadingContactId] = useState<string | null>(null);
 
   const handleClose = (v: boolean) => {
     if (!v) {
-      setSelectedContactId(null);
+      setSelectedContact(null);
       setDetailOpen(false);
     }
     onOpenChange(v);
   };
 
-  const handleContactClick = (id: string) => {
-    setSelectedContactId(id);
-    setDetailOpen(true);
+  const handleContactClick = async (id: string) => {
+    try {
+      setLoadingContactId(id);
+      const res = await apiClient.getContact(id);
+      if (res.success && res.data) {
+        setSelectedContact(res.data);
+        setDetailOpen(true);
+      }
+    } catch (error) {
+      console.error("Errore caricamento contatto:", error);
+    } finally {
+      setLoadingContactId(null);
+    }
   };
 
   const handleBackToList = () => {
-    setSelectedContactId(null);
+    setSelectedContact(null);
     setDetailOpen(false);
   };
 
@@ -141,6 +155,7 @@ export function LeadDrilldownSheet({
                 <button
                   key={c.id}
                   onClick={() => handleContactClick(c.id)}
+                  disabled={loadingContactId === c.id}
                   className="w-full flex items-center justify-between px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors text-left group"
                 >
                   <div className="min-w-0 flex-1">
@@ -166,7 +181,11 @@ export function LeadDrilldownSheet({
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 shrink-0 ml-2" />
+                  {loadingContactId === c.id ? (
+                    <Loader2 className="h-4 w-4 text-blue-500 animate-spin shrink-0 ml-2" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-gray-500 shrink-0 ml-2" />
+                  )}
                 </button>
               ))
             )}
@@ -174,14 +193,11 @@ export function LeadDrilldownSheet({
         </SheetContent>
       </Sheet>
 
-      <ContactSheet
-        contactId={selectedContactId}
-        open={detailOpen}
-        onOpenChange={(v) => {
-          if (!v) handleClose(false);
-        }}
-        backLabel={`← ${title}`}
-        onBack={handleBackToList}
+      <ContactDetailSidebar
+        contact={selectedContact}
+        isOpen={detailOpen}
+        onClose={handleBackToList}
+        onContactUpdate={(updated) => setSelectedContact(updated)}
       />
     </>
   );

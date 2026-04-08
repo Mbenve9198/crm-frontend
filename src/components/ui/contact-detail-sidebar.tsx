@@ -44,7 +44,7 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   const [syncMessage, setSyncMessage] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
   const [showManualLink, setShowManualLink] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{ id: string; email: string; name: string; created: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<{ id: string; email: string; name: string; description: string | null; created: string; lastInvoice: { amount: number; currency: string; date: string; number: string } | null }[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -223,20 +223,32 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
                 {isSearching && <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 animate-spin" />}
               </div>
               {searchResults.length > 0 && (
-                <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md bg-white">
+                <div className="max-h-56 overflow-y-auto border rounded-md bg-white divide-y">
                   {searchResults.map(c => (
                     <button
                       key={c.id}
                       onClick={() => handleLink(c.id)}
                       disabled={isLinking}
-                      className="w-full text-left px-3 py-2 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                      className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 transition-colors disabled:opacity-50"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-gray-900 truncate">{c.name || "—"}</p>
-                          <p className="text-[11px] text-gray-500 truncate">{c.email || "—"}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-gray-900 truncate">{c.name || "—"}</p>
+                          {c.description && c.description !== c.name && (
+                            <p className="text-[11px] text-gray-600 truncate">{c.description}</p>
+                          )}
+                          <p className="text-[11px] text-gray-400 truncate">{c.email || "no email"}</p>
+                          {c.lastInvoice && (
+                            <p className="text-[11px] text-emerald-600 mt-0.5">
+                              Ultima fattura: €{c.lastInvoice.amount} — {new Date(c.lastInvoice.date).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                              {c.lastInvoice.number && <span className="text-gray-400 ml-1">({c.lastInvoice.number})</span>}
+                            </p>
+                          )}
+                          {!c.lastInvoice && (
+                            <p className="text-[11px] text-gray-400 mt-0.5">Nessuna fattura</p>
+                          )}
                         </div>
-                        <Link className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0 ml-2" />
+                        <Link className="h-3.5 w-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
                       </div>
                     </button>
                   ))}

@@ -41,6 +41,7 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   const [invoices, setInvoices] = useState<StripeInvoice[]>([]);
   const [showInvoices, setShowInvoices] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<{ type: "success" | "warning" | "error"; text: string } | null>(null);
 
   const sd = contact.stripeData;
   const hasData = !!sd?.subscriptionId;
@@ -48,14 +49,24 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   const handleSync = async () => {
     try {
       setIsSyncing(true);
+      setSyncMessage(null);
       const res = await apiClient.stripeSyncContact(contact._id);
       if (res.success && res.data) {
         onContactUpdate(res.data);
+        const synced = res.data.stripeData?.subscriptionId;
+        setSyncMessage(synced
+          ? { type: "success", text: "Abbonamento sincronizzato!" }
+          : { type: "warning", text: "Nessun abbonamento trovato su Stripe per questa email." }
+        );
+      } else {
+        setSyncMessage({ type: "error", text: (res as { message?: string }).message || "Errore nella sincronizzazione" });
       }
     } catch (err) {
       console.error("Stripe sync error:", err);
+      setSyncMessage({ type: "error", text: err instanceof Error ? err.message : "Errore di connessione" });
     } finally {
       setIsSyncing(false);
+      setTimeout(() => setSyncMessage(null), 5000);
     }
   };
 
@@ -92,15 +103,25 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
         </button>
       </div>
 
+      {syncMessage && (
+        <div className={`rounded-md px-3 py-2 text-xs mb-2 ${
+          syncMessage.type === "success" ? "bg-emerald-50 text-emerald-700" :
+          syncMessage.type === "warning" ? "bg-amber-50 text-amber-700" :
+          "bg-red-50 text-red-700"
+        }`}>
+          {syncMessage.text}
+        </div>
+      )}
+
       {!hasData ? (
         <div className="bg-gray-50 rounded-lg p-3 text-center">
           <p className="text-xs text-gray-500">Nessun abbonamento Stripe collegato.</p>
           <button
             onClick={handleSync}
             disabled={isSyncing}
-            className="mt-2 text-xs font-medium text-indigo-600 hover:underline"
+            className="mt-2 text-xs font-medium text-indigo-600 hover:underline disabled:opacity-50"
           >
-            Cerca su Stripe
+            {isSyncing ? "Ricerca in corso..." : "Cerca su Stripe"}
           </button>
         </div>
       ) : (

@@ -385,7 +385,7 @@ class ApiClient {
     return this.request(`/stripe/invoices/${contactId}`);
   }
 
-  async stripeSearchCustomers(query: string): Promise<ApiResponse<{ id: string; email: string; name: string; description: string | null; created: string; lastInvoice: { amount: number; currency: string; date: string; number: string } | null }[]>> {
+  async stripeSearchCustomers(query: string): Promise<ApiResponse<{ id: string; email: string; name: string; description: string | null; created: string; subscription: { status: string; plan: string; productName: string | null } | null }[]>> {
     return this.request(`/stripe/search-customers?q=${encodeURIComponent(query)}`);
   }
 

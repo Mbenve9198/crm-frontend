@@ -52,9 +52,9 @@ export function CreateContactDialog({ open, onOpenChange, onCreated }: CreateCon
 
   useEffect(() => {
     if (open) {
-      apiClient.getUsers().then((res) => {
-        if (res.success && res.data) {
-          setAvailableUsers(res.data.filter((u) => u.isActive));
+      apiClient.getUsers({ limit: 100 }).then((res) => {
+        if (res.success && res.data?.users) {
+          setAvailableUsers(res.data.users.filter((u) => u.isActive));
         }
       });
     }

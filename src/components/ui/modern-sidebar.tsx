@@ -42,12 +42,6 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       href: "/",
       onClick: () => onListSelect?.(null),
     },
-    {
-      icon: BarChart3,
-      label: "Pipeline",
-      active: pathname === "/pipeline",
-      href: "/pipeline",
-    },
     ...(user?.role === "admin"
       ? [
           {

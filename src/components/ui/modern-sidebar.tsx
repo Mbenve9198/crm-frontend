@@ -59,12 +59,6 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
         ]
       : []),
     {
-      icon: MessageCircle,
-      label: "Campagne WhatsApp",
-      active: pathname === "/whatsapp-campaigns" || pathname.startsWith("/whatsapp-campaigns/"),
-      href: "/whatsapp-campaigns",
-    },
-    {
       icon: Activity,
       label: "AI Dashboard",
       active: pathname === "/agent/dashboard",
@@ -75,12 +69,6 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       label: "AI Review",
       active: pathname === "/agent/review",
       href: "/agent/review",
-    },
-    {
-      icon: Settings,
-      label: "Impostazioni",
-      active: pathname === "/settings",
-      href: "/settings",
     },
   ];
 

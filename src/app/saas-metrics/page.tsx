@@ -105,7 +105,7 @@ function MrrStackedChart({ data }: { data: MrrMonthSnapshot[] }) {
         <XAxis dataKey="month" tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `€${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
         <Tooltip
-          formatter={(v: number, name: string) => [fmtEur(Math.abs(v)), name]}
+          formatter={(v, name) => [fmtEur(Math.abs(Number(v))), String(name)]}
           labelStyle={{ fontWeight: 600 }}
           contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
         />
@@ -154,7 +154,7 @@ function BreakdownTable({ data }: { data: MrrMonthSnapshot[] }) {
             <tr key={row.key} className="border-b border-gray-100 hover:bg-gray-50/50">
               <td className="py-2 px-3 text-gray-600 text-xs">{row.label}</td>
               {last6.map(d => {
-                const val = (d as Record<string, number>)[row.key] || 0;
+                const val = (d as unknown as Record<string, number>)[row.key] || 0;
                 return (
                   <td key={d.month} className={`text-right py-2 px-3 text-xs tabular-nums ${d.month === currentMonth ? "bg-teal-50/50 font-medium" : ""} ${row.negative && val > 0 ? "text-red-500" : ""}`}>
                     {row.negative && val > 0 ? `-${fmtEur(val)}` : val > 0 ? `+${fmtEur(val)}` : fmtEur(0)}
@@ -195,7 +195,7 @@ function BreakdownTable({ data }: { data: MrrMonthSnapshot[] }) {
             <tr key={row.key} className="border-b border-gray-100 hover:bg-gray-50/50">
               <td className="py-2 px-3 text-gray-600 text-xs">{row.label}</td>
               {last6.map(d => {
-                const val = (d as Record<string, number>)[row.key] || 0;
+                const val = (d as unknown as Record<string, number>)[row.key] || 0;
                 return (
                   <td key={d.month} className={`text-right py-2 px-3 text-xs tabular-nums ${d.month === currentMonth ? "bg-teal-50/50" : ""} ${row.negative && val > 0 ? "text-red-500" : ""}`}>
                     {row.key === "totalCustomers" ? val : val > 0 ? (row.negative ? `-${val}` : `+${val}`) : "0"}
@@ -252,7 +252,7 @@ function PlansDonut({ plans, totalMrr }: { plans: PlansData["plans"]; totalMrr: 
             <Pie data={chartData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
               {chartData.map((e, i) => <Cell key={i} fill={e.fill} />)}
             </Pie>
-            <Tooltip formatter={(v: number) => fmtEur(v)} />
+            <Tooltip formatter={(v) => fmtEur(Number(v))} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -287,7 +287,7 @@ function PlansTrendChart({ trend }: { trend: PlansTrendData }) {
         <XAxis dataKey="month" tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `€${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
         <Tooltip
-          formatter={(v: number, name: string) => [fmtEur(v), name]}
+          formatter={(v, name) => [fmtEur(Number(v)), String(name)]}
           contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}
         />
         <Legend wrapperStyle={{ fontSize: 11 }} />

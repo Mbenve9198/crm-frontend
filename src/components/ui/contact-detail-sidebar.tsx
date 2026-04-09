@@ -293,7 +293,7 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
             const count = sd.planIntervalCount || 1;
             const labels: Record<string, string> = {
               year: count === 1 ? "Annuale" : `Ogni ${count} anni`,
-              month: count === 1 ? "Mensile" : count === 3 ? "Trimestrale" : count === 6 ? "Semestrale" : `Ogni ${count} mesi`,
+              month: count === 1 ? "Mensile" : count === 2 ? "Bimestrale" : count === 3 ? "Trimestrale" : count === 4 ? "Quadrimestrale" : count === 6 ? "Semestrale" : `Ogni ${count} mesi`,
               week: count === 1 ? "Settimanale" : `Ogni ${count} settimane`,
               day: count === 1 ? "Giornaliera" : `Ogni ${count} giorni`,
             };

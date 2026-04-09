@@ -289,11 +289,32 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
               <span className="text-sm font-medium text-gray-900">{sd.planName}</span>
             </div>
           )}
+          {sd?.planInterval && (() => {
+            const count = sd.planIntervalCount || 1;
+            const labels: Record<string, string> = {
+              year: count === 1 ? "Annuale" : `Ogni ${count} anni`,
+              month: count === 1 ? "Mensile" : count === 3 ? "Trimestrale" : count === 6 ? "Semestrale" : `Ogni ${count} mesi`,
+              week: count === 1 ? "Settimanale" : `Ogni ${count} settimane`,
+              day: count === 1 ? "Giornaliera" : `Ogni ${count} giorni`,
+            };
+            return (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Fatturazione</span>
+                <span className="text-xs text-gray-900">{labels[sd.planInterval] || sd.planInterval}</span>
+              </div>
+            );
+          })()}
           {typeof sd?.mrrFromStripe === "number" && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600">MRR (Stripe)</span>
-              <span className="text-sm font-bold text-emerald-700">€{sd.mrrFromStripe}</span>
-            </div>
+            <>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">MRR</span>
+                <span className="text-sm font-bold text-emerald-700">€{sd.mrrFromStripe.toLocaleString("it-IT")}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">ARR</span>
+                <span className="text-sm font-semibold text-emerald-600">€{(sd.mrrFromStripe * 12).toLocaleString("it-IT")}</span>
+              </div>
+            </>
           )}
           {sd?.subscriptionStartDate && (
             <div className="flex items-center justify-between">

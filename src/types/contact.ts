@@ -47,6 +47,7 @@ export type StripeData = {
   subscriptionStatus?: 'active' | 'past_due' | 'canceled' | 'incomplete' | 'trialing' | 'unpaid' | 'paused' | null;
   planName?: string;
   planInterval?: string;
+  planIntervalCount?: number;
   mrrFromStripe?: number;
   subscriptionStartDate?: string;
   currentPeriodEnd?: string;

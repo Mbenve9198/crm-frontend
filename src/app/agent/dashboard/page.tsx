@@ -86,28 +86,29 @@ function DashboardContent() {
   const fetchFeed = useCallback(async () => {
     try {
       const res = await apiClient.request<{ events: FeedEvent[] }>("/agent/live-feed?limit=30");
-      if (res && "events" in res) setFeed(res.events);
+      const events = (res as unknown as { events?: FeedEvent[] })?.events ?? res?.data?.events;
+      if (events) setFeed(events);
     } catch { /* ignore */ }
   }, []);
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await apiClient.request<{ data: DashboardStats }>(`/agent/dashboard-stats?period=${period}`);
-      if (res && "data" in res) setStats(res.data);
+      const res = await apiClient.request<DashboardStats>(`/agent/dashboard-stats?period=${period}`);
+      if (res?.data) setStats(res.data);
     } catch { /* ignore */ }
   }, [period]);
 
   const fetchBriefing = useCallback(async () => {
     try {
-      const res = await apiClient.request<{ data: BriefingData | null }>("/agent/briefing");
-      if (res && "data" in res) setBriefing(res.data);
+      const res = await apiClient.request<BriefingData | null>("/agent/briefing");
+      if (res?.data !== undefined) setBriefing(res.data ?? null);
     } catch { /* ignore */ }
   }, []);
 
   const fetchStrategies = useCallback(async () => {
     try {
-      const res = await apiClient.request<{ data: StrategyData[] }>("/agent/strategy-stats");
-      if (res && "data" in res) setStrategies(res.data);
+      const res = await apiClient.request<StrategyData[]>("/agent/strategy-stats");
+      if (res?.data) setStrategies(res.data);
     } catch { /* ignore */ }
   }, []);
 

@@ -1,6 +1,6 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
-import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData } from '@/types/saas-metrics';
+import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData } from '@/types/saas-metrics';
 import { 
   Call, 
   InitiateCallRequest, 
@@ -1013,6 +1013,10 @@ class ApiClient {
 
   async getSaasPlansTrend(months = 12): Promise<ApiResponse<PlansTrendData>> {
     return this.request<PlansTrendData>(`/saas-metrics/plans/trend?months=${months}`);
+  }
+
+  async getSaasPlansFromContacts(): Promise<ApiResponse<PlansFromContactsData>> {
+    return this.request<PlansFromContactsData>('/saas-metrics/plans/from-contacts');
   }
 
   async generateSnapshot(): Promise<ApiResponse<unknown>> {

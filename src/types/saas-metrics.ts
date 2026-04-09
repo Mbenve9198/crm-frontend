@@ -64,3 +64,29 @@ export interface PlansTrendData {
   months: string[];
   series: PlanTrendSeries[];
 }
+
+export interface PlanContactItem {
+  _id: string;
+  name: string;
+  email: string;
+  mrr: number;
+  planName: string;
+  status: string;
+}
+
+export interface PlanFromContactsBucket {
+  key: string;
+  label: string;
+  customers: number;
+  mrr: number;
+  arr: number;
+  arpu: number;
+  percentage: number;
+  contacts: PlanContactItem[];
+}
+
+export interface PlansFromContactsData {
+  plans: PlanFromContactsBucket[];
+  totalMrr: number;
+  totalCustomers: number;
+}

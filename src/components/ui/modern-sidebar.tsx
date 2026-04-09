@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, Bot, Activity, TrendingUp } from "lucide-react";
+import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, Bot, Activity, TrendingUp, PieChart, LineChart } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -27,6 +27,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
   const [lists, setLists] = useState<ContactList[]>([]);
   const [isLoadingLists, setIsLoadingLists] = useState(false);
   const [showLists, setShowLists] = useState(true);
+  const [showSaas, setShowSaas] = useState(pathname.startsWith("/saas-metrics"));
 
   const menuItems = [
     {
@@ -55,12 +56,6 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
             label: "Chiamate",
             active: pathname === "/calls",
             href: "/calls",
-          } as const,
-          {
-            icon: TrendingUp,
-            label: "SaaS Metrics",
-            active: pathname === "/saas-metrics",
-            href: "/saas-metrics",
           } as const,
         ]
       : []),
@@ -171,6 +166,57 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
               );
             })}
             
+            {/* SaaS Metrics macro-category (admin only) */}
+            {user?.role === "admin" && (
+              <li>
+                <button
+                  onClick={() => setShowSaas(!showSaas)}
+                  className={`w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                    pathname.startsWith("/saas-metrics")
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <TrendingUp className={`h-5 w-5 ${pathname.startsWith("/saas-metrics") ? "text-blue-700" : "text-gray-500"}`} />
+                  {isExpanded && (
+                    <>
+                      <span className="ml-3 text-sm font-medium transition-opacity duration-200">SaaS Metrics</span>
+                      {showSaas
+                        ? <ChevronDown className="h-3.5 w-3.5 ml-auto text-gray-400" />
+                        : <ChevronRight className="h-3.5 w-3.5 ml-auto text-gray-400" />}
+                    </>
+                  )}
+                </button>
+                {showSaas && isExpanded && (
+                  <ul className="mt-1 space-y-0.5 pl-5">
+                    {([
+                      { href: "/saas-metrics", label: "Dashboard", icon: LayoutDashboard },
+                      { href: "/saas-metrics/mrr-overview", label: "MRR Overview", icon: LineChart },
+                      { href: "/saas-metrics/plans", label: "Confronto Piani", icon: PieChart },
+                    ] as const).map(sub => {
+                      const SubIcon = sub.icon;
+                      const isActive = pathname === sub.href;
+                      return (
+                        <li key={sub.href}>
+                          <Link
+                            href={sub.href}
+                            className={`flex items-center px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                              isActive
+                                ? "bg-blue-50 text-blue-700"
+                                : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                            }`}
+                          >
+                            <SubIcon className={`h-3.5 w-3.5 mr-2 ${isActive ? "text-blue-700" : "text-gray-400"}`} />
+                            {sub.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            )}
+
             {/* Import CSV item */}
             <li>
               <CsvImportDialog onImportComplete={() => { onImportComplete?.(); loadLists(); }}>

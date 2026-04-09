@@ -1,5 +1,6 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
+import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData } from '@/types/saas-metrics';
 import { 
   Call, 
   InitiateCallRequest, 
@@ -996,6 +997,31 @@ class ApiClient {
     });
   }
 
+  // === SAAS METRICS ===
+
+  async getSaasOverview(): Promise<ApiResponse<SaasOverview>> {
+    return this.request<SaasOverview>('/saas-metrics/overview');
+  }
+
+  async getMrrOverview(months = 12): Promise<ApiResponse<MrrOverviewData>> {
+    return this.request<MrrOverviewData>(`/saas-metrics/mrr-overview?months=${months}`);
+  }
+
+  async getSaasPlans(): Promise<ApiResponse<PlansData>> {
+    return this.request<PlansData>('/saas-metrics/plans');
+  }
+
+  async getSaasPlansTrend(months = 12): Promise<ApiResponse<PlansTrendData>> {
+    return this.request<PlansTrendData>(`/saas-metrics/plans/trend?months=${months}`);
+  }
+
+  async generateSnapshot(): Promise<ApiResponse<unknown>> {
+    return this.request('/saas-metrics/snapshot/generate', { method: 'POST' });
+  }
+
+  async backfillSnapshots(): Promise<ApiResponse<unknown>> {
+    return this.request('/saas-metrics/snapshot/backfill', { method: 'POST' });
+  }
 }
 
 // Istanza singleton dell'API client

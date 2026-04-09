@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard, Phone, Bot, Activity } from "lucide-react";
+import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, Bot, Activity } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";

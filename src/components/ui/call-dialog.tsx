@@ -93,12 +93,7 @@ export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChang
         setCallState('error');
 
         if (response.message?.includes('Configurazione Twilio')) {
-          toast.error('Twilio non configurato. Vai nelle Impostazioni per configurarlo.', {
-            action: {
-              label: 'Impostazioni',
-              onClick: () => window.open('/settings', '_blank')
-            }
-          });
+          toast.error('Twilio non configurato. Contatta l\'amministratore.');
         }
       }
     } catch (error) {

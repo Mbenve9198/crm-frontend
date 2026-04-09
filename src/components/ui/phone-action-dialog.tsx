@@ -6,7 +6,6 @@ import { Button } from "./button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog";
 import { Contact } from "@/types/contact";
 import { CallDialog } from "./call-dialog";
-import { apiClient } from "@/lib/api";
 
 interface PhoneActionDialogProps {
   open: boolean;
@@ -34,33 +33,11 @@ export function PhoneActionDialog({
         onOpenChange(false);
         setShowCallDialog(true);
       } else if (action === 'whatsapp') {
-        // Compila il template e apri WhatsApp Web
         const cleanPhone = contact.phone?.replace(/[^\d+]/g, '');
         if (cleanPhone) {
-          try {
-            // Compila il template con i dati del contatto
-            const templateResponse = await apiClient.compileWhatsAppTemplate(contact._id);
-            let message = '';
-            
-            if (templateResponse.success && templateResponse.data) {
-              message = templateResponse.data.compiledMessage;
-            } else {
-              // Fallback a messaggio di default se il template non è disponibile
-              message = `Ciao ${contact.name}, ti scrivo da MenuChatCRM. Come posso aiutarti?`;
-            }
-            
-            // Codifica il messaggio per l'URL
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-            window.open(whatsappUrl, '_blank');
-          } catch (error) {
-            console.error('Errore nella compilazione del template:', error);
-            // Fallback a WhatsApp senza messaggio precompilato
-            const whatsappUrl = `https://wa.me/${cleanPhone}`;
-            window.open(whatsappUrl, '_blank');
-          }
+          const whatsappUrl = `https://wa.me/${cleanPhone}`;
+          window.open(whatsappUrl, '_blank');
         }
-        // Chiudi il dialog
         onOpenChange(false);
       }
     } catch (error) {

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import { User as UserType, Contact } from "@/types/contact";
 import { DashboardData, DashboardListItem } from "@/types/dashboard";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -538,7 +539,7 @@ export default function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [owners, setOwners] = useState<UserType[]>([]);
-  const [owner, setOwner] = useState<string>("all");
+  const [owner, setOwner] = usePersistedState<string>("dashboard:owner", "all");
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -577,11 +578,18 @@ export default function DashboardPage() {
     }
   };
 
+  const initialLoadDone = useRef(false);
   useEffect(() => {
     if (isAuthenticated) {
       loadOwners();
-      setOwner(defaultOwnerId);
-      loadDashboard(defaultOwnerId);
+      if (!initialLoadDone.current) {
+        initialLoadDone.current = true;
+        const effectiveOwner = owner !== "all" ? owner : defaultOwnerId;
+        if (effectiveOwner !== owner) setOwner(effectiveOwner);
+        loadDashboard(effectiveOwner);
+      } else {
+        loadDashboard(owner);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, defaultOwnerId]);

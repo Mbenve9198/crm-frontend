@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import {
   OwnerPerformanceData,
   OwnerPerformanceRow,
@@ -319,19 +320,19 @@ export default function LeadAnalyticsPage() {
   const defaultFrom = () => { const d = new Date(); d.setDate(1); return formatDateInput(d); };
   const defaultTo = () => { const d = new Date(); return formatDateInput(new Date(d.getFullYear(), d.getMonth() + 1, 0)); };
 
-  const [funnelFrom, setFunnelFrom] = useState(defaultFrom);
-  const [funnelTo, setFunnelTo] = useState(defaultTo);
+  const [funnelFrom, setFunnelFrom] = usePersistedState("analytics:funnelFrom", defaultFrom());
+  const [funnelTo, setFunnelTo] = usePersistedState("analytics:funnelTo", defaultTo());
 
-  const [ownerFrom, setOwnerFrom] = useState(defaultFrom);
-  const [ownerTo, setOwnerTo] = useState(defaultTo);
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [ownerFrom, setOwnerFrom] = usePersistedState("analytics:ownerFrom", defaultFrom());
+  const [ownerTo, setOwnerTo] = usePersistedState("analytics:ownerTo", defaultTo());
+  const [selectedSources, setSelectedSources] = usePersistedState<string[]>("analytics:sources", []);
 
-  const [closeDateFrom, setCloseDateFrom] = useState(defaultFrom);
-  const [closeDateTo, setCloseDateTo] = useState(defaultTo);
+  const [closeDateFrom, setCloseDateFrom] = usePersistedState("analytics:closeDateFrom", defaultFrom());
+  const [closeDateTo, setCloseDateTo] = usePersistedState("analytics:closeDateTo", defaultTo());
 
-  const [wonFilterEnabled, setWonFilterEnabled] = useState(false);
-  const [wonFrom, setWonFrom] = useState(defaultFrom);
-  const [wonTo, setWonTo] = useState(defaultTo);
+  const [wonFilterEnabled, setWonFilterEnabled] = usePersistedState("analytics:wonEnabled", false);
+  const [wonFrom, setWonFrom] = usePersistedState("analytics:wonFrom", defaultFrom());
+  const [wonTo, setWonTo] = usePersistedState("analytics:wonTo", defaultTo());
 
   const [data, setData] = useState<OwnerPerformanceData | null>(null);
   const [cohortData, setCohortData] = useState<LeadCohortFunnelAnalyticsData | null>(null);
@@ -349,9 +350,9 @@ export default function LeadAnalyticsPage() {
     dotColor: string;
     contacts: DrilldownContact[];
   } | null>(null);
-  const [selectedOwners, setSelectedOwners] = useState<string[]>([]);
-  const [sortKey, setSortKey] = useState<SortKey>("cohort");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [selectedOwners, setSelectedOwners] = usePersistedState<string[]>("analytics:selectedOwners", []);
+  const [sortKey, setSortKey] = usePersistedState<SortKey>("analytics:sortKey", "cohort");
+  const [sortDir, setSortDir] = usePersistedState<"asc" | "desc">("analytics:sortDir", "desc");
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 

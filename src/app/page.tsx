@@ -10,6 +10,7 @@ import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Loader2 } from "lucide-react";
 import { Contact, ColumnFilter, SortingState } from "@/types/contact";
 import { apiClient } from "@/lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 function LoadingSpinner() {
   return (
@@ -39,14 +40,14 @@ function Dashboard() {
   });
   const [currentLimit, setCurrentLimit] = useState(10);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [selectedList, setSelectedList] = usePersistedState<string | null>("contacts:list", null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
   const [initialActivity, setInitialActivity] = useState<{ type: 'call' | 'whatsapp'; data?: object } | undefined>();
-  const [searchQuery, setSearchQuery] = useState<string>(searchParams.get("search") || "");
-  const [ownerFilter, setOwnerFilter] = useState<string>("all");
-  const [serverColumnFilters, setServerColumnFilters] = useState<Record<string, ColumnFilter>>({});
-  const [serverSorting, setServerSorting] = useState<SortingState | null>(null);
+  const [searchQuery, setSearchQuery] = usePersistedState<string>("contacts:search", searchParams.get("search") || "");
+  const [ownerFilter, setOwnerFilter] = usePersistedState<string>("contacts:owner", "all");
+  const [serverColumnFilters, setServerColumnFilters] = usePersistedState<Record<string, ColumnFilter>>("contacts:columnFilters", {});
+  const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", null);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {

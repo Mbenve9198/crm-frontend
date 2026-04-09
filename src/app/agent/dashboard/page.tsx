@@ -23,7 +23,7 @@ interface FeedEvent {
   contactName: string;
   contactEmail: string;
   description: string;
-  details: Record<string, unknown>;
+  details: { channel?: string; stage?: string; costUsd?: number; action?: string; actions?: string[]; confidence?: number };
   conversationId: string | null;
 }
 
@@ -259,13 +259,13 @@ function DashboardContent() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{ev.description}</span>
-                              {ev.details?.channel && <Badge variant="outline" className="text-xs">{ev.details.channel as string}</Badge>}
+                              {ev.details?.channel && <Badge variant="outline" className="text-xs">{ev.details.channel}</Badge>}
                             </div>
                             {ev.contactName && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{ev.contactName}</p>}
-                            {ev.details?.stage && <p className="text-xs text-gray-400">{ev.details.stage as string}</p>}
+                            {ev.details?.stage && <p className="text-xs text-gray-400">{ev.details.stage}</p>}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {ev.details?.costUsd && <span className="text-xs text-gray-400">${(ev.details.costUsd as number).toFixed(3)}</span>}
+                            {ev.details?.costUsd != null && <span className="text-xs text-gray-400">${ev.details.costUsd.toFixed(3)}</span>}
                             <span className="text-xs text-gray-400">{timeAgo(ev.timestamp)}</span>
                             {ev.conversationId && (
                               <a href={`/agent/review?id=${ev.conversationId}`} className="text-blue-500 hover:text-blue-600">

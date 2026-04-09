@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard, Phone } from "lucide-react";
+import { User, LogOut, Upload, Users, Settings, Menu, List, ChevronDown, ChevronRight, BarChart3, MessageCircle, LayoutDashboard, Phone, Bot, Activity } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { CsvImportDialog } from "./csv-import";
@@ -69,6 +69,18 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       label: "Campagne WhatsApp",
       active: pathname === "/whatsapp-campaigns" || pathname.startsWith("/whatsapp-campaigns/"),
       href: "/whatsapp-campaigns",
+    },
+    {
+      icon: Activity,
+      label: "AI Dashboard",
+      active: pathname === "/agent/dashboard",
+      href: "/agent/dashboard",
+    },
+    {
+      icon: Bot,
+      label: "AI Review",
+      active: pathname === "/agent/review",
+      href: "/agent/review",
     },
     {
       icon: Settings,

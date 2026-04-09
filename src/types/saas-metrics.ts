@@ -90,3 +90,24 @@ export interface PlansFromContactsData {
   totalMrr: number;
   totalCustomers: number;
 }
+
+export interface SaasCustomer {
+  _id: string;
+  name: string;
+  email: string;
+  planDesc: string;
+  planName: string;
+  billingLabel: string;
+  mrr: number;
+  status: string;
+  activityType: string;
+  activityDelta: number;
+  activityDate: string | null;
+  subscriptionStartDate: string | null;
+}
+
+export interface CustomersListData {
+  customers: SaasCustomer[];
+  totalMrr: number;
+  totalCustomers: number;
+}

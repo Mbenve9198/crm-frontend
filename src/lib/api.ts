@@ -1,6 +1,6 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
-import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData } from '@/types/saas-metrics';
+import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData, CustomersListData } from '@/types/saas-metrics';
 import { 
   Call, 
   InitiateCallRequest, 
@@ -1017,6 +1017,15 @@ class ApiClient {
 
   async getSaasPlansFromContacts(): Promise<ApiResponse<PlansFromContactsData>> {
     return this.request<PlansFromContactsData>('/saas-metrics/plans/from-contacts');
+  }
+
+  async getSaasCustomers(params?: { search?: string; sort?: string; order?: string }): Promise<ApiResponse<CustomersListData>> {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    if (params?.sort) qs.set('sort', params.sort);
+    if (params?.order) qs.set('order', params.order);
+    const query = qs.toString();
+    return this.request<CustomersListData>(`/saas-metrics/customers${query ? `?${query}` : ''}`);
   }
 
   async generateSnapshot(): Promise<ApiResponse<unknown>> {

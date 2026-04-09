@@ -193,6 +193,7 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
                       { href: "/saas-metrics", label: "Dashboard", icon: LayoutDashboard },
                       { href: "/saas-metrics/mrr-overview", label: "MRR Overview", icon: LineChart },
                       { href: "/saas-metrics/plans", label: "Confronto Piani", icon: PieChart },
+                      { href: "/saas-metrics/customers", label: "Clienti", icon: Users },
                     ] as const).map(sub => {
                       const SubIcon = sub.icon;
                       const isActive = pathname === sub.href;

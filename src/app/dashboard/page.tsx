@@ -549,8 +549,6 @@ export default function DashboardPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
 
-  const defaultOwnerId = useMemo(() => (user?._id ? user._id : "all"), [user?._id]);
-
   const loadOwners = async () => {
     try {
       const response = await apiClient.getUsersForAssignment();
@@ -584,15 +582,13 @@ export default function DashboardPage() {
       loadOwners();
       if (!initialLoadDone.current) {
         initialLoadDone.current = true;
-        const effectiveOwner = owner !== "all" ? owner : defaultOwnerId;
-        if (effectiveOwner !== owner) setOwner(effectiveOwner);
-        loadDashboard(effectiveOwner);
+        loadDashboard(owner);
       } else {
         loadDashboard(owner);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, defaultOwnerId]);
+  }, [isAuthenticated]);
 
   const handleOpenCallbackDialog = (item: DashboardListItem) => {
     setSelectedCallbackItem(item);

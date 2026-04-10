@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
+import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Input } from "@/components/ui/input";
 import { Loader2, Search, ArrowUpDown, Users } from "lucide-react";
 import { fmtEur } from "@/components/ui/saas-metrics-shared";
 import type { CustomersListData, SaasCustomer } from "@/types/saas-metrics";
+import type { Contact } from "@/types/contact";
 
 const ACTIVITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   new:               { label: "NEW CUSTOMER",    color: "text-white",    bg: "bg-teal-500" },
@@ -56,6 +57,20 @@ export default function CustomersPage() {
   const [sortField, setSortField] = useState<SortField>("activityDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const canAccess = useMemo(() => user?.role === "admin", [user]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const openContact = async (contactId: string) => {
+    try {
+      const res = await apiClient.getContact(contactId);
+      if (res.success && res.data) {
+        setSelectedContact(res.data);
+        setIsSidebarOpen(true);
+      }
+    } catch (e) {
+      console.error("Error loading contact:", e);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -173,7 +188,7 @@ export default function CustomersPage() {
                     {data.customers.map((c) => (
                       <tr key={c._id} className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
                         <td className="py-3 px-4">
-                          <Link href={`/?search=${encodeURIComponent(c.email || c.name)}`} className="flex items-center gap-3 group">
+                          <button onClick={() => openContact(c._id)} className="flex items-center gap-3 group text-left w-full">
                             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                               <Users className="w-4 h-4 text-gray-400" />
                             </div>
@@ -181,7 +196,7 @@ export default function CustomersPage() {
                               <p className="text-sm font-medium text-gray-900 truncate group-hover:text-teal-600 transition-colors">{c.name}</p>
                               <p className="text-xs text-gray-400 truncate group-hover:text-teal-500 transition-colors">{c.planDesc}</p>
                             </div>
-                          </Link>
+                          </button>
                         </td>
                         <td className="text-right py-3 px-4">
                           <span className="text-sm font-medium text-gray-900 tabular-nums">{fmtEur(c.mrr)}</span>
@@ -208,6 +223,13 @@ export default function CustomersPage() {
           )}
         </div>
       </main>
+
+      <ContactDetailSidebar
+        contact={selectedContact}
+        isOpen={isSidebarOpen}
+        onClose={() => { setIsSidebarOpen(false); setSelectedContact(null); }}
+        onContactUpdate={(updated) => setSelectedContact(updated)}
+      />
     </div>
   );
 }

@@ -6,8 +6,10 @@ import apiClient from "@/lib/api";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { ContactDetailSidebar } from "@/components/ui/contact-detail-sidebar";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, ArrowUpDown, Users } from "lucide-react";
+import { Loader2, Search, ArrowUpDown, Users, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { fmtEur } from "@/components/ui/saas-metrics-shared";
+import { StripeReconcileDialog } from "@/components/ui/stripe-reconcile-dialog";
 import type { CustomersListData, SaasCustomer } from "@/types/saas-metrics";
 import type { Contact } from "@/types/contact";
 
@@ -59,6 +61,7 @@ export default function CustomersPage() {
   const canAccess = useMemo(() => user?.role === "admin", [user]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [reconcileOpen, setReconcileOpen] = useState(false);
 
   const openContact = async (contactId: string) => {
     try {
@@ -141,14 +144,25 @@ export default function CustomersPage() {
                 <span className="text-sm font-medium text-gray-500 uppercase tracking-wider">MRR</span>
               </div>
             </div>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Cerca clienti..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 text-sm"
-              />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReconcileOpen(true)}
+                className="h-9 text-sm border-teal-300 text-teal-700 hover:bg-teal-50"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                Sync Stripe
+              </Button>
+              <div className="relative w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Cerca clienti..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -229,6 +243,12 @@ export default function CustomersPage() {
         isOpen={isSidebarOpen}
         onClose={() => { setIsSidebarOpen(false); setSelectedContact(null); }}
         onContactUpdate={(updated) => setSelectedContact(updated)}
+      />
+
+      <StripeReconcileDialog
+        open={reconcileOpen}
+        onOpenChange={setReconcileOpen}
+        onComplete={load}
       />
     </div>
   );

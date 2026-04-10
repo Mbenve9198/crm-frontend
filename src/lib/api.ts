@@ -1,6 +1,6 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
-import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData, CustomersListData } from '@/types/saas-metrics';
+import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData, CustomersListData, UnmatchedStripeData } from '@/types/saas-metrics';
 import { 
   Call, 
   InitiateCallRequest, 
@@ -1034,6 +1034,10 @@ class ApiClient {
 
   async backfillSnapshots(): Promise<ApiResponse<unknown>> {
     return this.request('/saas-metrics/snapshot/backfill', { method: 'POST' });
+  }
+
+  async getUnmatchedStripeCustomers(): Promise<ApiResponse<UnmatchedStripeData>> {
+    return this.request<UnmatchedStripeData>('/stripe/unmatched-customers');
   }
 }
 

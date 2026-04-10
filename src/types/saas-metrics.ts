@@ -111,3 +111,21 @@ export interface CustomersListData {
   totalMrr: number;
   totalCustomers: number;
 }
+
+export interface UnmatchedStripeCustomer {
+  stripeCustomerId: string;
+  email: string | null;
+  name: string;
+  status: string;
+  planName: string;
+  mrr: number;
+  interval: string;
+  intervalCount: number;
+  subscriptionId: string;
+}
+
+export interface UnmatchedStripeData {
+  unmatched: UnmatchedStripeCustomer[];
+  totalStripe: number;
+  totalLinked: number;
+}

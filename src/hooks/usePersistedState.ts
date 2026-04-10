@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Drop-in replacement for useState that persists value to localStorage,
@@ -34,9 +37,11 @@ export function usePersistedState<T>(
   const fullKeyRef = useRef(fullKey);
   fullKeyRef.current = fullKey;
 
-  // Re-hydrate when user changes (e.g. login/logout)
+  // Re-hydrate when user changes (e.g. login/logout).
+  // useLayoutEffect so state updates are flushed synchronously
+  // before any useEffect (e.g. data-loading) runs.
   const prevKeyRef = useRef(fullKey);
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (prevKeyRef.current === fullKey) return;
     prevKeyRef.current = fullKey;
     try {

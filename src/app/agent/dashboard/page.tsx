@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api";
+import { usePersistedState } from "@/hooks/usePersistedState";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import {
   Loader2, Activity, Brain, AlertTriangle, TrendingUp,
@@ -303,7 +304,7 @@ function DashboardContent() {
   const [briefing, setBriefing] = useState<BriefingData | null>(null);
   const [strategies, setStrategies] = useState<StrategyData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<"today" | "week" | "month">("week");
+  const [period, setPeriod] = usePersistedState<"today" | "week" | "month">("agent-dashboard:period", "week");
 
   const [peekConvId, setPeekConvId] = useState<string | null>(null);
   const [listSheet, setListSheet] = useState<{ open: boolean; title: string; params: string }>({ open: false, title: "", params: "" });

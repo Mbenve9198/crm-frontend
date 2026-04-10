@@ -14,7 +14,8 @@ export const getStatusColor = (status: ContactStatus): string => {
     'lost before free trial': 'bg-red-600 shadow-red-600/50',
     'lost after free trial': 'bg-rose-600 shadow-rose-600/50',
     'bad_data': 'bg-slate-500 shadow-slate-500/50',
-    'non_qualificato': 'bg-zinc-500 shadow-zinc-500/50'
+    'non_qualificato': 'bg-zinc-500 shadow-zinc-500/50',
+    'do_not_contact': 'bg-stone-700 shadow-stone-700/50'
   };
   
   return colorMap[status] || 'bg-gray-400 shadow-gray-400/50';
@@ -34,7 +35,8 @@ export const getStatusLabel = (status: ContactStatus): string => {
     'lost before free trial': 'Lost (before free trial)',
     'lost after free trial': 'Lost (after free trial)',
     'bad_data': 'Bad data',
-    'non_qualificato': 'Non qualificato'
+    'non_qualificato': 'Non qualificato',
+    'do_not_contact': 'Do Not Contact'
   };
   
   return labelMap[status] || status;
@@ -66,7 +68,8 @@ export const getAllStatuses = (): ContactStatus[] => {
     'lost before free trial',
     'lost after free trial',
     'bad_data',
-    'non_qualificato'
+    'non_qualificato',
+    'do_not_contact'
   ];
 };
 

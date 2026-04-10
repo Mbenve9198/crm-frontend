@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./dialog";
 import { Input } from "./input";
 import { Button } from "./button";
-import { Loader2, Search, RefreshCw, CheckCircle2, AlertTriangle, Link2, X, CreditCard } from "lucide-react";
+import { Loader2, Search, RefreshCw, CheckCircle2, AlertTriangle, Link2, UserPlus, CreditCard } from "lucide-react";
 import apiClient from "@/lib/api";
 import { fmtEur } from "./saas-metrics-shared";
 import type { UnmatchedStripeCustomer } from "@/types/saas-metrics";
@@ -111,6 +111,28 @@ export function StripeReconcileDialog({ open, onOpenChange, onComplete }: Props)
       }
     } catch (e) {
       console.error("Link error:", e);
+    } finally {
+      setLinkingId(null);
+    }
+  };
+
+  const createAndLink = async (u: UnmatchedStripeCustomer) => {
+    setLinkingId(u.stripeCustomerId);
+    try {
+      const createRes = await apiClient.createContact({
+        name: u.name || u.email || u.stripeCustomerId,
+        email: u.email || undefined,
+        status: "won" as never,
+      });
+      if (createRes.success && createRes.data) {
+        const linkRes = await apiClient.stripeLinkCustomer(createRes.data._id, u.stripeCustomerId);
+        if (linkRes.success) {
+          setUnmatched(prev => prev.filter(x => x.stripeCustomerId !== u.stripeCustomerId));
+          setLinkedCount(prev => prev + 1);
+        }
+      }
+    } catch (e) {
+      console.error("Create & link error:", e);
     } finally {
       setLinkingId(null);
     }
@@ -245,6 +267,22 @@ export function StripeReconcileDialog({ open, onOpenChange, onComplete }: Props)
                     searchResults[u.stripeCustomerId]?.length === 0 && (
                     <p className="text-xs text-gray-400 italic px-1">Nessun lead trovato</p>
                   )}
+
+                  {/* Create new lead */}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="w-full h-8 text-xs text-gray-500 hover:text-teal-700 hover:bg-teal-50"
+                    disabled={linkingId === u.stripeCustomerId}
+                    onClick={() => createAndLink(u)}
+                  >
+                    {linkingId === u.stripeCustomerId ? (
+                      <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
+                    ) : (
+                      <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                    )}
+                    Crea nuovo lead e collega
+                  </Button>
                 </div>
               ))}
             </div>

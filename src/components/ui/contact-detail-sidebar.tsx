@@ -395,6 +395,64 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   );
 }
 
+function BonificoSection({ contact }: { contact: Contact }) {
+  const props = contact.properties || {};
+  const mrr = props.manualMrr as number | undefined;
+  const plan = props.manualPlanName as string | undefined;
+  const startDate = props.manualSubscriptionStart as string | undefined;
+
+  return (
+    <div className="border-t pt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <path d="M2 8h20" />
+          <path d="M6 12h4" />
+        </svg>
+        <h4 className="font-medium text-gray-900">Bonifico Bancario</h4>
+      </div>
+      <div className="bg-amber-50/50 rounded-lg p-3 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-600">Stato</span>
+          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800">
+            Attivo
+          </span>
+        </div>
+        {plan && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Piano</span>
+            <span className="text-sm font-medium text-gray-900">{plan}</span>
+          </div>
+        )}
+        {typeof mrr === "number" && (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">MRR</span>
+              <span className="text-sm font-bold text-emerald-700">€{mrr.toLocaleString("it-IT")}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">ARR</span>
+              <span className="text-sm font-semibold text-emerald-600">€{(mrr * 12).toLocaleString("it-IT")}</span>
+            </div>
+          </>
+        )}
+        {startDate && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Inizio</span>
+            <span className="text-xs text-gray-900">
+              {new Date(startDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-600">Metodo</span>
+          <span className="text-xs text-gray-900">Bonifico bancario</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -1076,8 +1134,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     )}
                   </div>
 
-                  {/* Sezione Stripe */}
-                  {contact.status === 'won' || contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
+                  {/* Sezione Pagamento */}
+                  {contact.properties?.paymentMethod === 'bonifico_bancario' && !contact.stripeData?.subscriptionId ? (
+                    <BonificoSection contact={contact} />
+                  ) : contact.status === 'won' || contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
                     <StripeSection contact={contact} onContactUpdate={onContactUpdate} />
                   ) : null}
 

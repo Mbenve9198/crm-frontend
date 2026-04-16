@@ -858,7 +858,24 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                 <UserIcon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{contact.name}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-gray-900">{contact.name}</h2>
+                  {(() => {
+                    const sourceBadges: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
+                      'inbound_menu_landing': { label: 'Google Ads', emoji: '📱', bg: 'bg-blue-100', text: 'text-blue-800' },
+                      'inbound_social_proof': { label: 'Social Proof', emoji: '🎬', bg: 'bg-pink-100', text: 'text-pink-800' },
+                      'inbound_prova_gratuita': { label: 'Prova Gratuita', emoji: '🚀', bg: 'bg-green-100', text: 'text-green-800' },
+                      'inbound_qr_recensioni': { label: 'QR Recensioni', emoji: '⭐', bg: 'bg-red-100', text: 'text-red-800' },
+                      'inbound_rank_checker': { label: 'Rank Checker', emoji: '🎯', bg: 'bg-teal-100', text: 'text-teal-800' },
+                    };
+                    const badge = sourceBadges[contact.source];
+                    return badge ? (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg} ${badge.text}`}>
+                        {badge.emoji} {badge.label}
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
                 <p className="text-sm text-gray-600">{contact.email}</p>
               </div>
             </div>
@@ -906,8 +923,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   </SelectContent>
                 </Select>
                 
-                {/* Bottone Script Chiamata - solo per contatti inbound con rankCheckerData */}
-                {contact.source === 'inbound_rank_checker' && contact.rankCheckerData && (
+                {/* Bottone Script Chiamata - per tutti i contatti inbound */}
+                {contact.source?.startsWith('inbound_') && (
                   <CallScriptDialog contact={contact} />
                 )}
               </div>
@@ -1110,7 +1127,11 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       <SelectContent>
                         {([
                           ['smartlead_outbound', 'Smartlead Outbound', 'bg-blue-500'],
-                          ['inbound_rank_checker', 'Rank Checker Inbound', 'bg-teal-500'],
+                          ['inbound_rank_checker', 'Rank Checker Organic', 'bg-teal-500'],
+                          ['inbound_prova_gratuita', 'Meta — Prova Gratuita', 'bg-green-500'],
+                          ['inbound_menu_landing', 'Google Ads — Menu', 'bg-blue-600'],
+                          ['inbound_social_proof', 'Meta — Social Proof', 'bg-pink-500'],
+                          ['inbound_qr_recensioni', 'Google Ads — QR Recensioni', 'bg-red-500'],
                           ['inbound_form', 'Form Inbound', 'bg-violet-500'],
                           ['inbound_api', 'API Inbound', 'bg-cyan-500'],
                           ['csv_import', 'CSV Import', 'bg-orange-500'],
@@ -1194,8 +1215,92 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     </div>
                   )}
 
-                  {/* Dati Rank Checker (solo se inbound) */}
-                  {contact.source === 'inbound_rank_checker' && contact.rankCheckerData && (
+                  {/* Sezione Menu Landing (per lead da Google Ads / Social Proof) */}
+                  {(contact.source === 'inbound_menu_landing' || contact.source === 'inbound_social_proof' || contact.source === 'inbound_qr_recensioni') && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-lg">🍽️</span>
+                        <h4 className="font-medium text-gray-900">Menu & Conversazione</h4>
+                      </div>
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 space-y-3">
+                        {/* Link al menu */}
+                        {contact.properties?.menuPreviewUrl && (
+                          <a
+                            href={contact.properties.menuPreviewUrl as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition-colors text-sm shadow-lg"
+                          >
+                            🍽️ Vedi Menu Digitale Creato
+                          </a>
+                        )}
+
+                        {/* Link WhatsApp diretto */}
+                        {contact.phone && (
+                          <a
+                            href={`https://wa.me/${contact.phone.replace('+', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors text-sm"
+                          >
+                            💬 Apri Chat WhatsApp
+                          </a>
+                        )}
+
+                        {/* Dati ristorante dal form */}
+                        {contact.rankCheckerData?.restaurantData && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
+                            <div className="text-xs font-bold text-gray-700 mb-2">🏪 Dati Ristorante</div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-yellow-500">⭐</span>
+                                <span className="font-bold text-lg">
+                                  {contact.rankCheckerData.restaurantData.rating?.toFixed(1) || 'N/A'}
+                                </span>
+                                <span className="text-gray-500 text-sm">
+                                  ({contact.rankCheckerData.restaurantData.reviewCount || 0} recensioni)
+                                </span>
+                              </div>
+                            </div>
+                            {contact.rankCheckerData.restaurantData.address && (
+                              <div className="text-sm">
+                                <div className="text-xs text-gray-500 mb-1">📍 Indirizzo</div>
+                                <div className="text-gray-900">{contact.rankCheckerData.restaurantData.address}</div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Suggerimento approccio vendita */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <div className="text-xs font-bold text-amber-800 mb-1">💡 Come approcciare</div>
+                          <p className="text-xs text-amber-700 leading-relaxed">
+                            {contact.source === 'inbound_social_proof'
+                              ? 'Ha visto il video con i risultati reali. Parla dei numeri (Impact Food +913, Il Porto +1565). Ha già il menu — proponi la prova gratuita delle recensioni.'
+                              : contact.source === 'inbound_qr_recensioni'
+                              ? 'Cercava un QR per recensioni. Ha ricevuto il menu digitale. Mostra come il QR del menu raccoglie recensioni automaticamente — è quello che cercava.'
+                              : 'Ha ricevuto il menu digitale su WhatsApp. Chiedi com\'è andato, poi presenta il sistema recensioni come upgrade naturale: stesso QR, le recensioni arrivano da sole.'
+                            }
+                          </p>
+                        </div>
+
+                        {/* Google Maps */}
+                        {contact.rankCheckerData?.placeId && (
+                          <a
+                            href={`https://www.google.com/maps/place/?q=place_id:${contact.rankCheckerData.placeId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors text-sm"
+                          >
+                            🗺️ Vedi su Google Maps
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dati Rank Checker (per lead organici e prova gratuita) */}
+                  {(contact.source === 'inbound_rank_checker' || contact.source === 'inbound_prova_gratuita') && contact.rankCheckerData && (
                     <div className="border-t pt-4">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg">🎯</span>

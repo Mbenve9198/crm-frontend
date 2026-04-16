@@ -13,7 +13,7 @@ export type ContactStatus =
   | 'non_qualificato'
   | 'do_not_contact';
 
-export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_form' | 'inbound_api' | 'smartlead_outbound' | 'referral';
+export type ContactSource = 'manual' | 'csv_import' | 'inbound_rank_checker' | 'inbound_prova_gratuita' | 'inbound_menu_landing' | 'inbound_social_proof' | 'inbound_qr_recensioni' | 'inbound_form' | 'inbound_api' | 'smartlead_outbound' | 'referral';
 
 export type RankCheckerData = {
   placeId?: string;

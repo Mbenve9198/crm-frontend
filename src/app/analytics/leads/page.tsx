@@ -116,7 +116,11 @@ function TrendArrow({ delta }: { delta: number | null }) {
 
 const ALL_SOURCES = [
   ["smartlead_outbound", "Smartlead Outbound"],
-  ["inbound_rank_checker", "Rank Checker Inbound"],
+  ["inbound_rank_checker", "Rank Checker Organic"],
+  ["inbound_prova_gratuita", "Meta — Prova Gratuita"],
+  ["inbound_menu_landing", "Google Ads — Menu"],
+  ["inbound_social_proof", "Meta — Social Proof"],
+  ["inbound_qr_recensioni", "Google Ads — QR Recensioni"],
   ["inbound_form", "Form Inbound"],
   ["inbound_api", "API Inbound"],
   ["csv_import", "CSV Import"],
@@ -790,7 +794,20 @@ export default function LeadAnalyticsPage() {
                     </thead>
                     <tbody>
                       {Object.entries(cohortData.sources).map(([srcKey, src]) => {
-                        const srcLabel = srcKey === "smartlead_outbound" ? "Smartlead Outbound" : srcKey === "inbound_rank_checker" ? "Rank Checker Inbound" : srcKey === "inbound_form" ? "Form Inbound" : srcKey === "inbound_api" ? "API Inbound" : srcKey === "manual" ? "Manuale" : srcKey === "csv_import" ? "CSV Import" : srcKey === "referral" ? "Referral" : srcKey;
+                        const srcLabelMap: Record<string, string> = {
+                          smartlead_outbound: "Smartlead Outbound",
+                          inbound_rank_checker: "Rank Checker Organic",
+                          inbound_prova_gratuita: "Meta — Prova Gratuita",
+                          inbound_menu_landing: "Google Ads — Menu",
+                          inbound_social_proof: "Meta — Social Proof",
+                          inbound_qr_recensioni: "Google Ads — QR Recensioni",
+                          inbound_form: "Form Inbound",
+                          inbound_api: "API Inbound",
+                          manual: "Manuale",
+                          csv_import: "CSV Import",
+                          referral: "Referral",
+                        };
+                        const srcLabel = srcLabelMap[srcKey] || srcKey;
                         const openFunnelDrilldown = (label: string, color: string, contacts: { id: string; name: string; email?: string; source?: string; mrr?: number | null }[]) => {
                           setGenericDrilldown({
                             title: `${srcLabel} · ${label}`,

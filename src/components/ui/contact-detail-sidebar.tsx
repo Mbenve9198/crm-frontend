@@ -892,7 +892,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       'inbound_qr_recensioni': { label: 'QR Recensioni', emoji: '⭐', bg: 'bg-red-100', text: 'text-red-800' },
                       'inbound_rank_checker': { label: 'Rank Checker', emoji: '🎯', bg: 'bg-teal-100', text: 'text-teal-800' },
                     };
-                    const badge = sourceBadges[contact.source];
+                    const badge = contact.source ? sourceBadges[contact.source] : undefined;
                     return badge ? (
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg} ${badge.text}`}>
                         {badge.emoji} {badge.label}

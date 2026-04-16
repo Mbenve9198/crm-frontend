@@ -15,6 +15,20 @@ import {
 import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData, OwnerPerformanceData } from '@/types/analytics';
 import { DashboardData } from '@/types/dashboard';
 
+export type SourceRule = {
+  source: string;
+  strategy: 'specific' | 'round_robin';
+  userId?: string | User | null;
+  userIds?: (string | User)[];
+};
+
+export type AssignmentConfig = {
+  _id?: string;
+  key?: string;
+  globalRoundRobin: User[];
+  sourceRules: SourceRule[];
+};
+
 // Tipi per statistiche e paginazione
 type PaginationData = {
   currentPage: number;
@@ -1038,6 +1052,22 @@ class ApiClient {
 
   async getUnmatchedStripeCustomers(): Promise<ApiResponse<UnmatchedStripeData>> {
     return this.request<UnmatchedStripeData>('/stripe/unmatched-customers');
+  }
+
+  // ── Admin Settings: Assignment Config ────────────────────────────────────
+
+  async getAssignmentConfig(): Promise<ApiResponse<AssignmentConfig>> {
+    return this.request<AssignmentConfig>('/admin/settings/assignment');
+  }
+
+  async updateAssignmentConfig(data: {
+    globalRoundRobin: string[];
+    sourceRules: SourceRule[];
+  }): Promise<ApiResponse<AssignmentConfig>> {
+    return this.request<AssignmentConfig>('/admin/settings/assignment', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 }
 

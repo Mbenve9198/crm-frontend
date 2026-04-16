@@ -463,6 +463,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [pendingCloseDate, setPendingCloseDate] = useState<string>("");
   const [showMRRInput, setShowMRRInput] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
+
+  // Conversazione WhatsApp da menu landing (Claude Managed Agents)
+  const [landingConversation, setLandingConversation] = useState<Array<{ role: string; content: string; timestamp: string; channel?: string }>>([]);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{description?: string; callOutcome?: CallOutcome}>({});
 
@@ -550,6 +554,25 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   }, [contact]);
 
+  const loadLandingConversation = useCallback(async () => {
+    if (!contact?.properties?.agentSessionId) return;
+    try {
+      setIsLoadingConversation(true);
+      const sessionId = contact.properties.agentSessionId as string;
+      const res = await fetch(
+        `https://menuchat-backend.onrender.com/api/menu-landing/conversation/${sessionId}`
+      );
+      const data = await res.json();
+      if (data.success && data.messages) {
+        setLandingConversation(data.messages);
+      }
+    } catch {
+      // Endpoint potrebbe non essere disponibile
+    } finally {
+      setIsLoadingConversation(false);
+    }
+  }, [contact]);
+
   const loadAgentConversations = useCallback(async () => {
     if (!contact) return;
     try {
@@ -572,6 +595,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     if (contact && isOpen) {
       loadActivities();
       loadAgentConversations();
+      loadLandingConversation();
       setEditedContact({ ...contact });
       
       // Se c'è un'activity iniziale, apri il form e precompilalo
@@ -1295,6 +1319,35 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             🗺️ Vedi su Google Maps
                           </a>
                         )}
+                        {/* Conversazione WhatsApp con l'agente */}
+                        {isLoadingConversation ? (
+                          <div className="text-xs text-gray-400 text-center py-2">Caricamento conversazione...</div>
+                        ) : landingConversation.length > 0 ? (
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione WhatsApp</div>
+                            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                              {landingConversation.map((msg, i) => (
+                                <div key={i} className={`text-xs p-2 rounded-lg ${
+                                  msg.role === 'lead'
+                                    ? 'bg-gray-100 border border-gray-200'
+                                    : 'bg-emerald-50 border border-emerald-200'
+                                }`}>
+                                  <span className="font-medium text-gray-500">
+                                    {msg.role === 'lead' ? 'Cliente' : 'Marco (AI)'}
+                                  </span>
+                                  {msg.timestamp && (
+                                    <span className="text-gray-300 ml-1 text-[10px]">
+                                      {new Date(msg.timestamp).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                  <p className="text-gray-700 mt-0.5">{msg.content}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : contact.properties?.agentSessionId ? (
+                          <div className="text-xs text-gray-400 text-center py-2">Nessun messaggio nella conversazione</div>
+                        ) : null}
                       </div>
                     </div>
                   )}

@@ -790,6 +790,7 @@ export default function LeadAnalyticsPage() {
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">QR&nbsp;Inviato</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Free&nbsp;Trial</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Won</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Bad&nbsp;Data&nbsp;/&nbsp;Non&nbsp;Qual.</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -842,6 +843,9 @@ export default function LeadAnalyticsPage() {
                             <td className="px-4 py-2.5 text-right">
                               <CCell count={src.steps.won.count} label="Won" color="bg-emerald-500" contacts={src.steps.won.contacts} />
                             </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.steps.badData?.count ?? 0} label="Bad Data / Non Qualificato" color="bg-red-400" contacts={src.steps.badData?.contacts ?? []} />
+                            </td>
                           </tr>
                         );
                       })}
@@ -855,6 +859,7 @@ export default function LeadAnalyticsPage() {
                         const totQR = srcs.reduce((s, v) => s + v.steps.qrCodeSent.count, 0);
                         const totFT = srcs.reduce((s, v) => s + v.steps.freeTrialStarted.count, 0);
                         const totWon = srcs.reduce((s, v) => s + v.steps.won.count, 0);
+                        const totBD = srcs.reduce((s, v) => s + (v.steps.badData?.count ?? 0), 0);
                         return (
                           <tr className="border-t-2 bg-indigo-50/60 font-semibold">
                             <td className="px-4 py-2.5 text-gray-900">Totale</td>
@@ -865,6 +870,7 @@ export default function LeadAnalyticsPage() {
                             <td className="px-4 py-2.5 text-right">{totQR}</td>
                             <td className="px-4 py-2.5 text-right">{totFT}</td>
                             <td className="px-4 py-2.5 text-right">{totWon}</td>
+                            <td className="px-4 py-2.5 text-right">{totBD}</td>
                           </tr>
                         );
                       })()}

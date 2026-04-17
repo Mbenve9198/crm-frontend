@@ -68,6 +68,7 @@ export type LeadCohortSourceAnalytics = {
     qrCodeSent: { count: number; contacts: LeadFunnelStepContact[] };
     freeTrialStarted: { count: number; contacts: LeadFunnelStepContact[] };
     won: { count: number; contacts: LeadFunnelStepContact[] };
+    badData?: { count: number; contacts: LeadFunnelStepContact[] };
   };
 };
 

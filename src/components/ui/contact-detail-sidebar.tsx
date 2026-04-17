@@ -1635,7 +1635,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                   {contact.rankCheckerData.hasDigitalMenu ? '✅ Sì' : '❌ No'}
                                 </div>
                               </div>
-                              {!contact.rankCheckerData.hasDigitalMenu && (
+                              {!contact.rankCheckerData.hasDigitalMenu && contact.rankCheckerData.willingToAdoptMenu !== null && contact.rankCheckerData.willingToAdoptMenu !== undefined && (
                                 <div>
                                   <span className="text-gray-500">Disposto:</span>
                                   <div className="font-bold">

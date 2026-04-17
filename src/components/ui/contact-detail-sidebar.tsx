@@ -395,21 +395,199 @@ function StripeSection({ contact, onContactUpdate }: { contact: Contact; onConta
   );
 }
 
-function BonificoSection({ contact }: { contact: Contact }) {
+function BonificoSection({ contact, onContactUpdate }: { contact: Contact; onContactUpdate: (c: Contact) => void }) {
   const props = contact.properties || {};
+  const hasData = props.paymentMethod === 'bonifico_bancario';
   const mrr = props.manualMrr as number | undefined;
   const plan = props.manualPlanName as string | undefined;
   const startDate = props.manualSubscriptionStart as string | undefined;
+  const renewalDate = props.manualRenewalDate as string | undefined;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    planName: plan || '',
+    mrr: mrr?.toString() || '',
+    startDate: startDate || '',
+    renewalDate: renewalDate || '',
+  });
+
+  useEffect(() => {
+    setFormData({
+      planName: (props.manualPlanName as string) || '',
+      mrr: (props.manualMrr as number)?.toString() || '',
+      startDate: (props.manualSubscriptionStart as string) || '',
+      renewalDate: (props.manualRenewalDate as string) || '',
+    });
+  }, [contact._id, props.manualPlanName, props.manualMrr, props.manualSubscriptionStart, props.manualRenewalDate]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const mrrVal = parseFloat(formData.mrr);
+      const newProps: Record<string, string | number | boolean> = {
+        ...contact.properties,
+        paymentMethod: 'bonifico_bancario',
+      };
+      if (formData.planName) newProps.manualPlanName = formData.planName;
+      if (!isNaN(mrrVal)) newProps.manualMrr = mrrVal;
+      if (formData.startDate) newProps.manualSubscriptionStart = formData.startDate;
+      if (formData.renewalDate) newProps.manualRenewalDate = formData.renewalDate;
+      const res = await apiClient.updateContact(contact._id, {
+        properties: newProps,
+      });
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      console.error("Errore salvataggio bonifico:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!confirm("Rimuovere il pagamento con bonifico bancario?")) return;
+    setIsSaving(true);
+    try {
+      const newProps = { ...contact.properties };
+      delete newProps.paymentMethod;
+      delete newProps.manualPlanName;
+      delete newProps.manualMrr;
+      delete newProps.manualSubscriptionStart;
+      delete newProps.manualRenewalDate;
+      const res = await apiClient.updateContact(contact._id, { properties: newProps });
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+        setIsEditing(false);
+      }
+    } catch (err) {
+      console.error("Errore rimozione bonifico:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const BankIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M2 8h20" />
+      <path d="M6 12h4" />
+    </svg>
+  );
+
+  if (!hasData && !isEditing) {
+    return (
+      <div className="border-t pt-4">
+        <button
+          onClick={() => setIsEditing(true)}
+          className="w-full flex items-center justify-center gap-2 text-xs font-medium text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg py-2.5 transition-colors"
+        >
+          <BankIcon />
+          Aggiungi pagamento con bonifico
+        </button>
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="border-t pt-4">
+        <div className="flex items-center gap-2 mb-3">
+          <BankIcon />
+          <h4 className="font-medium text-gray-900">Bonifico Bancario</h4>
+        </div>
+        <div className="bg-amber-50/50 rounded-lg p-3 space-y-2.5">
+          <div>
+            <label className="text-[11px] text-gray-500 mb-1 block">Piano</label>
+            <select
+              value={formData.planName}
+              onChange={e => setFormData(f => ({ ...f, planName: e.target.value }))}
+              className="w-full text-xs border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              <option value="">Seleziona piano...</option>
+              <option value="Menuchat Mensile">Menuchat Mensile</option>
+              <option value="Menuchat Trimestrale">Menuchat Trimestrale</option>
+              <option value="Menuchat Quadrimestrale">Menuchat Quadrimestrale</option>
+              <option value="Menuchat Semestrale">Menuchat Semestrale</option>
+              <option value="Menuchat Annuale">Menuchat Annuale</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-[11px] text-gray-500 mb-1 block">MRR (€/mese)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.mrr}
+              onChange={e => setFormData(f => ({ ...f, mrr: e.target.value }))}
+              placeholder="es. 107.50"
+              className="w-full text-xs border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-gray-500 mb-1 block">Data inizio</label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={e => setFormData(f => ({ ...f, startDate: e.target.value }))}
+              className="w-full text-xs border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+          <div>
+            <label className="text-[11px] text-gray-500 mb-1 block">Prossimo rinnovo</label>
+            <input
+              type="date"
+              value={formData.renewalDate}
+              onChange={e => setFormData(f => ({ ...f, renewalDate: e.target.value }))}
+              className="w-full text-xs border rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md py-1.5 disabled:opacity-50"
+            >
+              {isSaving ? "Salvataggio..." : "Salva"}
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              disabled={isSaving}
+              className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5"
+            >
+              Annulla
+            </button>
+            {hasData && (
+              <button
+                onClick={handleRemove}
+                disabled={isSaving}
+                className="text-xs text-red-500 hover:text-red-700 px-2 py-1.5"
+              >
+                Rimuovi
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const mrrVal = typeof mrr === "number" ? mrr : 0;
 
   return (
     <div className="border-t pt-4">
-      <div className="flex items-center gap-2 mb-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="4" width="20" height="16" rx="2" />
-          <path d="M2 8h20" />
-          <path d="M6 12h4" />
-        </svg>
-        <h4 className="font-medium text-gray-900">Bonifico Bancario</h4>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <BankIcon />
+          <h4 className="font-medium text-gray-900">Bonifico Bancario</h4>
+        </div>
+        <button
+          onClick={() => setIsEditing(true)}
+          className="text-xs text-amber-600 hover:text-amber-800 font-medium"
+        >
+          Modifica
+        </button>
       </div>
       <div className="bg-amber-50/50 rounded-lg p-3 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -424,15 +602,15 @@ function BonificoSection({ contact }: { contact: Contact }) {
             <span className="text-sm font-medium text-gray-900">{plan}</span>
           </div>
         )}
-        {typeof mrr === "number" && (
+        {mrrVal > 0 && (
           <>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-600">MRR</span>
-              <span className="text-sm font-bold text-emerald-700">€{mrr.toLocaleString("it-IT")}</span>
+              <span className="text-sm font-bold text-emerald-700">€{mrrVal.toLocaleString("it-IT")}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-600">ARR</span>
-              <span className="text-sm font-semibold text-emerald-600">€{(mrr * 12).toLocaleString("it-IT")}</span>
+              <span className="text-sm font-semibold text-emerald-600">€{(mrrVal * 12).toLocaleString("it-IT")}</span>
             </div>
           </>
         )}
@@ -441,6 +619,14 @@ function BonificoSection({ contact }: { contact: Contact }) {
             <span className="text-xs text-gray-600">Inizio</span>
             <span className="text-xs text-gray-900">
               {new Date(startDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+            </span>
+          </div>
+        )}
+        {renewalDate && (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-600">Prossimo rinnovo</span>
+            <span className="text-xs text-gray-900">
+              {new Date(renewalDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
             </span>
           </div>
         )}
@@ -1180,11 +1366,16 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   </div>
 
                   {/* Sezione Pagamento */}
-                  {contact.properties?.paymentMethod === 'bonifico_bancario' && !contact.stripeData?.subscriptionId ? (
-                    <BonificoSection contact={contact} />
-                  ) : contact.status === 'won' || contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
-                    <StripeSection contact={contact} onContactUpdate={onContactUpdate} />
-                  ) : null}
+                  {contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
+                    <>
+                      <StripeSection contact={contact} onContactUpdate={onContactUpdate} />
+                      {contact.properties?.paymentMethod === 'bonifico_bancario' && (
+                        <BonificoSection contact={contact} onContactUpdate={onContactUpdate} />
+                      )}
+                    </>
+                  ) : (
+                    <BonificoSection contact={contact} onContactUpdate={onContactUpdate} />
+                  )}
 
                   {/* Sezione Richiamo - visibile se status "da richiamare" */}
                   {contact.status === 'da richiamare' && (
@@ -1416,7 +1607,23 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             <div className="font-bold text-gray-900">{contact.rankCheckerData.keyword}</div>
                           </div>
                         )}
-                        
+
+                        {/* Data test Rank Checker */}
+                        {(contact.rankCheckerData.leadCapturedAt || contact.rankCheckerData.qualifiedAt) && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-xs text-gray-500 mb-1">📅 Data test effettuato</div>
+                            <div className="font-bold text-gray-900">
+                              {new Date(contact.rankCheckerData.leadCapturedAt || contact.rankCheckerData.qualifiedAt!).toLocaleString('it-IT', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Qualificazione */}
                         {contact.rankCheckerData.dailyCovers !== undefined && (
                           <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">

@@ -37,6 +37,7 @@ import {
   CalendarOff,
   ChevronLeft,
   ChevronRight,
+  Timer,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
 import { MessageCircle } from "lucide-react";
@@ -225,6 +226,7 @@ type ThemedTableProps = {
   showCloseDate?: boolean;
   showSource?: boolean;
   showAge?: boolean;
+  ageFrom?: "createdAt" | "lastActivityAt";
   onContactClick?: (id: string) => void;
 };
 
@@ -249,6 +251,7 @@ function ThemedLeadsTable({
   showCloseDate,
   showSource,
   showAge,
+  ageFrom = "createdAt",
   onContactClick,
 }: ThemedTableProps) {
   const [page, setPage] = useState(1);
@@ -293,7 +296,7 @@ function ThemedLeadsTable({
                     </th>
                     {showAge && (
                       <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        In attesa da
+                        {ageFrom === "lastActivityAt" ? "Ultimo tocco" : "In attesa da"}
                       </th>
                     )}
                     {!hideMrr && (
@@ -327,7 +330,7 @@ function ThemedLeadsTable({
                             : formatDateTime(c.lastActivityAt)}
                       </td>
                       {showAge && (() => {
-                        const age = formatAge(c.createdAt);
+                        const age = formatAge(ageFrom === "lastActivityAt" ? c.lastActivityAt : c.createdAt);
                         return (
                           <td className="px-4 py-3">
                             {age ? (
@@ -709,6 +712,15 @@ export default function DashboardPage() {
               valueColor="text-amber-700"
             />
             <KpiCard
+              label="In stallo"
+              description="Toccati ma ancora in 'Da contattare' o 'Interessato'."
+              value={k?.stalled ?? "—"}
+              icon={<Timer className="h-5 w-5 text-orange-600" />}
+              borderColor="border-l-orange-500"
+              iconBg="bg-orange-50"
+              valueColor="text-orange-700"
+            />
+            <KpiCard
               label="Free trial iniziato"
               value={k?.freeTrialStarted ?? "—"}
               icon={<Play className="h-5 w-5 text-emerald-600" />}
@@ -841,6 +853,24 @@ export default function DashboardPage() {
               hideMrr
               showSource
               showAge
+              onContactClick={handleContactClick}
+            />
+
+            <ThemedLeadsTable
+              title="In stallo"
+              count={data?.lists.stalled?.length || 0}
+              items={data?.lists.stalled || []}
+              headerBg="bg-orange-50"
+              headerText="text-orange-800"
+              badgeBg="bg-orange-100"
+              badgeText="text-orange-700"
+              accentBorder="border-t-orange-500"
+              emptyIcon={<Timer className="h-8 w-8" />}
+              emptyMessage="Nessun lead in stallo — ottimo ritmo!"
+              hideMrr
+              showSource
+              showAge
+              ageFrom="lastActivityAt"
               onContactClick={handleContactClick}
             />
 

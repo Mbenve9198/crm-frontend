@@ -23,6 +23,7 @@ export type DashboardListItem = {
 export type DashboardKpis = {
   total: number;
   notTouched: number;
+  stalled: number;
   freeTrialStarted: number;
   qrCodeSent: number;
   interested: number;
@@ -40,6 +41,7 @@ export type DashboardData = {
   kpis: DashboardKpis;
   lists: {
     notTouched: DashboardListItem[];
+    stalled: DashboardListItem[];
     callback: DashboardListItem[];
     freeTrial: DashboardListItem[];
     qrFollowUp: DashboardListItem[];

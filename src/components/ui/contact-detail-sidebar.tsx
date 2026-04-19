@@ -639,6 +639,74 @@ function BonificoSection({ contact, onContactUpdate }: { contact: Contact; onCon
   );
 }
 
+const BUBBLE_PREVIEW = 220;
+
+function AiAgentActivity({ description }: { description: string }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (i: number) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return next;
+  });
+
+  const parts = description.split('\n\n');
+  const emailPart = parts.find(p => p.startsWith('Email inviata'));
+  const replyPart = parts.find(p => p.startsWith('Risposta cliente'));
+  const reasoningPart = parts.find(p => p.startsWith('Ragionamento AI'));
+  const emailText = emailPart ? emailPart.replace(/^Email inviata[^:]*:\n?/, '').replace(/^"|"$/, '').trim() : null;
+  const replyText = replyPart ? replyPart.replace(/^Risposta cliente[^:]*:\n?/, '').replace(/^"|"$/, '').trim() : null;
+  const reasoningText = reasoningPart ? reasoningPart.replace(/^Ragionamento AI:\s*/, '').trim() : null;
+
+  if (!emailText && !replyText) {
+    return <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{description}</p>;
+  }
+
+  const bubbles: { label: string; text: string; side: 'noi' | 'cliente' | 'meta' }[] = [];
+  if (emailText) bubbles.push({ label: 'Noi', text: emailText, side: 'noi' });
+  if (replyText) bubbles.push({ label: 'Cliente', text: replyText, side: 'cliente' });
+  if (reasoningText) bubbles.push({ label: 'AI', text: reasoningText, side: 'meta' });
+
+  return (
+    <div className="mt-2 space-y-2">
+      {bubbles.map((b, i) => {
+        if (b.side === 'meta') {
+          return (
+            <div key={i} className="flex items-start gap-1.5 px-1">
+              <span className="text-[10px] font-medium text-violet-400 mt-0.5 shrink-0">AI</span>
+              <p className="text-[11px] text-violet-500 italic leading-relaxed">{b.text}</p>
+            </div>
+          );
+        }
+        const isNoi = b.side === 'noi';
+        const isLong = b.text.length > BUBBLE_PREVIEW;
+        const isExpanded = expanded.has(i);
+        const displayText = isLong && !isExpanded ? b.text.slice(0, BUBBLE_PREVIEW) + '…' : b.text;
+        return (
+          <div key={i} className={`flex flex-col gap-0.5 ${isNoi ? 'items-end' : 'items-start'}`}>
+            <span className="text-[10px] text-gray-400 px-1">{isNoi ? 'Noi' : 'Cliente'}</span>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line ${
+                isNoi ? 'bg-violet-600 text-white rounded-tr-sm' : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+              }`}
+            >
+              {displayText}
+              {isLong && (
+                <button
+                  onClick={() => toggle(i)}
+                  className={`block mt-1 text-[11px] underline opacity-70 hover:opacity-100 ${isNoi ? 'text-violet-200' : 'text-gray-500'}`}
+                >
+                  {isExpanded ? 'Mostra meno' : 'Leggi tutto'}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -944,53 +1012,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const renderAiAgentDescription = (description: string) => {
-    const sections: { label: string; text: string; side: 'noi' | 'cliente' | 'meta' }[] = [];
-
-    const parts = description.split('\n\n');
-    const emailPart = parts.find(p => p.startsWith('Email inviata'));
-    const replyPart = parts.find(p => p.startsWith('Risposta cliente'));
-    const reasoningPart = parts.find(p => p.startsWith('Ragionamento AI'));
-    const emailText = emailPart ? emailPart.replace(/^Email inviata[^:]*:\s*"?/, '').replace(/"$/, '').trim() : null;
-    const replyText = replyPart ? replyPart.replace(/^Risposta cliente[^:]*:\s*"?/, '').replace(/"$/, '').trim() : null;
-    const reasoningText = reasoningPart ? reasoningPart.replace(/^Ragionamento AI:\s*/, '').trim() : null;
-
-    if (!emailText && !replyText) {
-      return <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{description}</p>;
-    }
-
-    if (emailText) sections.push({ label: 'Noi', text: emailText, side: 'noi' });
-    if (replyText) sections.push({ label: 'Cliente', text: replyText, side: 'cliente' });
-    if (reasoningText) sections.push({ label: 'AI', text: reasoningText, side: 'meta' });
-
-    return (
-      <div className="mt-2 space-y-2">
-        {sections.map((s, i) => {
-          if (s.side === 'meta') {
-            return (
-              <div key={i} className="flex items-start gap-1.5 px-1">
-                <span className="text-[10px] font-medium text-violet-400 mt-0.5 shrink-0">AI</span>
-                <p className="text-[11px] text-violet-500 italic leading-relaxed">{s.text}</p>
-              </div>
-            );
-          }
-          const isNoi = s.side === 'noi';
-          return (
-            <div key={i} className={`flex flex-col gap-0.5 ${isNoi ? 'items-end' : 'items-start'}`}>
-              <span className="text-[10px] text-gray-400 px-1">{isNoi ? 'Noi' : 'Cliente'}</span>
-              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
-                isNoi
-                  ? 'bg-violet-600 text-white rounded-tr-sm'
-                  : 'bg-gray-100 text-gray-800 rounded-tl-sm'
-              }`}>
-                {s.text}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -2087,7 +2108,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             <>
                               {activity.description && (
                                 activity.type === 'ai_agent'
-                                  ? renderAiAgentDescription(activity.description)
+                                  ? <AiAgentActivity description={activity.description} />
                                   : <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
                               )}
                               

@@ -947,17 +947,21 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const renderAiAgentDescription = (description: string) => {
     const sections: { label: string; text: string; side: 'noi' | 'cliente' | 'meta' }[] = [];
 
-    const emailMatch = description.match(/Email inviata[^:]*:\s*"?([^"]+(?:"[^"]*"[^"]*)*?)(?=\n\nRisposta|\n\nRagionamento|$)/s);
-    const replyMatch = description.match(/Risposta cliente[^:]*:\s*"?(.+?)(?=\n\nRagionamento|$)/s);
-    const reasoningMatch = description.match(/Ragionamento AI:\s*(.+)$/s);
+    const parts = description.split('\n\n');
+    const emailPart = parts.find(p => p.startsWith('Email inviata'));
+    const replyPart = parts.find(p => p.startsWith('Risposta cliente'));
+    const reasoningPart = parts.find(p => p.startsWith('Ragionamento AI'));
+    const emailText = emailPart ? emailPart.replace(/^Email inviata[^:]*:\s*"?/, '').replace(/"$/, '').trim() : null;
+    const replyText = replyPart ? replyPart.replace(/^Risposta cliente[^:]*:\s*"?/, '').replace(/"$/, '').trim() : null;
+    const reasoningText = reasoningPart ? reasoningPart.replace(/^Ragionamento AI:\s*/, '').trim() : null;
 
-    if (!emailMatch && !replyMatch) {
+    if (!emailText && !replyText) {
       return <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{description}</p>;
     }
 
-    if (emailMatch) sections.push({ label: 'Noi', text: emailMatch[1].replace(/^"|"$/g, '').trim(), side: 'noi' });
-    if (replyMatch) sections.push({ label: 'Cliente', text: replyMatch[1].replace(/^"|"$/g, '').trim(), side: 'cliente' });
-    if (reasoningMatch) sections.push({ label: 'AI', text: reasoningMatch[1].trim(), side: 'meta' });
+    if (emailText) sections.push({ label: 'Noi', text: emailText, side: 'noi' });
+    if (replyText) sections.push({ label: 'Cliente', text: replyText, side: 'cliente' });
+    if (reasoningText) sections.push({ label: 'AI', text: reasoningText, side: 'meta' });
 
     return (
       <div className="mt-2 space-y-2">

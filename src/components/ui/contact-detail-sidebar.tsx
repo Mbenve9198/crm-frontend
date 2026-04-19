@@ -1632,14 +1632,14 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                               <div>
                                 <span className="text-gray-500">Menu Digitale:</span>
                                 <div className="font-bold">
-                                  {contact.rankCheckerData.hasDigitalMenu ? '✅ Sì' : '❌ No'}
+                                  {contact.rankCheckerData.hasDigitalMenu === true ? '✅ Sì' : contact.rankCheckerData.hasDigitalMenu === false ? '❌ No' : '—'}
                                 </div>
                               </div>
-                              {!contact.rankCheckerData.hasDigitalMenu && contact.rankCheckerData.willingToAdoptMenu !== null && contact.rankCheckerData.willingToAdoptMenu !== undefined && (
+                              {contact.rankCheckerData.hasDigitalMenu === false && (
                                 <div>
                                   <span className="text-gray-500">Disposto:</span>
                                   <div className="font-bold">
-                                    {contact.rankCheckerData.willingToAdoptMenu ? '✅ Sì' : '❌ No'}
+                                    {contact.rankCheckerData.willingToAdoptMenu === true ? '✅ Sì' : contact.rankCheckerData.willingToAdoptMenu === false ? '❌ No' : '⚪ Non risposto'}
                                   </div>
                                 </div>
                               )}

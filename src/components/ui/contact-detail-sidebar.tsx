@@ -944,6 +944,50 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     return colorMap[type] || 'bg-gray-100 text-gray-800';
   };
 
+  const renderAiAgentDescription = (description: string) => {
+    const sections: { label: string; text: string; side: 'noi' | 'cliente' | 'meta' }[] = [];
+
+    const emailMatch = description.match(/Email inviata[^:]*:\s*"?([^"]+(?:"[^"]*"[^"]*)*?)(?=\n\nRisposta|\n\nRagionamento|$)/s);
+    const replyMatch = description.match(/Risposta cliente[^:]*:\s*"?(.+?)(?=\n\nRagionamento|$)/s);
+    const reasoningMatch = description.match(/Ragionamento AI:\s*(.+)$/s);
+
+    if (!emailMatch && !replyMatch) {
+      return <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{description}</p>;
+    }
+
+    if (emailMatch) sections.push({ label: 'Noi', text: emailMatch[1].replace(/^"|"$/g, '').trim(), side: 'noi' });
+    if (replyMatch) sections.push({ label: 'Cliente', text: replyMatch[1].replace(/^"|"$/g, '').trim(), side: 'cliente' });
+    if (reasoningMatch) sections.push({ label: 'AI', text: reasoningMatch[1].trim(), side: 'meta' });
+
+    return (
+      <div className="mt-2 space-y-2">
+        {sections.map((s, i) => {
+          if (s.side === 'meta') {
+            return (
+              <div key={i} className="flex items-start gap-1.5 px-1">
+                <span className="text-[10px] font-medium text-violet-400 mt-0.5 shrink-0">AI</span>
+                <p className="text-[11px] text-violet-500 italic leading-relaxed">{s.text}</p>
+              </div>
+            );
+          }
+          const isNoi = s.side === 'noi';
+          return (
+            <div key={i} className={`flex flex-col gap-0.5 ${isNoi ? 'items-end' : 'items-start'}`}>
+              <span className="text-[10px] text-gray-400 px-1">{isNoi ? 'Noi' : 'Cliente'}</span>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                isNoi
+                  ? 'bg-violet-600 text-white rounded-tr-sm'
+                  : 'bg-gray-100 text-gray-800 rounded-tl-sm'
+              }`}>
+                {s.text}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -2038,7 +2082,9 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           ) : (
                             <>
                               {activity.description && (
-                                <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                                activity.type === 'ai_agent'
+                                  ? renderAiAgentDescription(activity.description)
+                                  : <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
                               )}
                               
                               {activity.data?.messageText && (

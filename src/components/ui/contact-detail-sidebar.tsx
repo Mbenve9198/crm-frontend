@@ -1708,6 +1708,14 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                   </span>
                                 </div>
                               )}
+                              {contact.properties.callNote && (
+                                <div className="mt-2 pt-2 border-t border-green-200">
+                                  <span className="text-xs text-gray-600 block mb-1">Note:</span>
+                                  <span className="text-xs text-gray-800 italic">
+                                    {contact.properties.callNote as string}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}

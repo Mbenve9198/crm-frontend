@@ -7,12 +7,13 @@ import { formatDistanceToNow, isPast } from "date-fns";
 import { it } from "date-fns/locale";
 
 export function CallbackReminderNotification() {
-  const { visibleCallbacks, snooze, dismiss, dismissAll } = useCallbacks();
+  const { visibleCallbacks, snooze, dismiss, dismissAll, setPendingContactId } = useCallbacks();
   const router = useRouter();
 
   const openContact = (contactId: string) => {
     dismiss(contactId);
-    router.push(`/?contact=${contactId}`);
+    setPendingContactId(contactId);
+    router.push("/");
   };
 
   if (visibleCallbacks.length === 0) return null;

@@ -19,6 +19,8 @@ type CallbackContextType = {
   snooze: (contactId: string) => void;
   dismiss: (contactId: string) => void;
   dismissAll: () => void;
+  pendingContactId: string | null;
+  setPendingContactId: (id: string | null) => void;
 };
 
 const CallbackContext = createContext<CallbackContextType>({
@@ -26,6 +28,8 @@ const CallbackContext = createContext<CallbackContextType>({
   snooze: () => {},
   dismiss: () => {},
   dismissAll: () => {},
+  pendingContactId: null,
+  setPendingContactId: () => {},
 });
 
 export const useCallbacks = () => useContext(CallbackContext);
@@ -33,10 +37,9 @@ export const useCallbacks = () => useContext(CallbackContext);
 export function CallbackProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [dueCallbacks, setDueCallbacks] = useState<CallbackContact[]>([]);
-  // dismissedKeys: Set of "${contactId}_${callbackAt}" — cleared when callbackAt changes
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
-  // snoozedUntil: Map of contactId → timestamp when snooze expires
   const [snoozedUntil, setSnoozedUntil] = useState<Map<string, number>>(new Map());
+  const [pendingContactId, setPendingContactId] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getDismissKey = (c: CallbackContact) =>
@@ -89,7 +92,7 @@ export function CallbackProvider({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <CallbackContext.Provider value={{ visibleCallbacks, snooze, dismiss, dismissAll }}>
+    <CallbackContext.Provider value={{ visibleCallbacks, snooze, dismiss, dismissAll, pendingContactId, setPendingContactId }}>
       {children}
     </CallbackContext.Provider>
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useCallbacks } from "@/context/CallbackContext";
 import ContactsTable from "@/components/ui/contacts-table";
 import LoginForm from "@/components/ui/login-form";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
@@ -25,6 +26,7 @@ function LoadingSpinner() {
 
 function Dashboard() {
   const {} = useAuth();
+  const { pendingContactId, setPendingContactId } = useCallbacks();
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -49,17 +51,16 @@ function Dashboard() {
   const [serverColumnFilters, setServerColumnFilters] = usePersistedState<Record<string, ColumnFilter>>("contacts:columnFilters", {});
   const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", null);
 
-  // Apri scheda contatto se passato come ?contact=ID nella URL
+  // Apri scheda contatto richiesta dalla notifica di richiamata
   useEffect(() => {
-    const contactId = searchParams.get("contact");
-    if (!contactId) return;
-    apiClient.getContactById(contactId).then(res => {
+    if (!pendingContactId) return;
+    apiClient.getContactById(pendingContactId).then(res => {
       if (res.success && res.data) {
         setSelectedContact(res.data);
         setIsContactSidebarOpen(true);
       }
-    }).catch(() => {});
-  }, [searchParams]);
+    }).catch(() => {}).finally(() => setPendingContactId(null));
+  }, [pendingContactId]);
 
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {

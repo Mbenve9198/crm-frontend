@@ -54,7 +54,7 @@ function Dashboard() {
   // Apri scheda contatto richiesta dalla notifica di richiamata
   useEffect(() => {
     if (!pendingContactId) return;
-    apiClient.getContactById(pendingContactId).then(res => {
+    apiClient.getContact(pendingContactId).then(res => {
       if (res.success && res.data) {
         setSelectedContact(res.data);
         setIsContactSidebarOpen(true);

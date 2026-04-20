@@ -2,12 +2,18 @@
 
 import { useCallbacks } from "@/context/CallbackContext";
 import { Phone, X, Clock, AlarmClock } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { it } from "date-fns/locale";
 
 export function CallbackReminderNotification() {
   const { visibleCallbacks, snooze, dismiss, dismissAll } = useCallbacks();
+  const router = useRouter();
+
+  const openContact = (contactId: string) => {
+    dismiss(contactId);
+    router.push(`/?contact=${contactId}`);
+  };
 
   if (visibleCallbacks.length === 0) return null;
 
@@ -78,13 +84,12 @@ export function CallbackReminderNotification() {
               </div>
 
               <div className="flex gap-2 mt-2">
-                <Link
-                  href={`/?contact=${contact._id}`}
+                <button
+                  onClick={() => openContact(contact._id)}
                   className="flex-1 text-center text-xs font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-3 py-1.5 transition-colors"
-                  onClick={() => dismiss(contact._id)}
                 >
                   Vai al contatto
-                </Link>
+                </button>
                 <button
                   onClick={() => snooze(contact._id)}
                   className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg px-3 py-1.5 transition-colors"

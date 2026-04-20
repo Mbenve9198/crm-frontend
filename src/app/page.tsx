@@ -49,6 +49,18 @@ function Dashboard() {
   const [serverColumnFilters, setServerColumnFilters] = usePersistedState<Record<string, ColumnFilter>>("contacts:columnFilters", {});
   const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", null);
 
+  // Apri scheda contatto se passato come ?contact=ID nella URL
+  useEffect(() => {
+    const contactId = searchParams.get("contact");
+    if (!contactId) return;
+    apiClient.getContactById(contactId).then(res => {
+      if (res.success && res.data) {
+        setSelectedContact(res.data);
+        setIsContactSidebarOpen(true);
+      }
+    }).catch(() => {});
+  }, [searchParams]);
+
   // Carica le preferenze utente per pageSize all'avvio
   useEffect(() => {
     const loadUserPreferences = async () => {

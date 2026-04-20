@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, Bot, Activity, TrendingUp, PieChart, LineChart, Settings } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
+import { useCallbacks } from "@/context/CallbackContext";
 import { CsvImportDialog } from "./csv-import";
 import { apiClient } from "@/lib/api";
 
@@ -22,6 +23,8 @@ type ContactList = {
 
 export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: ModernSidebarProps) {
   const { user, logout } = useAuth();
+  const { visibleCallbacks } = useCallbacks();
+  const callbackCount = visibleCallbacks.length;
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const [lists, setLists] = useState<ContactList[]>([]);
@@ -136,12 +139,25 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
           <ul className="space-y-1 px-3">
             {menuItems.map((item, index) => {
               const IconComponent = item.icon;
+              const isDashboard = item.href === "/dashboard";
               const content = (
                 <>
-                  <IconComponent className={`h-5 w-5 ${item.active ? "text-blue-700" : "text-gray-500"}`} />
+                  <div className="relative">
+                    <IconComponent className={`h-5 w-5 ${item.active ? "text-blue-700" : "text-gray-500"}`} />
+                    {isDashboard && callbackCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+                        {callbackCount > 9 ? "9+" : callbackCount}
+                      </span>
+                    )}
+                  </div>
                   {isExpanded && (
-                    <span className="ml-3 text-sm font-medium transition-opacity duration-200">
+                    <span className="ml-3 text-sm font-medium transition-opacity duration-200 flex-1">
                       {item.label}
+                    </span>
+                  )}
+                  {isExpanded && isDashboard && callbackCount > 0 && (
+                    <span className="ml-auto text-xs font-semibold bg-orange-100 text-orange-700 rounded-full px-2 py-0.5">
+                      {callbackCount}
                     </span>
                   )}
                 </>

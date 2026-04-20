@@ -566,6 +566,10 @@ class ApiClient {
     });
   }
 
+  async getCallbacksDue(): Promise<ApiResponse<{ _id: string; name: string; phone?: string; properties: { callbackAt?: string; callbackNote?: string } }[]>> {
+    return this.request('/contacts/callbacks/due');
+  }
+
   // === CRUSCOTTO (Dashboard) ===
   async getDashboard(params?: { ownerId?: string; limit?: number }): Promise<ApiResponse<DashboardData>> {
     const searchParams = new URLSearchParams();

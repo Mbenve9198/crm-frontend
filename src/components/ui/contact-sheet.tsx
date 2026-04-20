@@ -41,8 +41,6 @@ type ContactSheetProps = {
 const sourceLabel = (src?: string) => {
   if (src === "smartlead_outbound") return "Smartlead";
   if (src === "inbound_rank_checker") return "Rank Checker";
-  if (src === "inbound_form") return "Form";
-  if (src === "inbound_api") return "API";
   if (src === "csv_import") return "CSV Import";
   if (src === "manual") return "Manuale";
   return src || "—";

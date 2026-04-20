@@ -1411,8 +1411,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           ['inbound_menu_landing', 'Google Ads — Menu', 'bg-blue-600'],
                           ['inbound_social_proof', 'Meta — Social Proof', 'bg-pink-500'],
                           ['inbound_qr_recensioni', 'Google Ads — QR Recensioni', 'bg-red-500'],
-                          ['inbound_form', 'Form Inbound', 'bg-violet-500'],
-                          ['inbound_api', 'API Inbound', 'bg-cyan-500'],
                           ['csv_import', 'CSV Import', 'bg-orange-500'],
                           ['manual', 'Manuale', 'bg-gray-500'],
                           ['referral', 'Referral', 'bg-pink-500'],

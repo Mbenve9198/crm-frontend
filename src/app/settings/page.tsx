@@ -32,6 +32,7 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronDown,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +43,7 @@ type UserWithId = User & { _id: string };
 
 type EditableSourceRule = {
   id: string; // local key for React
-  source: string;
+  sources: string[];
   strategy: "specific" | "round_robin";
   userId: string;
   userIds: string[];
@@ -52,8 +53,9 @@ const SOURCE_OPTIONS: { value: string; label: string }[] = [
   { value: "inbound_rank_checker", label: "Rank Checker" },
   { value: "inbound_acquisition", label: "WhatsApp Acquisition" },
   { value: "inbound_prova_gratuita", label: "Prova Gratuita" },
-  { value: "inbound_form", label: "Form Inbound" },
-  { value: "inbound_api", label: "API Inbound" },
+  { value: "inbound_menu_landing", label: "Google Ads — Menu" },
+  { value: "inbound_social_proof", label: "Meta — Social Proof" },
+  { value: "inbound_qr_recensioni", label: "Google Ads — QR Recensioni" },
   { value: "smartlead_outbound", label: "Smartlead Outbound" },
   { value: "referral", label: "Referral" },
 ];
@@ -182,17 +184,18 @@ function SourceRuleRow({
 }: {
   rule: EditableSourceRule;
   allUsers: UserWithId[];
-  usedSources: string[];
+  usedSources: string[]; // sources used by OTHER rules
   onChange: (updated: EditableSourceRule) => void;
   onRemove: () => void;
 }) {
+  const [sourceDropdownOpen, setSourceDropdownOpen] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const availableSources = SOURCE_OPTIONS.filter(
-    (s) => s.value === rule.source || !usedSources.includes(s.value)
+  const availableToAdd = SOURCE_OPTIONS.filter(
+    (s) => !rule.sources.includes(s.value) && !usedSources.includes(s.value)
   );
 
   const getUserById = (id: string) => allUsers.find((u) => u._id === id);
@@ -208,46 +211,80 @@ function SourceRuleRow({
 
   return (
     <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-3">
-      {/* Header row */}
-      <div className="flex items-center gap-3">
-        {/* Source selector */}
-        <select
-          value={rule.source}
-          onChange={(e) => onChange({ ...rule, source: e.target.value })}
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 max-w-52"
-        >
-          {availableSources.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+      {/* Header row: source chips + strategy + trash */}
+      <div className="flex flex-wrap items-center gap-2">
+        {rule.sources.map((src) => (
+          <span
+            key={src}
+            className="inline-flex items-center gap-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full px-2.5 py-1"
+          >
+            {SOURCE_OPTIONS.find((s) => s.value === src)?.label ?? src}
+            {rule.sources.length > 1 && (
+              <button
+                onClick={() => onChange({ ...rule, sources: rule.sources.filter((s) => s !== src) })}
+                className="hover:text-red-600 transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </span>
+        ))}
 
-        <span className="text-gray-400 text-sm">→</span>
+        {availableToAdd.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setSourceDropdownOpen((o) => !o)}
+              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 border border-dashed border-blue-300 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Plus className="h-3 w-3" />
+              Aggiungi source
+            </button>
+            {sourceDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setSourceDropdownOpen(false)} />
+                <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg min-w-48 py-1">
+                  {availableToAdd.map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => {
+                        onChange({ ...rule, sources: [...rule.sources, s.value] });
+                        setSourceDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
-        {/* Strategy selector */}
-        <select
-          value={rule.strategy}
-          onChange={(e) =>
-            onChange({
-              ...rule,
-              strategy: e.target.value as "specific" | "round_robin",
-              userId: "",
-              userIds: [],
-            })
-          }
-          className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="specific">Persona specifica</option>
-          <option value="round_robin">Round-robin</option>
-        </select>
-
-        <button
-          onClick={onRemove}
-          className="ml-auto text-gray-400 hover:text-red-500 transition-colors"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          <span className="text-gray-400 text-sm">→</span>
+          <select
+            value={rule.strategy}
+            onChange={(e) =>
+              onChange({
+                ...rule,
+                strategy: e.target.value as "specific" | "round_robin",
+                userId: "",
+                userIds: [],
+              })
+            }
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="specific">Persona specifica</option>
+            <option value="round_robin">Round-robin</option>
+          </select>
+          <button
+            onClick={onRemove}
+            className="text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* User selection area */}
@@ -367,7 +404,7 @@ export default function SettingsPage() {
           setSourceRules(
             cfg.sourceRules.map((r, i) => ({
               id: `rule-${i}-${Date.now()}`,
-              source: r.source,
+              sources: Array.isArray(r.sources) ? r.sources : (r as unknown as { source?: string }).source ? [(r as unknown as { source: string }).source] : [],
               strategy: r.strategy,
               userId: typeof r.userId === "object" && r.userId
                 ? (r.userId as UserWithId)._id
@@ -406,16 +443,16 @@ export default function SettingsPage() {
   };
 
   const addSourceRule = () => {
-    const usedSources = sourceRules.map((r) => r.source);
+    const allUsedSources = sourceRules.flatMap((r) => r.sources);
     const firstAvailable = SOURCE_OPTIONS.find(
-      (s) => !usedSources.includes(s.value)
+      (s) => !allUsedSources.includes(s.value)
     );
     if (!firstAvailable) return;
     setSourceRules((prev) => [
       ...prev,
       {
         id: `rule-new-${Date.now()}`,
-        source: firstAvailable.value,
+        sources: [firstAvailable.value],
         strategy: "round_robin",
         userId: "",
         userIds: [],
@@ -429,8 +466,8 @@ export default function SettingsPage() {
     try {
       const payload = {
         globalRoundRobin: globalRR,
-        sourceRules: sourceRules.map(({ source, strategy, userId, userIds }) => ({
-          source,
+        sourceRules: sourceRules.map(({ sources, strategy, userId, userIds }) => ({
+          sources,
           strategy,
           userId: strategy === "specific" ? userId || null : null,
           userIds: strategy === "round_robin" ? userIds : [],
@@ -448,7 +485,7 @@ export default function SettingsPage() {
     }
   };
 
-  const usedSources = sourceRules.map((r) => r.source);
+  const usedSources = sourceRules.flatMap((r) => r.sources);
 
   if (loading) {
     return (
@@ -568,7 +605,7 @@ export default function SettingsPage() {
                   key={rule.id}
                   rule={rule}
                   allUsers={allUsers}
-                  usedSources={usedSources.filter((s) => s !== rule.source)}
+                  usedSources={usedSources.filter((s) => !rule.sources.includes(s))}
                   onChange={(updated) =>
                     setSourceRules((prev) =>
                       prev.map((r) => (r.id === rule.id ? updated : r))

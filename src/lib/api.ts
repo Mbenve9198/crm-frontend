@@ -16,7 +16,7 @@ import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsD
 import { DashboardData } from '@/types/dashboard';
 
 export type SourceRule = {
-  source: string;
+  sources: string[];
   strategy: 'specific' | 'round_robin';
   userId?: string | User | null;
   userIds?: (string | User)[];

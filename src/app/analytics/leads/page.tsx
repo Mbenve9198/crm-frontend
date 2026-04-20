@@ -121,8 +121,6 @@ const ALL_SOURCES = [
   ["inbound_menu_landing", "Google Ads — Menu"],
   ["inbound_social_proof", "Meta — Social Proof"],
   ["inbound_qr_recensioni", "Google Ads — QR Recensioni"],
-  ["inbound_form", "Form Inbound"],
-  ["inbound_api", "API Inbound"],
   ["csv_import", "CSV Import"],
   ["manual", "Manuale"],
   ["referral", "Referral"],
@@ -794,7 +792,7 @@ export default function LeadAnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(cohortData.sources).map(([srcKey, src]) => {
+                      {Object.entries(cohortData.sources).filter(([, src]) => src.cohort.total.count > 0).map(([srcKey, src]) => {
                         const srcLabelMap: Record<string, string> = {
                           smartlead_outbound: "Smartlead Outbound",
                           inbound_rank_checker: "Rank Checker Organic",
@@ -802,8 +800,6 @@ export default function LeadAnalyticsPage() {
                           inbound_menu_landing: "Google Ads — Menu",
                           inbound_social_proof: "Meta — Social Proof",
                           inbound_qr_recensioni: "Google Ads — QR Recensioni",
-                          inbound_form: "Form Inbound",
-                          inbound_api: "API Inbound",
                           manual: "Manuale",
                           csv_import: "CSV Import",
                           referral: "Referral",

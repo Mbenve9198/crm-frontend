@@ -650,13 +650,20 @@ function AiAgentActivity({ description }: { description: string }) {
     return next;
   });
 
-  const parts = description.split('\n\n');
-  const emailPart = parts.find(p => p.startsWith('Email inviata'));
-  const replyPart = parts.find(p => p.startsWith('Risposta cliente'));
-  const reasoningPart = parts.find(p => p.startsWith('Ragionamento AI'));
-  const emailText = emailPart ? emailPart.replace(/^Email inviata[^:]*:\n?/, '').replace(/^"|"$/, '').trim() : null;
-  const replyText = replyPart ? replyPart.replace(/^Risposta cliente[^:]*:\n?/, '').replace(/^"|"$/, '').trim() : null;
-  const reasoningText = reasoningPart ? reasoningPart.replace(/^Ragionamento AI:\s*/, '').trim() : null;
+  const extractSection = (label: string): string | null => {
+    const re = new RegExp(
+      `${label}[^:\\n]*:\\s*\\n?([\\s\\S]*?)(?=\\n\\s*\\n(?:Email inviata|Risposta cliente|Ragionamento AI)[^:\\n]*:|$)`,
+      'i'
+    );
+    const m = description.match(re);
+    if (!m) return null;
+    const txt = m[1].replace(/^\s*"|"\s*$/g, '').trim();
+    return txt || null;
+  };
+
+  const emailText = extractSection('Email inviata');
+  const replyText = extractSection('Risposta cliente');
+  const reasoningText = extractSection('Ragionamento AI');
 
   if (!emailText && !replyText) {
     return <p className="text-sm text-gray-600 mt-1 whitespace-pre-line">{description}</p>;

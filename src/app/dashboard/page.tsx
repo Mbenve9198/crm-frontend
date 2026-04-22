@@ -34,7 +34,6 @@ import {
   CalendarClock,
   Bell,
   CalendarDays,
-  CalendarOff,
   ChevronLeft,
   ChevronRight,
   Timer,
@@ -380,7 +379,7 @@ function CallbackTable({ items, onSetCallback, onContactClick }: CallbackTablePr
   return (
     <Card className="overflow-hidden border-t-4 border-t-blue-500">
       <div className="px-5 py-3.5 flex items-center justify-between bg-blue-50">
-        <h3 className="text-sm font-semibold text-blue-800">Da richiamare</h3>
+        <h3 className="text-sm font-semibold text-blue-800">Richiami programmati</h3>
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700">
           {items.length}
         </span>
@@ -772,7 +771,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Callback KPI badges */}
-          {(k?.callbackOverdue ?? 0) + (k?.callbackToday ?? 0) + (k?.callbackNext7Days ?? 0) + (k?.callbackNoDate ?? 0) > 0 && (
+          {(k?.callbackOverdue ?? 0) + (k?.callbackToday ?? 0) + (k?.callbackNext7Days ?? 0) > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
                 <PhoneCall className="h-4 w-4 text-blue-600" />
@@ -796,12 +795,6 @@ export default function DashboardPage() {
                   value={k?.callbackNext7Days ?? 0}
                   icon={<CalendarDays className="h-4 w-4" />}
                   color="bg-blue-50 text-blue-700"
-                />
-                <CallbackBadge
-                  label="Senza data"
-                  value={k?.callbackNoDate ?? 0}
-                  icon={<CalendarOff className="h-4 w-4" />}
-                  color="bg-gray-100 text-gray-600"
                 />
               </div>
             </div>

@@ -782,7 +782,8 @@ export default function LeadAnalyticsPage() {
                       <tr className="border-b bg-gray-50/80">
                         <th className="px-4 py-2.5 text-left font-semibold text-gray-700">Sorgente</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Creati</th>
-                        <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Riattivati</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-teal-700">Riatt.&nbsp;Camp.</th>
+                        <th className="px-4 py-2.5 text-right font-semibold text-blue-700">Riatt.&nbsp;Man.</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Coorte</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Not&nbsp;Touched</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">QR&nbsp;Inviato</th>
@@ -824,7 +825,10 @@ export default function LeadAnalyticsPage() {
                               <CCell count={src.cohort.created.count} label="Creati" color="bg-indigo-500" contacts={src.cohort.created.contacts} />
                             </td>
                             <td className="px-4 py-2.5 text-right">
-                              <CCell count={src.cohort.reactivated.count} label="Riattivati" color="bg-teal-500" contacts={src.cohort.reactivated.contacts} />
+                              <CCell count={src.cohort.reactivated.campaign.count} label="Riattivati da campagna" color="bg-teal-500" contacts={src.cohort.reactivated.campaign.contacts} />
+                            </td>
+                            <td className="px-4 py-2.5 text-right">
+                              <CCell count={src.cohort.reactivated.manual.count} label="Riattivati manualmente" color="bg-blue-500" contacts={src.cohort.reactivated.manual.contacts} />
                             </td>
                             <td className="px-4 py-2.5 text-right font-semibold">{src.cohort.total.count}</td>
                             <td className="px-4 py-2.5 text-right">
@@ -849,7 +853,8 @@ export default function LeadAnalyticsPage() {
                       {(() => {
                         const srcs = Object.values(cohortData.sources);
                         const totCreated = srcs.reduce((s, v) => s + v.cohort.created.count, 0);
-                        const totReact = srcs.reduce((s, v) => s + v.cohort.reactivated.count, 0);
+                        const totReactCampaign = srcs.reduce((s, v) => s + v.cohort.reactivated.campaign.count, 0);
+                        const totReactManual = srcs.reduce((s, v) => s + v.cohort.reactivated.manual.count, 0);
                         const totCohort = srcs.reduce((s, v) => s + v.cohort.total.count, 0);
                         const totNT = srcs.reduce((s, v) => s + v.steps.notTouched.count, 0);
                         const totQR = srcs.reduce((s, v) => s + v.steps.qrCodeSent.count, 0);
@@ -860,7 +865,8 @@ export default function LeadAnalyticsPage() {
                           <tr className="border-t-2 bg-indigo-50/60 font-semibold">
                             <td className="px-4 py-2.5 text-gray-900">Totale</td>
                             <td className="px-4 py-2.5 text-right">{totCreated}</td>
-                            <td className="px-4 py-2.5 text-right">{totReact}</td>
+                            <td className="px-4 py-2.5 text-right">{totReactCampaign}</td>
+                            <td className="px-4 py-2.5 text-right">{totReactManual}</td>
                             <td className="px-4 py-2.5 text-right">{totCohort}</td>
                             <td className="px-4 py-2.5 text-right">{totNT}</td>
                             <td className="px-4 py-2.5 text-right">{totQR}</td>

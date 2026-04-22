@@ -1451,58 +1451,56 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <BonificoSection contact={contact} onContactUpdate={onContactUpdate} />
                   )}
 
-                  {/* Sezione Richiamo - visibile se status "da richiamare" */}
-                  {contact.status === 'da richiamare' && (
-                    <div className="border-t pt-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <CalendarClock className="h-4 w-4 text-blue-600" />
-                        <h4 className="font-medium text-gray-900">Richiamo</h4>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-600">Data/ora:</span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {contact.properties?.callbackAt
-                              ? new Date(contact.properties.callbackAt as string).toLocaleString('it-IT', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })
-                              : 'Non impostato'}
-                          </span>
-                        </div>
-                        {contact.properties?.callbackNote && (
-                          <div>
-                            <span className="text-xs text-gray-600">Nota:</span>
-                            <p className="text-sm text-gray-800 mt-0.5">{contact.properties.callbackNote as string}</p>
-                          </div>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full mt-2 text-xs"
-                          onClick={() => setCallbackDialogOpen(true)}
-                        >
-                          <CalendarClock className="h-3 w-3 mr-1" />
-                          {contact.properties?.callbackAt ? 'Modifica richiamo' : 'Imposta richiamo'}
-                        </Button>
-                      </div>
-
-                      <CallbackDialog
-                        open={callbackDialogOpen}
-                        onOpenChange={setCallbackDialogOpen}
-                        contactId={contact._id}
-                        contactName={contact.name}
-                        currentCallbackAt={contact.properties?.callbackAt as string | null | undefined}
-                        currentCallbackNote={contact.properties?.callbackNote as string | null | undefined}
-                        onSaved={(updatedContact) => {
-                          onContactUpdate(updatedContact);
-                          setEditedContact(updatedContact);
-                        }}
-                      />
+                  {/* Sezione Richiamo */}
+                  <div className="border-t pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CalendarClock className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-medium text-gray-900">Richiamo</h4>
                     </div>
-                  )}
+                    <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">Data/ora:</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {contact.properties?.callbackAt
+                            ? new Date(contact.properties.callbackAt as string).toLocaleString('it-IT', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })
+                            : 'Non impostato'}
+                        </span>
+                      </div>
+                      {contact.properties?.callbackNote && (
+                        <div>
+                          <span className="text-xs text-gray-600">Nota:</span>
+                          <p className="text-sm text-gray-800 mt-0.5">{contact.properties.callbackNote as string}</p>
+                        </div>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full mt-2 text-xs"
+                        onClick={() => setCallbackDialogOpen(true)}
+                      >
+                        <CalendarClock className="h-3 w-3 mr-1" />
+                        {contact.properties?.callbackAt ? 'Modifica richiamo' : 'Imposta richiamo'}
+                      </Button>
+                    </div>
+
+                    <CallbackDialog
+                      open={callbackDialogOpen}
+                      onOpenChange={setCallbackDialogOpen}
+                      contactId={contact._id}
+                      contactName={contact.name}
+                      currentCallbackAt={contact.properties?.callbackAt as string | null | undefined}
+                      currentCallbackNote={contact.properties?.callbackNote as string | null | undefined}
+                      onSaved={(updatedContact) => {
+                        onContactUpdate(updatedContact);
+                        setEditedContact(updatedContact);
+                      }}
+                    />
+                  </div>
 
                   {/* Sezione Menu Landing (per lead da Google Ads / Social Proof) */}
                   {(contact.source === 'inbound_menu_landing' || contact.source === 'inbound_social_proof' || contact.source === 'inbound_qr_recensioni') && (

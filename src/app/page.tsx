@@ -49,7 +49,7 @@ function Dashboard() {
   const [searchQuery, setSearchQuery] = usePersistedState<string>("contacts:search", searchParams.get("search") || "");
   const [ownerFilter, setOwnerFilter] = usePersistedState<string>("contacts:owner", "all");
   const [serverColumnFilters, setServerColumnFilters] = usePersistedState<Record<string, ColumnFilter>>("contacts:columnFilters", {});
-  const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", null);
+  const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", { column: 'Created', direction: 'desc' });
 
   // Apri scheda contatto richiesta dalla notifica di richiamata
   useEffect(() => {

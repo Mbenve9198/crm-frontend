@@ -60,7 +60,11 @@ export type LeadFunnelStepContact = {
 export type LeadCohortSourceAnalytics = {
   cohort: {
     created: { count: number; contacts: LeadCohortContact[] };
-    reactivated: { count: number; contacts: LeadCohortContact[] };
+    reactivated: {
+      campaign: { count: number; contacts: LeadCohortContact[] };
+      manual: { count: number; contacts: LeadCohortContact[] };
+      total: { count: number };
+    };
     total: { count: number };
   };
   steps: {

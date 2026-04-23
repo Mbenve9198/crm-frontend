@@ -948,21 +948,28 @@ function ContactsTable({
                 {visibleColumns.includes("Contact") && (
                   <TableCell className="font-medium w-[200px]">
                     <div className="min-w-0">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div 
-                                className="font-medium truncate cursor-pointer hover:text-blue-600 transition-colors"
-                                onClick={() => onContactClick?.(contact)}
-                              >
-                                {contact.name}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs break-words">{contact.name}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <div className="flex items-center gap-1.5">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className="font-medium truncate cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={() => onContactClick?.(contact)}
+                                >
+                                  {contact.name}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="max-w-xs break-words">{contact.name}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {contact.createdAt && new Date(contact.createdAt).toDateString() === new Date().toDateString() && (
+                            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500 hover:bg-emerald-500 text-white shrink-0">
+                              new
+                            </Badge>
+                          )}
+                        </div>
                         {contact.properties?.company && (
                           <TooltipProvider>
                             <Tooltip>

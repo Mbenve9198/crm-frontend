@@ -58,15 +58,16 @@ export type CallStatus =
   | 'failed' 
   | 'canceled';
 
-export type CallOutcome = 
-  | 'interested' 
-  | 'not-interested' 
-  | 'callback' 
-  | 'voicemail' 
-  | 'wrong-number' 
-  | 'meeting-set' 
+export type CallOutcome =
+  | 'interested'
+  | 'not-interested'
+  | 'callback'
+  | 'voicemail'
+  | 'wrong-number'
+  | 'meeting-set'
   | 'sale-made'
-  | 'no-answer';
+  | 'no-answer'
+  | 'not-logged';
 
 export interface InitiateCallRequest {
   contactId: string;

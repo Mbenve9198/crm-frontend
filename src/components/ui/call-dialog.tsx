@@ -51,12 +51,12 @@ export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChang
   const dragOffset = useRef({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
 
-  // Posizione iniziale: angolo in basso a destra
+  // Posizione iniziale: centro dello schermo
   useEffect(() => {
     if (isOpen && !initialized) {
       setPosition({
-        x: window.innerWidth - 380,
-        y: window.innerHeight - 520,
+        x: (window.innerWidth - 360) / 2,
+        y: (window.innerHeight - 480) / 2,
       });
       setInitialized(true);
     }

@@ -11,7 +11,7 @@ import { Contact, ContactStatus, ContactSource, User, StripeInvoice } from "@/ty
 import { Activity, ActivityType, CreateActivityRequest, CallOutcome } from "@/types/activity";
 import { apiClient } from "@/lib/api";
 import { getAllStatuses, getStatusLabel, isPipelineStatus, getStatusColor } from "@/lib/status-utils";
-import { CallDialog } from "./call-dialog";
+import { CallDialog, CallDialogHandle } from "./call-dialog";
 import { CallScriptDialog } from "./call-script-dialog";
 import { CallbackDialog } from "./callback-dialog";
 
@@ -724,12 +724,22 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [pendingCloseDate, setPendingCloseDate] = useState<string>("");
   const [showMRRInput, setShowMRRInput] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ContactStatus | null>(null);
+  const [pendingActualCloseDate, setPendingActualCloseDate] = useState<string>("");
+  const [showActualCloseDateInput, setShowActualCloseDateInput] = useState(false);
+  const [isUpdatingActualCloseDate, setIsUpdatingActualCloseDate] = useState(false);
 
   // Conversazione WhatsApp da menu landing (Claude Managed Agents)
   const [landingConversation, setLandingConversation] = useState<Array<{ role: string; content: string; timestamp: string; channel?: string }>>([]);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [editingActivity, setEditingActivity] = useState<string | null>(null);
   const [editingData, setEditingData] = useState<{description?: string; callOutcome?: CallOutcome}>({});
+
+  const callDialogRef = useRef<CallDialogHandle>(null);
+
+  const handleSidebarClose = async () => {
+    await callDialogRef.current?.close();
+    onClose();
+  };
 
   // Stato per gestire gli owner disponibili
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
@@ -927,6 +937,24 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       alert('Errore durante l\'aggiornamento dello status');
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleActualCloseDateSave = async () => {
+    if (!contact) return;
+    try {
+      setIsUpdatingActualCloseDate(true);
+      const isoDate = pendingActualCloseDate ? new Date(pendingActualCloseDate + "T12:00:00").toISOString() : null;
+      const response = await apiClient.updateActualCloseDate(contact._id, isoDate);
+      if (response.success && response.data) {
+        onContactUpdate(response.data);
+      }
+      setShowActualCloseDateInput(false);
+    } catch (error) {
+      console.error('Errore aggiornamento data chiusura effettiva:', error);
+      alert('Errore durante l\'aggiornamento della data di chiusura effettiva');
+    } finally {
+      setIsUpdatingActualCloseDate(false);
     }
   };
 
@@ -1167,7 +1195,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
             </div>
             <div className="flex items-center gap-2">
               {contact.phone && (
-                <CallDialog 
+                <CallDialog
+                  ref={callDialogRef}
                   contact={contact}
                   trigger={
                     <Button variant="outline" size="sm">
@@ -1178,7 +1207,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   onCallComplete={loadActivities}
                 />
               )}
-              <Button variant="ghost" size="sm" onClick={onClose}>
+              <Button variant="ghost" size="sm" onClick={handleSidebarClose}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -1312,6 +1341,57 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     >
                       ✏️
                     </Button>
+                  </div>
+                )}
+
+                {/* Actual Close Date per contatti won */}
+                {contact.status === 'won' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">Chiusura effettiva:</span>
+                    {showActualCloseDateInput ? (
+                      <>
+                        <Input
+                          type="date"
+                          value={pendingActualCloseDate}
+                          onChange={(e) => setPendingActualCloseDate(e.target.value)}
+                          className="w-36 h-8"
+                        />
+                        <Button size="sm" onClick={handleActualCloseDateSave} disabled={isUpdatingActualCloseDate}>
+                          ✓
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowActualCloseDateInput(false)}
+                        >
+                          ✕
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-sm text-gray-600">
+                          {contact.properties?.actualCloseDate
+                            ? new Date(String(contact.properties.actualCloseDate)).toLocaleDateString("it-IT")
+                            : "Non impostata"}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            setPendingActualCloseDate(
+                              contact.properties?.actualCloseDate
+                                ? new Date(String(contact.properties.actualCloseDate)).toISOString().slice(0, 10)
+                                : ""
+                            );
+                            setShowActualCloseDateInput(true);
+                          }}
+                          title="Modifica data chiusura effettiva"
+                        >
+                          ✏️
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

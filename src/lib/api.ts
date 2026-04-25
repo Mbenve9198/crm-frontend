@@ -911,6 +911,13 @@ class ApiClient {
     }) as Promise<StatusUpdateResponse>;
   }
 
+  async updateActualCloseDate(contactId: string, actualCloseDate: string | null): Promise<ApiResponse<Contact>> {
+    return this.request(`/contacts/${contactId}/actual-close-date`, {
+      method: 'PATCH',
+      body: JSON.stringify({ actualCloseDate }),
+    });
+  }
+
   // 📞 Genera script di chiamata personalizzato con AI
   // Se regenerate=true, forza una nuova generazione invece di usare la cache
   async generateCallScript(contactId: string, regenerate: boolean = false): Promise<ApiResponse<{

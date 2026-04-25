@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Phone, AlertCircle, CheckCircle, XCircle, GripHorizontal } from "lucide-react";
 import { Button } from "./button";
 import { Textarea } from "./textarea";
@@ -23,6 +23,10 @@ const outcomeLabels: Record<Exclude<CallOutcome, 'not-logged'>, string> = {
   'no-answer': 'Nessuna risposta',
 };
 
+export interface CallDialogHandle {
+  close: () => Promise<void>;
+}
+
 interface CallDialogProps {
   contact: Contact;
   trigger: React.ReactNode;
@@ -31,7 +35,7 @@ interface CallDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChange }: CallDialogProps) {
+export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function CallDialog({ contact, trigger, onCallComplete, open, onOpenChange }, ref) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = open !== undefined ? open : internalIsOpen;
   const setIsOpen = onOpenChange || setInternalIsOpen;
@@ -174,6 +178,8 @@ export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChang
     setErrorMessage('');
     setWaitingStartTime(null);
   };
+
+  useImperativeHandle(ref, () => ({ close: handleClose }));
 
   const handleSaveAndClose = async () => {
     await handleSaveResult();
@@ -376,4 +382,4 @@ export function CallDialog({ contact, trigger, onCallComplete, open, onOpenChang
       )}
     </>
   );
-}
+});

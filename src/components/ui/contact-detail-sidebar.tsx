@@ -748,6 +748,22 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   // Stato per il dialog callback/richiamo
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
+  const [isDeletingCallback, setIsDeletingCallback] = useState(false);
+
+  const handleDeleteCallback = async () => {
+    try {
+      setIsDeletingCallback(true);
+      const res = await apiClient.updateContactCallback(contact._id, { callbackAt: null, callbackNote: null });
+      if (res.success && res.data) {
+        onContactUpdate(res.data);
+        setEditedContact(res.data);
+      }
+    } catch (err) {
+      console.error('Errore cancellazione richiamo:', err);
+    } finally {
+      setIsDeletingCallback(false);
+    }
+  };
 
   // Stato per conversazioni AI Agent
   const [agentConversations, setAgentConversations] = useState<Array<{
@@ -1557,15 +1573,32 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           <p className="text-sm text-gray-800 mt-0.5">{contact.properties.callbackNote as string}</p>
                         </div>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full mt-2 text-xs"
-                        onClick={() => setCallbackDialogOpen(true)}
-                      >
-                        <CalendarClock className="h-3 w-3 mr-1" />
-                        {contact.properties?.callbackAt ? 'Modifica richiamo' : 'Imposta richiamo'}
-                      </Button>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs"
+                          onClick={() => setCallbackDialogOpen(true)}
+                        >
+                          <CalendarClock className="h-3 w-3 mr-1" />
+                          {contact.properties?.callbackAt ? 'Modifica' : 'Imposta richiamo'}
+                        </Button>
+                        {contact.properties?.callbackAt && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2"
+                            onClick={handleDeleteCallback}
+                            disabled={isDeletingCallback}
+                            title="Cancella richiamo"
+                          >
+                            {isDeletingCallback
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5" />
+                            }
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <CallbackDialog

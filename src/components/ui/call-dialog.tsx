@@ -161,6 +161,31 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
     }
   };
 
+  // Salva la chiamata come not-logged se l'utente naviga via dalla pagina durante una chiamata attiva.
+  // Usa fetch con keepalive:true perché è l'unico modo per completare una richiesta HTTP
+  // durante l'evento beforeunload (navigator.sendBeacon non supporta header custom per il Bearer token).
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const callActive = callResult && callState !== 'idle' && callState !== 'error' && callState !== 'finished' && outcome === '';
+      if (!callActive) return;
+
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || '';
+      fetch(`${baseUrl}/api/calls/${callResult._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ outcome: 'not-logged' }),
+        keepalive: true,
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [callState, callResult, outcome]);
+
   // Chiusura: se la chiamata era in corso salva come not-logged
   const handleClose = async () => {
     const callWasInitiated = callResult && callState !== 'idle' && callState !== 'error';

@@ -417,24 +417,20 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50/60">
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Lead
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Richiamo
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Nota
-                    </th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Azioni
-                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Richiamo</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nota</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ultimo tocco</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">MRR</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paged.map((c) => {
                     const cbDate = formatCallbackDate(c.properties?.callbackAt);
                     const badge = getCallbackBadge(c.properties?.callbackAt);
+                    const age = formatAge(c.lastActivityAt);
                     return (
                       <tr
                         key={c._id}
@@ -447,6 +443,7 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                             {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-gray-700 text-sm">{getStatusLabel(c.status)}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5">
                             {cbDate
@@ -462,7 +459,7 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                           {c.properties?.callbackNote ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="text-gray-500 text-xs max-w-[90px] truncate cursor-default">
+                                <div className="text-gray-500 text-xs max-w-[160px] truncate cursor-default">
                                   {c.properties.callbackNote}
                                 </div>
                               </TooltipTrigger>
@@ -473,6 +470,18 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
                           )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {age ? (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${age.className}`}>
+                              <Clock className="h-3 w-3" />{age.label}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700 text-sm">
+                          {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -845,7 +854,7 @@ export default function DashboardPage() {
 
           {/* AGENDA TAB */}
           {activeTab === 'agenda' && (
-            <div className="max-w-2xl">
+            <div>
               <CallbackTable
                 items={data?.lists.callback || []}
                 onSetCallback={handleOpenCallbackDialog}

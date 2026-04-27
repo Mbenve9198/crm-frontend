@@ -751,6 +751,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const [isDeletingCallback, setIsDeletingCallback] = useState(false);
 
   const handleDeleteCallback = async () => {
+    if (!contact) return;
     try {
       setIsDeletingCallback(true);
       const res = await apiClient.updateContactCallback(contact._id, { callbackAt: null, callbackNote: null });

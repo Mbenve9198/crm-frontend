@@ -40,9 +40,9 @@ export type DashboardData = {
   ownerId: string;
   kpis: DashboardKpis;
   lists: {
-    notTouched: DashboardListItem[];
-    stalled: DashboardListItem[];
     callback: DashboardListItem[];
+    daContattare: DashboardListItem[];
+    interessato: DashboardListItem[];
     freeTrial: DashboardListItem[];
     qrFollowUp: DashboardListItem[];
     won: DashboardListItem[];

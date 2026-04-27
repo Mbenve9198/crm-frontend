@@ -25,7 +25,6 @@ import {
   Trophy,
   XCircle,
   DollarSign,
-
   PartyPopper,
   CheckCircle2,
   PhoneCall,
@@ -36,11 +35,15 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Timer,
   SlidersHorizontal,
   Eye,
   EyeOff,
   Trash2,
+  CalendarX,
+  LayoutList,
+  Columns2,
+  ListTodo,
+  GitBranch,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
 import { MessageCircle } from "lucide-react";
@@ -122,10 +125,10 @@ function formatAge(iso?: string | null): { label: string; className: string } | 
   return { label, className };
 }
 
-function getCallbackBadge(iso?: string | null): { label: string; className: string } | null {
-  if (!iso) return null;
+function getCallbackBadge(iso?: string | null): { label: string; className: string } {
+  if (!iso) return { label: "SENZA DATA", className: "bg-gray-100 text-gray-500" };
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
+  if (isNaN(d.getTime())) return { label: "SENZA DATA", className: "bg-gray-100 text-gray-500" };
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayEnd = new Date(todayStart);
@@ -133,7 +136,7 @@ function getCallbackBadge(iso?: string | null): { label: string; className: stri
 
   if (d < todayStart) return { label: "SCADUTO", className: "bg-red-100 text-red-700" };
   if (d < todayEnd) return { label: "OGGI", className: "bg-amber-100 text-amber-700" };
-  return null;
+  return { label: "OGGI", className: "bg-amber-100 text-amber-700" };
 }
 
 type KpiCardProps = {
@@ -382,10 +385,22 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
 
   useEffect(() => { setPage(1); }, [items]);
 
+  const overdueCount = items.filter(c => {
+    if (!c.properties?.callbackAt) return false;
+    return new Date(c.properties.callbackAt) < new Date(new Date().setHours(0,0,0,0));
+  }).length;
+
   return (
     <Card className="overflow-hidden border-t-4 border-t-blue-500">
       <div className="px-5 py-3.5 flex items-center justify-between bg-blue-50">
-        <h3 className="text-sm font-semibold text-blue-800">Richiami programmati</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-blue-800">Richiami di oggi</h3>
+          {overdueCount > 0 && (
+            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700">
+              {overdueCount} scaduti
+            </span>
+          )}
+        </div>
         <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold bg-blue-100 text-blue-700">
           {items.length}
         </span>
@@ -436,19 +451,15 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {cbDate ? (
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-gray-400" />
-                              <span className="text-gray-700 text-xs">{cbDate}</span>
-                              {badge && (
-                                <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
-                                  {badge.label}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-xs">Non impostato</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {cbDate
+                              ? <><Clock className="h-3.5 w-3.5 text-gray-400" /><span className="text-gray-700 text-xs">{cbDate}</span></>
+                              : <CalendarX className="h-3.5 w-3.5 text-gray-300" />
+                            }
+                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           {c.properties?.callbackNote ? (
@@ -570,6 +581,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = usePersistedState<'agenda' | 'pipeline'>('dashboard:tab', 'agenda');
+  const [pipelineView, setPipelineView] = usePersistedState<'list' | 'kanban'>('dashboard:pipelineView', 'list');
+
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -577,7 +591,7 @@ export default function DashboardPage() {
   const [showPanelFilter, setShowPanelFilter] = useState(false);
   const [visiblePanels, setVisiblePanels] = usePersistedState<Record<string, boolean>>(
     "dashboard:visiblePanels",
-    { callback: true, notTouched: true, stalled: true, qrFollowUp: true, freeTrial: true, won: true }
+    { won: false }
   );
   const togglePanel = (key: string) =>
     setVisiblePanels(prev => ({ ...prev, [key]: !prev[key] }));
@@ -760,22 +774,12 @@ export default function DashboardPage() {
           {/* KPI Cards */}
           <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
             <KpiCard
-              label="Lead untouched"
-              description="Smartlead: ≤ 1 activity. Rank Checker: 0 activity."
-              value={k?.notTouched ?? "—"}
+              label="Da contattare"
+              value={data?.lists.daContattare?.length ?? "—"}
               icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
               borderColor="border-l-amber-500"
               iconBg="bg-amber-50"
               valueColor="text-amber-700"
-            />
-            <KpiCard
-              label="In stallo"
-              description="Toccati ma ancora in 'Da contattare' o 'Interessato'."
-              value={k?.stalled ?? "—"}
-              icon={<Timer className="h-5 w-5 text-orange-600" />}
-              borderColor="border-l-orange-500"
-              iconBg="bg-orange-50"
-              valueColor="text-orange-700"
             />
             <KpiCard
               label="Free trial iniziato"
@@ -818,8 +822,16 @@ export default function DashboardPage() {
               valueColor="text-red-600"
             />
             <KpiCard
+              label="Richiami oggi"
+              value={(k?.callbackToday ?? 0) + (k?.callbackOverdue ?? 0)}
+              icon={<PhoneCall className="h-5 w-5 text-blue-600" />}
+              borderColor="border-l-blue-500"
+              iconBg="bg-blue-50"
+              valueColor={(k?.callbackOverdue ?? 0) > 0 ? "text-red-600" : "text-blue-700"}
+            />
+            <KpiCard
               label="Potential Commissions"
-              description="Somma di (20% × MRR × 12 + €50) per lead in QR/Free trial con MRR."
+              description="20% × MRR × 12 + €50 per lead in QR/Free trial"
               value={typeof k?.pipelinePotentialEur === "number" ? formatEur(k.pipelinePotentialEur) : "—"}
               icon={<DollarSign className="h-5 w-5 text-yellow-600" />}
               borderColor="border-l-yellow-500"
@@ -828,79 +840,64 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Callback KPI badges */}
-          {(k?.callbackOverdue ?? 0) + (k?.callbackToday ?? 0) + (k?.callbackNext7Days ?? 0) > 0 && (
-            <div>
-              <h2 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
-                <PhoneCall className="h-4 w-4 text-blue-600" />
-                Richiami
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                <CallbackBadge
-                  label="Scaduti"
-                  value={k?.callbackOverdue ?? 0}
-                  icon={<Bell className="h-4 w-4" />}
-                  color="bg-red-50 text-red-700"
-                />
-                <CallbackBadge
-                  label="Oggi"
-                  value={k?.callbackToday ?? 0}
-                  icon={<CalendarClock className="h-4 w-4" />}
-                  color="bg-amber-50 text-amber-700"
-                />
-                <CallbackBadge
-                  label="7 giorni"
-                  value={k?.callbackNext7Days ?? 0}
-                  icon={<CalendarDays className="h-4 w-4" />}
-                  color="bg-blue-50 text-blue-700"
-                />
-              </div>
-            </div>
-          )}
+          {/* Tab navigation */}
+          <div className="flex items-center gap-1 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('agenda')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === 'agenda'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ListTodo className="h-4 w-4" />
+              Agenda
+            </button>
+            <button
+              onClick={() => setActiveTab('pipeline')}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === 'pipeline'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <GitBranch className="h-4 w-4" />
+              Pipeline
+            </button>
+          </div>
 
-          {/* Operative Tables */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-700">Pannelli operativi</h2>
-              <div className="relative" ref={panelFilterRef}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs h-8"
-                  onClick={() => setShowPanelFilter(v => !v)}
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  Personalizza vista
-                </Button>
-                {showPanelFilter && (
-                  <div className="absolute right-0 top-9 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-52 space-y-1">
-                    {([
-                      { key: 'callback',   label: 'Richiami programmati' },
-                      { key: 'notTouched', label: 'Lead untouched' },
-                      { key: 'stalled',    label: 'In stallo' },
-                      { key: 'qrFollowUp', label: 'QR inviato' },
-                      { key: 'freeTrial',  label: 'In free trial' },
-                      { key: 'won',        label: 'Won' },
-                    ] as { key: string; label: string }[]).map(({ key, label }) => (
+          {/* AGENDA TAB */}
+          {activeTab === 'agenda' && (
+            <div>
+              <div className="flex items-center justify-end mb-4">
+                <div className="relative" ref={panelFilterRef}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs h-8"
+                    onClick={() => setShowPanelFilter(v => !v)}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Personalizza vista
+                  </Button>
+                  {showPanelFilter && (
+                    <div className="absolute right-0 top-9 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-48 space-y-1">
                       <button
-                        key={key}
-                        onClick={() => togglePanel(key)}
+                        onClick={() => togglePanel('won')}
                         className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-gray-50 text-sm text-gray-700 transition-colors"
                       >
-                        <span>{label}</span>
-                        {visiblePanels[key] !== false
+                        <span>Won</span>
+                        {visiblePanels.won === true
                           ? <Eye className="h-3.5 w-3.5 text-blue-500" />
                           : <EyeOff className="h-3.5 w-3.5 text-gray-300" />
                         }
                       </button>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="grid gap-6 xl:grid-cols-2">
-              {visiblePanels.callback !== false && (
+              <div className="grid gap-6 xl:grid-cols-2">
                 <CallbackTable
                   items={data?.lists.callback || []}
                   onSetCallback={handleOpenCallbackDialog}
@@ -908,48 +905,40 @@ export default function DashboardPage() {
                   deletingId={deletingCallbackId}
                   onContactClick={handleContactClick}
                 />
-              )}
 
-              {visiblePanels.notTouched !== false && (
                 <ThemedLeadsTable
-                  title="Lead untouched"
-                  count={data?.lists.notTouched?.length || 0}
-                  items={data?.lists.notTouched || []}
+                  title="Da contattare"
+                  count={data?.lists.daContattare?.length || 0}
+                  items={data?.lists.daContattare || []}
                   headerBg="bg-amber-50"
                   headerText="text-amber-800"
                   badgeBg="bg-amber-100"
                   badgeText="text-amber-700"
                   accentBorder="border-t-amber-500"
                   emptyIcon={<Inbox className="h-8 w-8" />}
-                  emptyMessage="Zero lead in attesa — backlog pulito!"
+                  emptyMessage="Nessun lead da contattare — backlog pulito!"
                   hideMrr
                   showSource
                   showAge
                   onContactClick={handleContactClick}
                 />
-              )}
 
-              {visiblePanels.stalled !== false && (
                 <ThemedLeadsTable
-                  title="In stallo"
-                  count={data?.lists.stalled?.length || 0}
-                  items={data?.lists.stalled || []}
-                  headerBg="bg-orange-50"
-                  headerText="text-orange-800"
-                  badgeBg="bg-orange-100"
-                  badgeText="text-orange-700"
-                  accentBorder="border-t-orange-500"
-                  emptyIcon={<Timer className="h-8 w-8" />}
-                  emptyMessage="Nessun lead in stallo — ottimo ritmo!"
-                  hideMrr
-                  showSource
+                  title="Interessato"
+                  count={data?.lists.interessato?.length || 0}
+                  items={data?.lists.interessato || []}
+                  headerBg="bg-blue-50"
+                  headerText="text-blue-800"
+                  badgeBg="bg-blue-100"
+                  badgeText="text-blue-700"
+                  accentBorder="border-t-blue-500"
+                  emptyIcon={<Users className="h-8 w-8" />}
+                  emptyMessage="Nessun lead interessato al momento."
                   showAge
                   ageFrom="lastActivityAt"
                   onContactClick={handleContactClick}
                 />
-              )}
 
-              {visiblePanels.qrFollowUp !== false && (
                 <ThemedLeadsTable
                   title="QR inviato (follow-up)"
                   count={data?.lists.qrFollowUp?.length || 0}
@@ -962,11 +951,11 @@ export default function DashboardPage() {
                   emptyIcon={<CheckCircle2 className="h-8 w-8" />}
                   emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
                   showCloseDate
+                  showAge
+                  ageFrom="lastActivityAt"
                   onContactClick={handleContactClick}
                 />
-              )}
 
-              {visiblePanels.freeTrial !== false && (
                 <ThemedLeadsTable
                   title="In free trial"
                   count={data?.lists.freeTrial?.length || 0}
@@ -979,27 +968,188 @@ export default function DashboardPage() {
                   emptyIcon={<PartyPopper className="h-8 w-8" />}
                   emptyMessage="Nessun free trial attivo — è il momento di convertire qualche lead!"
                   showCloseDate
+                  showAge
+                  ageFrom="lastActivityAt"
                   onContactClick={handleContactClick}
                 />
+
+                {visiblePanels.won === true && (
+                  <ThemedLeadsTable
+                    title="Won"
+                    count={data?.lists.won?.length || 0}
+                    items={data?.lists.won || []}
+                    headerBg="bg-green-50"
+                    headerText="text-green-800"
+                    badgeBg="bg-green-100"
+                    badgeText="text-green-700"
+                    accentBorder="border-t-green-600"
+                    emptyIcon={<Trophy className="h-8 w-8" />}
+                    emptyMessage="Nessun deal vinto — il prossimo è dietro l'angolo!"
+                    onContactClick={handleContactClick}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* PIPELINE TAB */}
+          {activeTab === 'pipeline' && (
+            <div>
+              <div className="flex items-center justify-end mb-4">
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setPipelineView('list')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      pipelineView === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <LayoutList className="h-3.5 w-3.5" />
+                    Lista
+                  </button>
+                  <button
+                    onClick={() => setPipelineView('kanban')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      pipelineView === 'kanban' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <Columns2 className="h-3.5 w-3.5" />
+                    Kanban
+                  </button>
+                </div>
+              </div>
+
+              {pipelineView === 'list' && (
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <ThemedLeadsTable
+                    title="Da contattare"
+                    count={data?.lists.daContattare?.length || 0}
+                    items={data?.lists.daContattare || []}
+                    headerBg="bg-amber-50"
+                    headerText="text-amber-800"
+                    badgeBg="bg-amber-100"
+                    badgeText="text-amber-700"
+                    accentBorder="border-t-amber-500"
+                    emptyIcon={<Inbox className="h-8 w-8" />}
+                    emptyMessage="Nessun lead da contattare."
+                    hideMrr
+                    showSource
+                    showAge
+                    onContactClick={handleContactClick}
+                  />
+                  <ThemedLeadsTable
+                    title="Interessato"
+                    count={data?.lists.interessato?.length || 0}
+                    items={data?.lists.interessato || []}
+                    headerBg="bg-blue-50"
+                    headerText="text-blue-800"
+                    badgeBg="bg-blue-100"
+                    badgeText="text-blue-700"
+                    accentBorder="border-t-blue-500"
+                    emptyIcon={<Users className="h-8 w-8" />}
+                    emptyMessage="Nessun lead interessato."
+                    showAge
+                    ageFrom="lastActivityAt"
+                    onContactClick={handleContactClick}
+                  />
+                  <ThemedLeadsTable
+                    title="QR inviato"
+                    count={data?.lists.qrFollowUp?.length || 0}
+                    items={data?.lists.qrFollowUp || []}
+                    headerBg="bg-purple-50"
+                    headerText="text-purple-800"
+                    badgeBg="bg-purple-100"
+                    badgeText="text-purple-700"
+                    accentBorder="border-t-purple-500"
+                    emptyIcon={<CheckCircle2 className="h-8 w-8" />}
+                    emptyMessage="Nessun QR in attesa."
+                    showCloseDate
+                    showAge
+                    ageFrom="lastActivityAt"
+                    onContactClick={handleContactClick}
+                  />
+                  <ThemedLeadsTable
+                    title="In free trial"
+                    count={data?.lists.freeTrial?.length || 0}
+                    items={data?.lists.freeTrial || []}
+                    headerBg="bg-emerald-50"
+                    headerText="text-emerald-800"
+                    badgeBg="bg-emerald-100"
+                    badgeText="text-emerald-700"
+                    accentBorder="border-t-emerald-500"
+                    emptyIcon={<PartyPopper className="h-8 w-8" />}
+                    emptyMessage="Nessun free trial attivo."
+                    showCloseDate
+                    showAge
+                    ageFrom="lastActivityAt"
+                    onContactClick={handleContactClick}
+                  />
+                  <ThemedLeadsTable
+                    title="Won"
+                    count={data?.lists.won?.length || 0}
+                    items={data?.lists.won || []}
+                    headerBg="bg-green-50"
+                    headerText="text-green-800"
+                    badgeBg="bg-green-100"
+                    badgeText="text-green-700"
+                    accentBorder="border-t-green-600"
+                    emptyIcon={<Trophy className="h-8 w-8" />}
+                    emptyMessage="Nessun deal vinto ancora."
+                    onContactClick={handleContactClick}
+                  />
+                </div>
               )}
 
-              {visiblePanels.won !== false && (
-                <ThemedLeadsTable
-                  title="Won"
-                  count={data?.lists.won?.length || 0}
-                  items={data?.lists.won || []}
-                  headerBg="bg-green-50"
-                  headerText="text-green-800"
-                  badgeBg="bg-green-100"
-                  badgeText="text-green-700"
-                  accentBorder="border-t-green-600"
-                  emptyIcon={<Trophy className="h-8 w-8" />}
-                  emptyMessage="Nessun deal vinto — il prossimo è dietro l'angolo!"
-                  onContactClick={handleContactClick}
-                />
+              {pipelineView === 'kanban' && (
+                <div className="flex gap-4 overflow-x-auto pb-4">
+                  {([
+                    { key: 'daContattare' as const, label: 'Da contattare', color: 'border-t-amber-400',   headerBg: 'bg-amber-50',   headerText: 'text-amber-800',   badgeBg: 'bg-amber-100' },
+                    { key: 'interessato'  as const, label: 'Interessato',   color: 'border-t-blue-400',    headerBg: 'bg-blue-50',    headerText: 'text-blue-800',    badgeBg: 'bg-blue-100' },
+                    { key: 'qrFollowUp'   as const, label: 'QR inviato',    color: 'border-t-purple-400',  headerBg: 'bg-purple-50',  headerText: 'text-purple-800',  badgeBg: 'bg-purple-100' },
+                    { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
+                    { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
+                  ]).map(col => {
+                    const items = (data?.lists[col.key] || []) as DashboardListItem[];
+                    return (
+                      <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
+                        <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>
+                          <span className={`text-sm font-semibold ${col.headerText}`}>{col.label}</span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${col.badgeBg} ${col.headerText}`}>{items.length}</span>
+                        </div>
+                        <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
+                          {items.length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-6">Nessun lead</p>
+                          ) : items.map(c => {
+                            const age = formatAge(c.lastActivityAt);
+                            return (
+                              <div
+                                key={c._id}
+                                className="bg-white border border-gray-100 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+                                onClick={() => handleContactClick(c._id)}
+                              >
+                                <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
+                                {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
+                                <div className="mt-2 flex items-center justify-between">
+                                  {typeof c.mrr === 'number'
+                                    ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
+                                    : <span />
+                                  }
+                                  {age && (
+                                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${age.className}`}>
+                                      <Clock className="h-2.5 w-2.5" />{age.label}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
-          </div>
+          )}
         </div>
       </main>
 

@@ -375,12 +375,22 @@ type CallbackTableProps = {
 
 function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onContactClick }: CallbackTableProps) {
   const [page, setPage] = useState(1);
+  const [done, setDone] = useState<Set<string>>(new Set());
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   useEffect(() => { setPage(1); }, [items]);
+
+  const toggleDone = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDone(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   const overdueCount = items.filter(c => {
     if (!c.properties?.callbackAt) return false;
@@ -431,16 +441,31 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                     const cbDate = formatCallbackDate(c.properties?.callbackAt);
                     const badge = getCallbackBadge(c.properties?.callbackAt);
                     const age = formatAge(c.lastActivityAt);
+                    const isDone = done.has(c._id);
                     return (
                       <tr
                         key={c._id}
-                        className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className={`border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors ${isDone ? 'opacity-50' : ''}`}
                         onClick={() => onContactClick?.(c._id)}
                       >
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{c.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => toggleDone(c._id, e)}
+                              className={`flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                isDone
+                                  ? 'border-green-500 bg-green-500 text-white'
+                                  : 'border-gray-300 hover:border-green-400'
+                              }`}
+                            >
+                              {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                            </button>
+                            <div>
+                              <div className={`font-medium text-gray-900 ${isDone ? 'line-through text-gray-400' : ''}`}>{c.name}</div>
+                              <div className="text-xs text-gray-500">
+                                {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-gray-700 text-sm">{getStatusLabel(c.status)}</td>
@@ -497,24 +522,6 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                               <CalendarClock className="h-3 w-3" />
                               {c.properties?.callbackAt ? "Modifica" : "Imposta"}
                             </Button>
-                            {c.properties?.callbackAt && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Cancella richiamo"
-                                disabled={deletingId === c._id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onDeleteCallback(c);
-                                }}
-                              >
-                                {deletingId === c._id
-                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  : <Trash2 className="h-3.5 w-3.5" />
-                                }
-                              </Button>
-                            )}
                           </div>
                         </td>
                       </tr>

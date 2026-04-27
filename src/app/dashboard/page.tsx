@@ -122,6 +122,31 @@ function formatAge(iso?: string | null): { label: string; className: string } | 
   return { label, className };
 }
 
+function formatCallbackRelative(iso?: string | null): { time: string; rel: string; className: string } | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  const diffMs = d.getTime() - Date.now();
+  const diffMin = Math.round(diffMs / 60_000);
+  const time = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+
+  if (diffMin >= 0) {
+    const h = Math.floor(diffMin / 60);
+    const m = diffMin % 60;
+    const rel = h > 0 ? (m > 0 ? `tra ${h}h ${m}m` : `tra ${h}h`) : `tra ${diffMin}m`;
+    const className = diffMin < 30
+      ? "bg-amber-100 text-amber-700"
+      : "bg-emerald-50 text-emerald-700";
+    return { time, rel, className };
+  } else {
+    const abs = Math.abs(diffMin);
+    const h = Math.floor(abs / 60);
+    const m = abs % 60;
+    const rel = h > 0 ? (m > 0 ? `${h}h ${m}m fa` : `${h}h fa`) : `${abs}m fa`;
+    return { time, rel, className: "bg-red-100 text-red-700" };
+  }
+}
+
 function getCallbackBadge(iso?: string | null): { label: string; className: string } {
   if (!iso) return { label: "SENZA DATA", className: "bg-gray-100 text-gray-500" };
   const d = new Date(iso);
@@ -431,16 +456,13 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Richiamo</th>
                     <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nota</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Ultimo tocco</th>
                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">MRR</th>
                     <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paged.map((c) => {
-                    const cbDate = formatCallbackDate(c.properties?.callbackAt);
-                    const badge = getCallbackBadge(c.properties?.callbackAt);
-                    const age = formatAge(c.lastActivityAt);
+                    const cbRel = formatCallbackRelative(c.properties?.callbackAt);
                     const isDone = done.has(c._id);
                     return (
                       <tr
@@ -470,15 +492,18 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                         </td>
                         <td className="px-4 py-3 text-gray-700 text-sm">{getStatusLabel(c.status)}</td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5">
-                            {cbDate
-                              ? <><Clock className="h-3.5 w-3.5 text-gray-400" /><span className="text-gray-700 text-xs">{cbDate}</span></>
-                              : <CalendarX className="h-3.5 w-3.5 text-gray-300" />
-                            }
-                            <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${badge.className}`}>
-                              {badge.label}
+                          {cbRel ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-gray-700 text-sm font-medium">{cbRel.time}</span>
+                              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${cbRel.className}`}>
+                                {cbRel.rel}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500">
+                              senza data
                             </span>
-                          </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {c.properties?.callbackNote ? (
@@ -492,15 +517,6 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                                 {c.properties.callbackNote}
                               </TooltipContent>
                             </Tooltip>
-                          ) : (
-                            <span className="text-gray-400 text-xs">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {age ? (
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${age.className}`}>
-                              <Clock className="h-3 w-3" />{age.label}
-                            </span>
                           ) : (
                             <span className="text-gray-400 text-xs">—</span>
                           )}

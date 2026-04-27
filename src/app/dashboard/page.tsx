@@ -35,9 +35,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  SlidersHorizontal,
-  Eye,
-  EyeOff,
   Trash2,
   CalendarX,
   LayoutList,
@@ -588,26 +585,6 @@ export default function DashboardPage() {
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactSidebarOpen, setIsContactSidebarOpen] = useState(false);
-  const [showPanelFilter, setShowPanelFilter] = useState(false);
-  const [visiblePanels, setVisiblePanels] = usePersistedState<Record<string, boolean>>(
-    "dashboard:visiblePanels",
-    { won: false }
-  );
-  const togglePanel = (key: string) =>
-    setVisiblePanels(prev => ({ ...prev, [key]: !prev[key] }));
-
-  // Chiudi il popover filtri cliccando fuori
-  const panelFilterRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!showPanelFilter) return;
-    const handler = (e: MouseEvent) => {
-      if (panelFilterRef.current && !panelFilterRef.current.contains(e.target as Node)) {
-        setShowPanelFilter(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showPanelFilter]);
 
   const loadOwners = async () => {
     try {
@@ -868,127 +845,14 @@ export default function DashboardPage() {
 
           {/* AGENDA TAB */}
           {activeTab === 'agenda' && (
-            <div>
-              <div className="flex items-center justify-end mb-4">
-                <div className="relative" ref={panelFilterRef}>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs h-8"
-                    onClick={() => setShowPanelFilter(v => !v)}
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    Personalizza vista
-                  </Button>
-                  {showPanelFilter && (
-                    <div className="absolute right-0 top-9 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-48 space-y-1">
-                      <button
-                        onClick={() => togglePanel('won')}
-                        className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg hover:bg-gray-50 text-sm text-gray-700 transition-colors"
-                      >
-                        <span>Won</span>
-                        {visiblePanels.won === true
-                          ? <Eye className="h-3.5 w-3.5 text-blue-500" />
-                          : <EyeOff className="h-3.5 w-3.5 text-gray-300" />
-                        }
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid gap-6 xl:grid-cols-2">
-                <CallbackTable
-                  items={data?.lists.callback || []}
-                  onSetCallback={handleOpenCallbackDialog}
-                  onDeleteCallback={handleDeleteCallback}
-                  deletingId={deletingCallbackId}
-                  onContactClick={handleContactClick}
-                />
-
-                <ThemedLeadsTable
-                  title="Da contattare"
-                  count={data?.lists.daContattare?.length || 0}
-                  items={data?.lists.daContattare || []}
-                  headerBg="bg-amber-50"
-                  headerText="text-amber-800"
-                  badgeBg="bg-amber-100"
-                  badgeText="text-amber-700"
-                  accentBorder="border-t-amber-500"
-                  emptyIcon={<Inbox className="h-8 w-8" />}
-                  emptyMessage="Nessun lead da contattare — backlog pulito!"
-                  hideMrr
-                  showSource
-                  showAge
-                  onContactClick={handleContactClick}
-                />
-
-                <ThemedLeadsTable
-                  title="Interessato"
-                  count={data?.lists.interessato?.length || 0}
-                  items={data?.lists.interessato || []}
-                  headerBg="bg-blue-50"
-                  headerText="text-blue-800"
-                  badgeBg="bg-blue-100"
-                  badgeText="text-blue-700"
-                  accentBorder="border-t-blue-500"
-                  emptyIcon={<Users className="h-8 w-8" />}
-                  emptyMessage="Nessun lead interessato al momento."
-                  showAge
-                  ageFrom="lastActivityAt"
-                  onContactClick={handleContactClick}
-                />
-
-                <ThemedLeadsTable
-                  title="QR inviato (follow-up)"
-                  count={data?.lists.qrFollowUp?.length || 0}
-                  items={data?.lists.qrFollowUp || []}
-                  headerBg="bg-purple-50"
-                  headerText="text-purple-800"
-                  badgeBg="bg-purple-100"
-                  badgeText="text-purple-700"
-                  accentBorder="border-t-purple-500"
-                  emptyIcon={<CheckCircle2 className="h-8 w-8" />}
-                  emptyMessage="Tutti i QR sono stati gestiti — ottimo lavoro!"
-                  showCloseDate
-                  showAge
-                  ageFrom="lastActivityAt"
-                  onContactClick={handleContactClick}
-                />
-
-                <ThemedLeadsTable
-                  title="In free trial"
-                  count={data?.lists.freeTrial?.length || 0}
-                  items={data?.lists.freeTrial || []}
-                  headerBg="bg-emerald-50"
-                  headerText="text-emerald-800"
-                  badgeBg="bg-emerald-100"
-                  badgeText="text-emerald-700"
-                  accentBorder="border-t-emerald-500"
-                  emptyIcon={<PartyPopper className="h-8 w-8" />}
-                  emptyMessage="Nessun free trial attivo — è il momento di convertire qualche lead!"
-                  showCloseDate
-                  showAge
-                  ageFrom="lastActivityAt"
-                  onContactClick={handleContactClick}
-                />
-
-                {visiblePanels.won === true && (
-                  <ThemedLeadsTable
-                    title="Won"
-                    count={data?.lists.won?.length || 0}
-                    items={data?.lists.won || []}
-                    headerBg="bg-green-50"
-                    headerText="text-green-800"
-                    badgeBg="bg-green-100"
-                    badgeText="text-green-700"
-                    accentBorder="border-t-green-600"
-                    emptyIcon={<Trophy className="h-8 w-8" />}
-                    emptyMessage="Nessun deal vinto — il prossimo è dietro l'angolo!"
-                    onContactClick={handleContactClick}
-                  />
-                )}
-              </div>
+            <div className="max-w-2xl">
+              <CallbackTable
+                items={data?.lists.callback || []}
+                onSetCallback={handleOpenCallbackDialog}
+                onDeleteCallback={handleDeleteCallback}
+                deletingId={deletingCallbackId}
+                onContactClick={handleContactClick}
+              />
             </div>
           )}
 

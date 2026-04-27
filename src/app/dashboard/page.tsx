@@ -40,6 +40,7 @@ import {
   SlidersHorizontal,
   Eye,
   EyeOff,
+  Trash2,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
 import { MessageCircle } from "lucide-react";
@@ -367,10 +368,12 @@ function ThemedLeadsTable({
 type CallbackTableProps = {
   items: DashboardListItem[];
   onSetCallback: (item: DashboardListItem) => void;
+  onDeleteCallback: (item: DashboardListItem) => void;
+  deletingId: string | null;
   onContactClick?: (id: string) => void;
 };
 
-function CallbackTable({ items, onSetCallback, onContactClick }: CallbackTableProps) {
+function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onContactClick }: CallbackTableProps) {
   const [page, setPage] = useState(1);
 
   const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
@@ -477,6 +480,24 @@ function CallbackTable({ items, onSetCallback, onContactClick }: CallbackTablePr
                               <CalendarClock className="h-3 w-3" />
                               {c.properties?.callbackAt ? "Modifica" : "Imposta"}
                             </Button>
+                            {c.properties?.callbackAt && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Cancella richiamo"
+                                disabled={deletingId === c._id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDeleteCallback(c);
+                                }}
+                              >
+                                {deletingId === c._id
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  : <Trash2 className="h-3.5 w-3.5" />
+                                }
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -622,6 +643,20 @@ export default function DashboardPage() {
 
   const handleCallbackSaved = (_updatedContact: Contact) => {
     loadDashboard(owner);
+  };
+
+  const [deletingCallbackId, setDeletingCallbackId] = useState<string | null>(null);
+
+  const handleDeleteCallback = async (item: DashboardListItem) => {
+    setDeletingCallbackId(item._id);
+    try {
+      await apiClient.updateContactCallback(item._id, { callbackAt: null, callbackNote: null });
+      loadDashboard(owner);
+    } catch (err) {
+      console.error('Errore cancellazione richiamo:', err);
+    } finally {
+      setDeletingCallbackId(null);
+    }
   };
 
   const handleContactClick = async (id: string) => {
@@ -869,6 +904,8 @@ export default function DashboardPage() {
                 <CallbackTable
                   items={data?.lists.callback || []}
                   onSetCallback={handleOpenCallbackDialog}
+                  onDeleteCallback={handleDeleteCallback}
+                  deletingId={deletingCallbackId}
                   onContactClick={handleContactClick}
                 />
               )}

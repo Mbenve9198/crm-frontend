@@ -284,9 +284,15 @@ function ThemedLeadsTable({
 }: ThemedTableProps) {
   const [page, setPage] = useState(1);
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const sorted = [...items].sort((a, b) => {
+    const ta = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
+    const tb = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   useEffect(() => { setPage(1); }, [items]);
 
@@ -402,9 +408,15 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
   const [page, setPage] = useState(1);
   const [done, setDone] = useState<Set<string>>(new Set());
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const sorted = [...items].sort((a, b) => {
+    const ta = a.properties?.callbackAt ? new Date(a.properties.callbackAt).getTime() : Infinity;
+    const tb = b.properties?.callbackAt ? new Date(b.properties.callbackAt).getTime() : Infinity;
+    return ta - tb;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   useEffect(() => { setPage(1); }, [items]);
 

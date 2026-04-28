@@ -285,8 +285,8 @@ function ThemedLeadsTable({
   const [page, setPage] = useState(1);
 
   const sorted = [...items].sort((a, b) => {
-    const ta = a.lastActivityAt ? new Date(a.lastActivityAt).getTime() : 0;
-    const tb = b.lastActivityAt ? new Date(b.lastActivityAt).getTime() : 0;
+    const ta = new Date(a.lastActivityAt ?? a.createdAt).getTime();
+    const tb = new Date(b.lastActivityAt ?? b.createdAt).getTime();
     return tb - ta;
   });
 

@@ -255,6 +255,7 @@ type ThemedTableProps = {
   showSource?: boolean;
   showAge?: boolean;
   ageFrom?: "createdAt" | "lastActivityAt";
+  sortBy?: "createdAt" | "lastActivityAt";
   onContactClick?: (id: string) => void;
 };
 
@@ -280,13 +281,14 @@ function ThemedLeadsTable({
   showSource,
   showAge,
   ageFrom = "createdAt",
+  sortBy = "lastActivityAt",
   onContactClick,
 }: ThemedTableProps) {
   const [page, setPage] = useState(1);
 
   const sorted = [...items].sort((a, b) => {
-    const ta = new Date(a.lastActivityAt ?? a.createdAt).getTime();
-    const tb = new Date(b.lastActivityAt ?? b.createdAt).getTime();
+    const ta = new Date(sortBy === "createdAt" ? a.createdAt : (a.lastActivityAt ?? a.createdAt)).getTime();
+    const tb = new Date(sortBy === "createdAt" ? b.createdAt : (b.lastActivityAt ?? b.createdAt)).getTime();
     return tb - ta;
   });
 
@@ -980,6 +982,7 @@ export default function DashboardPage() {
                     hideMrr
                     showSource
                     showAge
+                    sortBy="createdAt"
                     onContactClick={handleContactClick}
                   />
                   <ThemedLeadsTable

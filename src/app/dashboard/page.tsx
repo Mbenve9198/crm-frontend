@@ -612,6 +612,7 @@ export default function DashboardPage() {
 
   const [activeTab, setActiveTab] = usePersistedState<'agenda' | 'pipeline'>('dashboard:tab', 'agenda');
   const [pipelineView, setPipelineView] = usePersistedState<'list' | 'kanban'>('dashboard:pipelineView', 'list');
+  const [pipelineSource, setPipelineSource] = usePersistedState<string>('dashboard:pipelineSource', 'all');
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
@@ -703,6 +704,29 @@ export default function DashboardPage() {
     setSelectedContact(updatedContact);
     loadDashboard(owner);
   };
+
+  const availableSources = useMemo(() => {
+    if (!data) return [];
+    const all = Object.values(data.lists).flat() as DashboardListItem[];
+    return [...new Set(all.map(i => i.source).filter(Boolean))] as string[];
+  }, [data]);
+
+  const filteredLists = useMemo(() => {
+    if (!data) return data;
+    if (pipelineSource === 'all') return data;
+    const filter = (items: DashboardListItem[]) => items.filter(i => i.source === pipelineSource);
+    return {
+      ...data,
+      lists: {
+        ...data.lists,
+        daContattare: filter(data.lists.daContattare || []),
+        interessato: filter(data.lists.interessato || []),
+        qrFollowUp: filter(data.lists.qrFollowUp || []),
+        freeTrial: filter(data.lists.freeTrial || []),
+        won: filter(data.lists.won || []),
+      },
+    };
+  }, [data, pipelineSource]);
 
   if (authLoading) {
     return (
@@ -891,7 +915,21 @@ export default function DashboardPage() {
           {/* PIPELINE TAB */}
           {activeTab === 'pipeline' && (
             <div>
-              <div className="flex items-center justify-end mb-4">
+              <div className="flex items-center justify-between mb-4">
+                {/* Source filter */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-600">Fonte</label>
+                  <select
+                    className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    value={pipelineSource}
+                    onChange={(e) => setPipelineSource(e.target.value)}
+                  >
+                    <option value="all">Tutte</option>
+                    {availableSources.map(src => (
+                      <option key={src} value={src}>{sourceLabel(src)}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                   <button
                     onClick={() => setPipelineView('list')}
@@ -918,8 +956,8 @@ export default function DashboardPage() {
                 <div className="grid gap-6 xl:grid-cols-2">
                   <ThemedLeadsTable
                     title="Da contattare"
-                    count={data?.lists.daContattare?.length || 0}
-                    items={data?.lists.daContattare || []}
+                    count={filteredLists?.lists.daContattare?.length || 0}
+                    items={filteredLists?.lists.daContattare || []}
                     headerBg="bg-amber-50"
                     headerText="text-amber-800"
                     badgeBg="bg-amber-100"
@@ -934,8 +972,8 @@ export default function DashboardPage() {
                   />
                   <ThemedLeadsTable
                     title="Interessato"
-                    count={data?.lists.interessato?.length || 0}
-                    items={data?.lists.interessato || []}
+                    count={filteredLists?.lists.interessato?.length || 0}
+                    items={filteredLists?.lists.interessato || []}
                     headerBg="bg-blue-50"
                     headerText="text-blue-800"
                     badgeBg="bg-blue-100"
@@ -949,8 +987,8 @@ export default function DashboardPage() {
                   />
                   <ThemedLeadsTable
                     title="QR inviato"
-                    count={data?.lists.qrFollowUp?.length || 0}
-                    items={data?.lists.qrFollowUp || []}
+                    count={filteredLists?.lists.qrFollowUp?.length || 0}
+                    items={filteredLists?.lists.qrFollowUp || []}
                     headerBg="bg-purple-50"
                     headerText="text-purple-800"
                     badgeBg="bg-purple-100"
@@ -965,8 +1003,8 @@ export default function DashboardPage() {
                   />
                   <ThemedLeadsTable
                     title="In free trial"
-                    count={data?.lists.freeTrial?.length || 0}
-                    items={data?.lists.freeTrial || []}
+                    count={filteredLists?.lists.freeTrial?.length || 0}
+                    items={filteredLists?.lists.freeTrial || []}
                     headerBg="bg-emerald-50"
                     headerText="text-emerald-800"
                     badgeBg="bg-emerald-100"
@@ -981,8 +1019,8 @@ export default function DashboardPage() {
                   />
                   <ThemedLeadsTable
                     title="Won"
-                    count={data?.lists.won?.length || 0}
-                    items={data?.lists.won || []}
+                    count={filteredLists?.lists.won?.length || 0}
+                    items={filteredLists?.lists.won || []}
                     headerBg="bg-green-50"
                     headerText="text-green-800"
                     badgeBg="bg-green-100"
@@ -1004,7 +1042,7 @@ export default function DashboardPage() {
                     { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
                     { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
                   ]).map(col => {
-                    const items = (data?.lists[col.key] || []) as DashboardListItem[];
+                    const items = (filteredLists?.lists[col.key] || []) as DashboardListItem[];
                     return (
                       <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
                         <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>

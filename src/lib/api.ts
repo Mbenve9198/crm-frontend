@@ -530,11 +530,12 @@ class ApiClient {
     return this.request(endpoint);
   }
 
-  async getLeadCohortAnalytics(params?: { from?: string; to?: string; owner?: string }): Promise<ApiResponse<LeadCohortFunnelAnalyticsData>> {
+  async getLeadCohortAnalytics(params?: { from?: string; to?: string; owner?: string; cohortTypes?: string }): Promise<ApiResponse<LeadCohortFunnelAnalyticsData>> {
     const searchParams = new URLSearchParams();
     if (params?.from) searchParams.append('from', params.from);
     if (params?.to) searchParams.append('to', params.to);
     if (params?.owner) searchParams.append('owner', params.owner);
+    if (params?.cohortTypes) searchParams.append('cohortTypes', params.cohortTypes);
     const queryString = searchParams.toString();
     const endpoint = queryString
       ? `/contacts/analytics/leads-cohort?${queryString}`
@@ -542,7 +543,7 @@ class ApiClient {
     return this.request(endpoint);
   }
 
-  async getOwnerPerformance(params?: { from?: string; to?: string; source?: string; closeDateFrom?: string; closeDateTo?: string; wonFrom?: string; wonTo?: string }): Promise<ApiResponse<OwnerPerformanceData>> {
+  async getOwnerPerformance(params?: { from?: string; to?: string; source?: string; closeDateFrom?: string; closeDateTo?: string; wonFrom?: string; wonTo?: string; cohortTypes?: string }): Promise<ApiResponse<OwnerPerformanceData>> {
     const searchParams = new URLSearchParams();
     if (params?.from) searchParams.append('from', params.from);
     if (params?.to) searchParams.append('to', params.to);
@@ -551,6 +552,7 @@ class ApiClient {
     if (params?.closeDateTo) searchParams.append('closeDateTo', params.closeDateTo);
     if (params?.wonFrom) searchParams.append('wonFrom', params.wonFrom);
     if (params?.wonTo) searchParams.append('wonTo', params.wonTo);
+    if (params?.cohortTypes) searchParams.append('cohortTypes', params.cohortTypes);
     const queryString = searchParams.toString();
     const endpoint = queryString
       ? `/contacts/analytics/owner-performance?${queryString}`

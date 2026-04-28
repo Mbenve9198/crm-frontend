@@ -316,6 +316,84 @@ function SourceMultiSelect({
   );
 }
 
+const COHORT_TYPE_OPTIONS = [
+  { key: "created", label: "Creati" },
+  { key: "reactivated_campaign", label: "Riattivati da Campagna" },
+  { key: "reactivated_manual", label: "Riattivati Manualmente" },
+] as const;
+
+function CohortTypeMultiSelect({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const allSelected = selected.length === 0;
+  const label = allSelected
+    ? "Tutti i lead"
+    : selected.length === 1
+      ? (COHORT_TYPE_OPTIONS.find(o => o.key === selected[0])?.label ?? selected[0])
+      : `${selected.length} tipi`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 h-8 rounded-md border border-gray-200 bg-white px-2.5 text-xs shadow-xs hover:border-blue-300 hover:bg-blue-50/30 transition-colors"
+        >
+          <span className="font-medium text-gray-600">Tipo coorte:</span>
+          <span className="font-semibold text-blue-700">{label}</span>
+          <ChevronDown className="h-3 w-3 text-gray-400" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-60 p-2">
+        <div className="space-y-0.5">
+          {COHORT_TYPE_OPTIONS.map(({ key, label: lbl }) => {
+            const active = allSelected || selected.includes(key);
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (allSelected) {
+                    onChange(COHORT_TYPE_OPTIONS.map(o => o.key).filter(k => k !== key));
+                  } else {
+                    const next = selected.includes(key)
+                      ? selected.filter(s => s !== key)
+                      : [...selected, key];
+                    onChange(next.length === COHORT_TYPE_OPTIONS.length ? [] : next);
+                  }
+                }}
+                className={`w-full flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs transition-colors ${
+                  active ? "bg-blue-50 text-blue-800" : "text-gray-400"
+                }`}
+              >
+                <div className={`h-4 w-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                  active ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                }`}>
+                  {active && <Check className="h-3 w-3 text-white" />}
+                </div>
+                {lbl}
+              </button>
+            );
+          })}
+        </div>
+        {!allSelected && (
+          <button
+            type="button"
+            onClick={() => onChange([])}
+            className="w-full mt-1.5 pt-1.5 border-t text-xs text-gray-500 hover:text-gray-700 text-center"
+          >
+            Tutti i lead
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function LeadAnalyticsPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -324,10 +402,12 @@ export default function LeadAnalyticsPage() {
 
   const [funnelFrom, setFunnelFrom] = usePersistedState("analytics:funnelFrom", defaultFrom());
   const [funnelTo, setFunnelTo] = usePersistedState("analytics:funnelTo", defaultTo());
+  const [funnelCohortTypes, setFunnelCohortTypes] = usePersistedState<string[]>("analytics:funnelCohortTypes", []);
 
   const [ownerFrom, setOwnerFrom] = usePersistedState("analytics:ownerFrom", defaultFrom());
   const [ownerTo, setOwnerTo] = usePersistedState("analytics:ownerTo", defaultTo());
   const [selectedSources, setSelectedSources] = usePersistedState<string[]>("analytics:sources", []);
+  const [ownerCohortTypes, setOwnerCohortTypes] = usePersistedState<string[]>("analytics:ownerCohortTypes", []);
 
   const [closeDateFrom, setCloseDateFrom] = usePersistedState("analytics:closeDateFrom", defaultFrom());
   const [closeDateTo, setCloseDateTo] = usePersistedState("analytics:closeDateTo", defaultTo());
@@ -358,10 +438,12 @@ export default function LeadAnalyticsPage() {
 
   const canAccess = useMemo(() => user && user.role === "admin", [user]);
 
+  const cohortTypesParam = (types: string[]) => types.length > 0 ? types.join(",") : undefined;
+
   const loadFunnel = async () => {
     try {
       setIsLoadingFunnel(true);
-      const res = await apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo });
+      const res = await apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo, cohortTypes: cohortTypesParam(funnelCohortTypes) });
       if (res.success && res.data) setCohortData(res.data);
     } catch {
       // silent
@@ -376,7 +458,7 @@ export default function LeadAnalyticsPage() {
       setError(null);
       setDrilldown(null);
       const sourceParam = selectedSources.length > 0 ? selectedSources.join(",") : "all";
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}), cohortTypes: cohortTypesParam(ownerCohortTypes) });
       if (res.success && res.data) setData(res.data);
       else setError(res.message || "Errore nel caricamento");
     } catch (err) {
@@ -390,7 +472,7 @@ export default function LeadAnalyticsPage() {
     try {
       setIsLoadingTrials(true);
       const sourceParam = selectedSources.length > 0 ? selectedSources.join(",") : "all";
-      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) });
+      const res = await apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: sourceParam, closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}), cohortTypes: cohortTypesParam(ownerCohortTypes) });
       if (res.success && res.data) setData(prev => prev ? { ...prev, forecast: res.data!.forecast } : res.data!);
     } catch {
       // silent
@@ -406,8 +488,8 @@ export default function LeadAnalyticsPage() {
       setIsLoadingTrials(true);
       setError(null);
       const [ownerRes, cohortRes] = await Promise.all([
-        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: selectedSources.length > 0 ? selectedSources.join(",") : "all", closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}) }),
-        apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo }),
+        apiClient.getOwnerPerformance({ from: ownerFrom, to: ownerTo, source: selectedSources.length > 0 ? selectedSources.join(",") : "all", closeDateFrom, closeDateTo, ...(wonFilterEnabled ? { wonFrom, wonTo } : {}), cohortTypes: cohortTypesParam(ownerCohortTypes) }),
+        apiClient.getLeadCohortAnalytics({ from: funnelFrom, to: funnelTo, cohortTypes: cohortTypesParam(funnelCohortTypes) }),
       ]);
       if (ownerRes.success && ownerRes.data) setData(ownerRes.data);
       else setError(ownerRes.message || "Errore nel caricamento");
@@ -753,6 +835,7 @@ export default function LeadAnalyticsPage() {
               className="flex flex-wrap items-center gap-2 px-5 py-2.5 bg-indigo-50/40 border-b"
             >
               <DateRangePopover label="Data creazione" from={funnelFrom} to={funnelTo} onFromChange={setFunnelFrom} onToChange={setFunnelTo} color="indigo" />
+              <CohortTypeMultiSelect selected={funnelCohortTypes} onChange={setFunnelCohortTypes} />
               <Button type="submit" size="sm" disabled={isLoadingFunnel} className="h-8 text-xs">
                 {isLoadingFunnel && <Loader2 className="h-3 w-3 animate-spin" />}
                 Applica
@@ -1036,6 +1119,7 @@ export default function LeadAnalyticsPage() {
               </div>
 
               <SourceMultiSelect selected={selectedSources} onChange={setSelectedSources} />
+              <CohortTypeMultiSelect selected={ownerCohortTypes} onChange={setOwnerCohortTypes} />
 
               <Button type="submit" size="sm" disabled={isLoadingOwner} className="h-8 text-xs">
                 {isLoadingOwner && <Loader2 className="h-3 w-3 animate-spin" />}

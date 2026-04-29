@@ -866,7 +866,6 @@ export default function LeadAnalyticsPage() {
                         <th className="px-4 py-2.5 text-left font-semibold text-gray-700">Sorgente</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Creati</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-teal-700">Riatt.&nbsp;Camp.</th>
-                        <th className="px-4 py-2.5 text-right font-semibold text-blue-700">Riatt.&nbsp;Man.</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Coorte</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">Not&nbsp;Touched</th>
                         <th className="px-4 py-2.5 text-right font-semibold text-gray-700">QR&nbsp;Inviato</th>
@@ -910,9 +909,6 @@ export default function LeadAnalyticsPage() {
                             <td className="px-4 py-2.5 text-right">
                               <CCell count={src.cohort.reactivated.campaign.count} label="Riattivati da campagna" color="bg-teal-500" contacts={src.cohort.reactivated.campaign.contacts} />
                             </td>
-                            <td className="px-4 py-2.5 text-right">
-                              <CCell count={src.cohort.reactivated.manual.count} label="Riattivati manualmente" color="bg-blue-500" contacts={src.cohort.reactivated.manual.contacts} />
-                            </td>
                             <td className="px-4 py-2.5 text-right font-semibold">{src.cohort.total.count}</td>
                             <td className="px-4 py-2.5 text-right">
                               <CCell count={src.steps.notTouched.count} label="Non lavorati" color="bg-amber-500" contacts={src.steps.notTouched.contacts} />
@@ -927,7 +923,16 @@ export default function LeadAnalyticsPage() {
                               <CCell count={src.steps.won.count} label="Won" color="bg-emerald-500" contacts={src.steps.won.contacts} />
                             </td>
                             <td className="px-4 py-2.5 text-right">
-                              <CCell count={src.steps.badData?.count ?? 0} label="Bad Data / Non Qualificato" color="bg-red-400" contacts={src.steps.badData?.contacts ?? []} />
+                              {(() => {
+                                const bdCount = src.steps.badData?.count ?? 0;
+                                const pct = src.cohort.total.count > 0 ? Math.round((bdCount / src.cohort.total.count) * 100) : 0;
+                                return (
+                                  <span className="inline-flex items-center gap-1">
+                                    <CCell count={bdCount} label="Bad Data / Non Qualificato" color="bg-red-400" contacts={src.steps.badData?.contacts ?? []} />
+                                    {bdCount > 0 && <span className="text-xs text-gray-400">({pct}%)</span>}
+                                  </span>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );
@@ -937,7 +942,6 @@ export default function LeadAnalyticsPage() {
                         const srcs = Object.values(cohortData.sources);
                         const totCreated = srcs.reduce((s, v) => s + v.cohort.created.count, 0);
                         const totReactCampaign = srcs.reduce((s, v) => s + v.cohort.reactivated.campaign.count, 0);
-                        const totReactManual = srcs.reduce((s, v) => s + v.cohort.reactivated.manual.count, 0);
                         const totCohort = srcs.reduce((s, v) => s + v.cohort.total.count, 0);
                         const totNT = srcs.reduce((s, v) => s + v.steps.notTouched.count, 0);
                         const totQR = srcs.reduce((s, v) => s + v.steps.qrCodeSent.count, 0);
@@ -949,13 +953,17 @@ export default function LeadAnalyticsPage() {
                             <td className="px-4 py-2.5 text-gray-900">Totale</td>
                             <td className="px-4 py-2.5 text-right">{totCreated}</td>
                             <td className="px-4 py-2.5 text-right">{totReactCampaign}</td>
-                            <td className="px-4 py-2.5 text-right">{totReactManual}</td>
                             <td className="px-4 py-2.5 text-right">{totCohort}</td>
                             <td className="px-4 py-2.5 text-right">{totNT}</td>
                             <td className="px-4 py-2.5 text-right">{totQR}</td>
                             <td className="px-4 py-2.5 text-right">{totFT}</td>
                             <td className="px-4 py-2.5 text-right">{totWon}</td>
-                            <td className="px-4 py-2.5 text-right">{totBD}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <span className="inline-flex items-center gap-1">
+                                {totBD}
+                                {totBD > 0 && totCohort > 0 && <span className="text-xs text-gray-400 font-normal">({Math.round((totBD / totCohort) * 100)}%)</span>}
+                              </span>
+                            </td>
                           </tr>
                         );
                       })()}

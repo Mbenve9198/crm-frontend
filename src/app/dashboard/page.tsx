@@ -626,7 +626,7 @@ export default function DashboardPage() {
 
   const [activeTab, setActiveTab] = usePersistedState<'agenda' | 'pipeline'>('dashboard:tab', 'agenda');
   const [pipelineView, setPipelineView] = usePersistedState<'list' | 'kanban'>('dashboard:pipelineView', 'list');
-  const [pipelineSource, setPipelineSource] = usePersistedState<string>('dashboard:pipelineSource', 'all');
+  const [pipelineSources, setPipelineSources] = usePersistedState<string[]>('dashboard:pipelineSources', []);
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
@@ -727,8 +727,8 @@ export default function DashboardPage() {
 
   const filteredLists = useMemo(() => {
     if (!data) return data;
-    if (pipelineSource === 'all') return data;
-    const filter = (items: DashboardListItem[]) => items.filter(i => i.source === pipelineSource);
+    if (pipelineSources.length === 0) return data;
+    const filter = (items: DashboardListItem[]) => items.filter(i => pipelineSources.includes(i.source ?? ''));
     return {
       ...data,
       lists: {
@@ -740,7 +740,7 @@ export default function DashboardPage() {
         won: filter(data.lists.won || []),
       },
     };
-  }, [data, pipelineSource]);
+  }, [data, pipelineSources]);
 
   if (authLoading) {
     return (
@@ -931,18 +931,43 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 {/* Source filter */}
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-600">Fonte</label>
-                  <select
-                    className="h-8 rounded-md border border-gray-200 bg-white px-2.5 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    value={pipelineSource}
-                    onChange={(e) => setPipelineSource(e.target.value)}
-                  >
-                    <option value="all">Tutte</option>
-                    {availableSources.map(src => (
-                      <option key={src} value={src}>{sourceLabel(src)}</option>
-                    ))}
-                  </select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-gray-600">Fonte</span>
+                  {availableSources.map(src => {
+                    const active = pipelineSources.length === 0 || pipelineSources.includes(src);
+                    return (
+                      <button
+                        key={src}
+                        type="button"
+                        onClick={() => {
+                          setPipelineSources(prev => {
+                            if (prev.length === 0) return [src];
+                            if (prev.includes(src)) {
+                              const next = prev.filter(s => s !== src);
+                              return next;
+                            }
+                            return [...prev, src];
+                          });
+                        }}
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                          active
+                            ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
+                            : 'bg-gray-100 text-gray-400'
+                        }`}
+                      >
+                        {sourceLabel(src)}
+                      </button>
+                    );
+                  })}
+                  {pipelineSources.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPipelineSources([])}
+                      className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
+                    >
+                      Tutte
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                   <button

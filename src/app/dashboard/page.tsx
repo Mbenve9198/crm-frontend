@@ -140,9 +140,13 @@ function formatCallbackRelative(iso?: string | null): { time: string; rel: strin
     return { time, rel, className };
   } else {
     const abs = Math.abs(diffMin);
-    const h = Math.floor(abs / 60);
+    const totalH = Math.floor(abs / 60);
     const m = abs % 60;
-    const rel = h > 0 ? (m > 0 ? `${h}h ${m}m fa` : `${h}h fa`) : `${abs}m fa`;
+    const days = Math.floor(totalH / 24);
+    const h = totalH % 24;
+    const rel = days > 0
+      ? (h > 0 ? `${days}g e ${h}h fa` : `${days}g fa`)
+      : totalH > 0 ? (m > 0 ? `${totalH}h ${m}m fa` : `${totalH}h fa`) : `${abs}m fa`;
     return { time, rel, className: "bg-red-100 text-red-700" };
   }
 }

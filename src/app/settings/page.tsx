@@ -577,7 +577,7 @@ export default function SettingsPage() {
 
               {globalRR.length === 0 && (
                 <p className="text-sm text-gray-400 italic py-2">
-                  Nessun utente nel pool — aggiungi almeno un utente.
+                  Pool vuoto — i lead non verranno assegnati a nessuno.
                 </p>
               )}
 

@@ -5,8 +5,19 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
-import { User as UserType, Contact } from "@/types/contact";
+import { User as UserType, Contact, ContactStatus } from "@/types/contact";
 import { DashboardData, DashboardListItem } from "@/types/dashboard";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -41,6 +52,16 @@ import { getStatusLabel } from "@/lib/status-utils";
 import { MessageCircle } from "lucide-react";
 
 const PAGE_SIZE = 10;
+
+type KanbanColKey = 'daContattare' | 'interessato' | 'qrFollowUp' | 'freeTrial' | 'won';
+
+const KANBAN_COL_STATUS: Record<KanbanColKey, ContactStatus> = {
+  daContattare: 'da contattare',
+  interessato:  'interessato',
+  qrFollowUp:   'qr code inviato',
+  freeTrial:    'free trial iniziato',
+  won:          'won',
+};
 
 function WhatsAppLink({ phone }: { phone: string }) {
   const cleaned = phone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
@@ -217,6 +238,63 @@ function MiniStat({
         <span className="text-xs text-gray-600 truncate">{label}</span>
       </div>
       <span className={`text-sm font-bold tabular-nums ml-3 ${valueColor}`}>{value}</span>
+    </div>
+  );
+}
+
+function DraggableCard({
+  id,
+  children,
+  onClick,
+}: {
+  id: string;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : undefined;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      onClick={onClick}
+      className={`bg-white border border-gray-100 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm transition-all ${
+        isDragging ? 'opacity-40' : ''
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DroppableColumn({
+  id,
+  children,
+  isEmpty,
+}: {
+  id: string;
+  children: React.ReactNode;
+  isEmpty: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`p-2 space-y-2 min-h-[80px] max-h-[600px] overflow-y-auto rounded-b-xl transition-colors ${
+        isOver ? 'bg-blue-50 ring-2 ring-inset ring-blue-300' : ''
+      }`}
+    >
+      {isEmpty && !isOver && (
+        <p className="text-xs text-gray-400 text-center py-6">Nessun lead</p>
+      )}
+      {isEmpty && isOver && (
+        <div className="border-2 border-dashed border-blue-300 rounded-lg h-16" />
+      )}
+      {children}
     </div>
   );
 }
@@ -646,6 +724,11 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [pipelineSources, setPipelineSources] = usePersistedState<string[]>('dashboard:pipelineSources', []);
+  const [draggingItem, setDraggingItem] = useState<DashboardListItem | null>(null);
+
+  const kanbanSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
   const [selectedCallbackItem, setSelectedCallbackItem] = useState<DashboardListItem | null>(null);
@@ -736,6 +819,48 @@ export default function DashboardPage() {
   const handleContactUpdate = (updatedContact: Contact) => {
     setSelectedContact(updatedContact);
     loadDashboard(owner);
+  };
+
+  const handleKanbanDragStart = (event: DragStartEvent) => {
+    const id = event.active.id as string;
+    const allItems = Object.values(data?.lists ?? {}).flat() as DashboardListItem[];
+    setDraggingItem(allItems.find(c => c._id === id) ?? null);
+  };
+
+  const handleKanbanDragEnd = async (event: DragEndEvent) => {
+    setDraggingItem(null);
+    const { active, over } = event;
+    if (!over || !data) return;
+
+    const contactId = active.id as string;
+    const newColKey = over.id as KanbanColKey;
+    const newStatus = KANBAN_COL_STATUS[newColKey];
+    if (!newStatus) return;
+
+    const colKeys = Object.keys(KANBAN_COL_STATUS) as KanbanColKey[];
+    const oldColKey = colKeys.find(k => data.lists[k]?.some(c => c._id === contactId));
+    if (!oldColKey || oldColKey === newColKey) return;
+
+    const contact = data.lists[oldColKey]?.find(c => c._id === contactId);
+    if (!contact) return;
+
+    setData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        lists: {
+          ...prev.lists,
+          [oldColKey]: prev.lists[oldColKey].filter(c => c._id !== contactId),
+          [newColKey]: [...(prev.lists[newColKey] || []), { ...contact, status: newStatus }],
+        },
+      };
+    });
+
+    try {
+      await apiClient.updateContactStatus(contactId, { status: newStatus });
+    } catch {
+      loadDashboard(owner);
+    }
   };
 
   const availableSources = useMemo(() => {
@@ -923,53 +1048,71 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {([
-                { key: 'daContattare' as const, label: 'Da contattare', color: 'border-t-amber-400',   headerBg: 'bg-amber-50',   headerText: 'text-amber-800',   badgeBg: 'bg-amber-100' },
-                { key: 'interessato'  as const, label: 'Interessato',   color: 'border-t-blue-400',    headerBg: 'bg-blue-50',    headerText: 'text-blue-800',    badgeBg: 'bg-blue-100' },
-                { key: 'qrFollowUp'   as const, label: 'QR inviato',    color: 'border-t-purple-400',  headerBg: 'bg-purple-50',  headerText: 'text-purple-800',  badgeBg: 'bg-purple-100' },
-                { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
-                { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
-              ]).map(col => {
-                const items = (filteredLists?.lists[col.key] || []) as DashboardListItem[];
-                return (
-                  <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
-                    <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>
-                      <span className={`text-sm font-semibold ${col.headerText}`}>{col.label}</span>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${col.badgeBg} ${col.headerText}`}>{items.length}</span>
+            <DndContext
+              sensors={kanbanSensors}
+              onDragStart={handleKanbanDragStart}
+              onDragEnd={handleKanbanDragEnd}
+            >
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {([
+                  { key: 'daContattare' as const, label: 'Da contattare', color: 'border-t-amber-400',   headerBg: 'bg-amber-50',   headerText: 'text-amber-800',   badgeBg: 'bg-amber-100' },
+                  { key: 'interessato'  as const, label: 'Interessato',   color: 'border-t-blue-400',    headerBg: 'bg-blue-50',    headerText: 'text-blue-800',    badgeBg: 'bg-blue-100' },
+                  { key: 'qrFollowUp'   as const, label: 'QR inviato',    color: 'border-t-purple-400',  headerBg: 'bg-purple-50',  headerText: 'text-purple-800',  badgeBg: 'bg-purple-100' },
+                  { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
+                  { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
+                ] as const).map(col => {
+                  const items = (filteredLists?.lists[col.key] || []) as DashboardListItem[];
+                  return (
+                    <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
+                      <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>
+                        <span className={`text-sm font-semibold ${col.headerText}`}>{col.label}</span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${col.badgeBg} ${col.headerText}`}>{items.length}</span>
+                      </div>
+                      <DroppableColumn id={col.key} isEmpty={items.length === 0}>
+                        {items.map(c => {
+                          const age = formatAge(c.lastActivityAt);
+                          return (
+                            <DraggableCard
+                              key={c._id}
+                              id={c._id}
+                              onClick={() => handleContactClick(c._id)}
+                            >
+                              <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
+                              {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
+                              <div className="mt-2 flex items-center justify-between">
+                                {typeof c.mrr === 'number'
+                                  ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
+                                  : <span />
+                                }
+                                {age && (
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${age.className}`}>
+                                    <Clock className="h-2.5 w-2.5" />{age.label}
+                                  </span>
+                                )}
+                              </div>
+                            </DraggableCard>
+                          );
+                        })}
+                      </DroppableColumn>
                     </div>
-                    <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
-                      {items.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center py-6">Nessun lead</p>
-                      ) : items.map(c => {
-                        const age = formatAge(c.lastActivityAt);
-                        return (
-                          <div
-                            key={c._id}
-                            className="bg-white border border-gray-100 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
-                            onClick={() => handleContactClick(c._id)}
-                          >
-                            <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
-                            {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
-                            <div className="mt-2 flex items-center justify-between">
-                              {typeof c.mrr === 'number'
-                                ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
-                                : <span />
-                              }
-                              {age && (
-                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${age.className}`}>
-                                  <Clock className="h-2.5 w-2.5" />{age.label}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  );
+                })}
+              </div>
+
+              <DragOverlay dropAnimation={null}>
+                {draggingItem ? (
+                  <div className="w-72 bg-white border border-gray-200 rounded-lg p-3 shadow-2xl rotate-1 opacity-95">
+                    <div className="font-medium text-sm text-gray-900 truncate">{draggingItem.name}</div>
+                    {draggingItem.phone && (
+                      <div className="mt-1 text-xs text-green-600">{draggingItem.phone}</div>
+                    )}
+                    {typeof draggingItem.mrr === 'number' && (
+                      <div className="mt-1 text-xs font-semibold text-gray-600">{formatEur(draggingItem.mrr)}/m</div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           </div>
         </div>
       </main>

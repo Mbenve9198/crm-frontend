@@ -25,10 +25,8 @@ import {
   Trophy,
   XCircle,
   DollarSign,
-  PartyPopper,
   CheckCircle2,
   PhoneCall,
-  Inbox,
   Clock,
   CalendarClock,
   Bell,
@@ -37,9 +35,6 @@ import {
   ChevronRight,
   Trash2,
   CalendarX,
-  LayoutList,
-  Columns2,
-  ListTodo,
   GitBranch,
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
@@ -201,6 +196,28 @@ function KpiCard({
         <p className={`text-3xl font-bold tracking-tight ${valueColor}`}>{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  dot,
+  valueColor = "text-gray-800",
+}: {
+  label: string;
+  value: string | number;
+  dot: string;
+  valueColor?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`h-2 w-2 rounded-full flex-shrink-0 ${dot}`} />
+        <span className="text-xs text-gray-600 truncate">{label}</span>
+      </div>
+      <span className={`text-sm font-bold tabular-nums ml-3 ${valueColor}`}>{value}</span>
+    </div>
   );
 }
 
@@ -628,8 +645,6 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = usePersistedState<'agenda' | 'pipeline'>('dashboard:tab', 'agenda');
-  const [pipelineView, setPipelineView] = usePersistedState<'list' | 'kanban'>('dashboard:pipelineView', 'list');
   const [pipelineSources, setPipelineSources] = usePersistedState<string[]>('dashboard:pipelineSources', []);
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);
@@ -822,312 +837,140 @@ export default function DashboardPage() {
             </Alert>
           )}
 
-          {/* KPI Cards */}
-          <div className="grid gap-4 grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              label="Da contattare"
-              value={data?.lists.daContattare?.length ?? "—"}
-              icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}
-              borderColor="border-l-amber-500"
-              iconBg="bg-amber-50"
-              valueColor="text-amber-700"
-            />
-            <KpiCard
-              label="Free trial iniziato"
-              value={k?.freeTrialStarted ?? "—"}
-              icon={<Play className="h-5 w-5 text-emerald-600" />}
-              borderColor="border-l-emerald-500"
-              iconBg="bg-emerald-50"
-              valueColor="text-emerald-700"
-            />
-            <KpiCard
-              label="QR code inviato"
-              value={k?.qrCodeSent ?? "—"}
-              icon={<QrCode className="h-5 w-5 text-purple-600" />}
-              borderColor="border-l-purple-500"
-              iconBg="bg-purple-50"
-              valueColor="text-purple-700"
-            />
-            <KpiCard
-              label="Interessati"
-              value={k?.interested ?? "—"}
-              icon={<Users className="h-5 w-5 text-blue-600" />}
-              borderColor="border-l-blue-500"
-              iconBg="bg-blue-50"
-              valueColor="text-blue-700"
-            />
-            <KpiCard
-              label="Won"
-              value={k?.won ?? "—"}
-              icon={<Trophy className="h-5 w-5 text-green-700" />}
-              borderColor="border-l-green-600"
-              iconBg="bg-green-50"
-              valueColor="text-green-700"
-            />
-            <KpiCard
-              label="Lost"
-              value={k?.lost ?? "—"}
-              icon={<XCircle className="h-5 w-5 text-red-500" />}
-              borderColor="border-l-red-400"
-              iconBg="bg-red-50"
-              valueColor="text-red-600"
-            />
-            <KpiCard
-              label="Richiami oggi"
-              value={(k?.callbackToday ?? 0) + (k?.callbackOverdue ?? 0)}
-              icon={<PhoneCall className="h-5 w-5 text-blue-600" />}
-              borderColor="border-l-blue-500"
-              iconBg="bg-blue-50"
-              valueColor={(k?.callbackOverdue ?? 0) > 0 ? "text-red-600" : "text-blue-700"}
-            />
-            <KpiCard
-              label="Potential Commissions"
-              description="20% × MRR × 12 + €50 per lead in QR/Free trial"
-              value={typeof k?.pipelinePotentialEur === "number" ? formatEur(k.pipelinePotentialEur) : "—"}
-              icon={<DollarSign className="h-5 w-5 text-yellow-600" />}
-              borderColor="border-l-yellow-500"
-              iconBg="bg-yellow-50"
-              valueColor="text-yellow-700"
-            />
+          {/* Riepilogo status — compatto, due colonne */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Sinistra: in lavorazione */}
+            <Card className="border-l-4 border-l-gray-300">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">In lavorazione</p>
+              </CardHeader>
+              <CardContent className="pt-0 pb-2 px-3 space-y-0.5">
+                <MiniStat label="Da contattare" value={data?.lists.daContattare?.length ?? "—"} dot="bg-amber-400" valueColor="text-amber-700" />
+                <MiniStat label="Interessati" value={k?.interested ?? "—"} dot="bg-blue-400" valueColor="text-blue-700" />
+                <MiniStat label="Richiami oggi" value={(k?.callbackToday ?? 0) + (k?.callbackOverdue ?? 0)} dot="bg-sky-400" valueColor={(k?.callbackOverdue ?? 0) > 0 ? "text-red-600" : "text-sky-700"} />
+                <MiniStat label="Lost" value={k?.lost ?? "—"} dot="bg-red-400" valueColor="text-red-600" />
+              </CardContent>
+            </Card>
+
+            {/* Destra: pipeline avanzata */}
+            <Card className="border-l-4 border-l-gray-300">
+              <CardHeader className="pb-1 pt-3 px-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Pipeline</p>
+              </CardHeader>
+              <CardContent className="pt-0 pb-2 px-3 space-y-0.5">
+                <MiniStat label="QR code inviato" value={k?.qrCodeSent ?? "—"} dot="bg-purple-400" valueColor="text-purple-700" />
+                <MiniStat label="Free trial iniziato" value={k?.freeTrialStarted ?? "—"} dot="bg-emerald-400" valueColor="text-emerald-700" />
+                <MiniStat label="Won" value={k?.won ?? "—"} dot="bg-green-500" valueColor="text-green-700" />
+                <MiniStat label="Potential Commissions" value={typeof k?.pipelinePotentialEur === "number" ? formatEur(k.pipelinePotentialEur) : "—"} dot="bg-yellow-400" valueColor="text-yellow-600" />
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Tab navigation */}
-          <div className="flex items-center gap-1 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('agenda')}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                activeTab === 'agenda'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ListTodo className="h-4 w-4" />
-              Agenda
-            </button>
-            <button
-              onClick={() => setActiveTab('pipeline')}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                activeTab === 'pipeline'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <GitBranch className="h-4 w-4" />
-              Pipeline
-            </button>
-          </div>
+          {/* Agenda */}
+          <CallbackTable
+            items={data?.lists.callback || []}
+            onSetCallback={handleOpenCallbackDialog}
+            onDeleteCallback={handleDeleteCallback}
+            deletingId={deletingCallbackId}
+            onContactClick={handleContactClick}
+          />
 
-          {/* AGENDA TAB */}
-          {activeTab === 'agenda' && (
-            <div>
-              <CallbackTable
-                items={data?.lists.callback || []}
-                onSetCallback={handleOpenCallbackDialog}
-                onDeleteCallback={handleDeleteCallback}
-                deletingId={deletingCallbackId}
-                onContactClick={handleContactClick}
-              />
-            </div>
-          )}
-
-          {/* PIPELINE TAB */}
-          {activeTab === 'pipeline' && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                {/* Source filter */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-gray-600">Fonte</span>
-                  {availableSources.map(src => {
-                    const active = pipelineSources.length === 0 || pipelineSources.includes(src);
-                    return (
-                      <button
-                        key={src}
-                        type="button"
-                        onClick={() => {
-                          setPipelineSources(prev => {
-                            if (prev.length === 0) return [src];
-                            if (prev.includes(src)) {
-                              const next = prev.filter(s => s !== src);
-                              return next;
-                            }
-                            return [...prev, src];
-                          });
-                        }}
-                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                          active
-                            ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
-                            : 'bg-gray-100 text-gray-400'
-                        }`}
-                      >
-                        {sourceLabel(src)}
-                      </button>
-                    );
-                  })}
-                  {pipelineSources.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setPipelineSources([])}
-                      className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
-                    >
-                      Tutte
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setPipelineView('list')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      pipelineView === 'list' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <LayoutList className="h-3.5 w-3.5" />
-                    Lista
-                  </button>
-                  <button
-                    onClick={() => setPipelineView('kanban')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                      pipelineView === 'kanban' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    <Columns2 className="h-3.5 w-3.5" />
-                    Kanban
-                  </button>
-                </div>
+          {/* Pipeline Kanban */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-4 w-4 text-gray-500" />
+                <span className="text-sm font-semibold text-gray-700">Pipeline</span>
               </div>
-
-              {pipelineView === 'list' && (
-                <div className="grid gap-6 xl:grid-cols-2">
-                  <ThemedLeadsTable
-                    title="Da contattare"
-                    count={filteredLists?.lists.daContattare?.length || 0}
-                    items={filteredLists?.lists.daContattare || []}
-                    headerBg="bg-amber-50"
-                    headerText="text-amber-800"
-                    badgeBg="bg-amber-100"
-                    badgeText="text-amber-700"
-                    accentBorder="border-t-amber-500"
-                    emptyIcon={<Inbox className="h-8 w-8" />}
-                    emptyMessage="Nessun lead da contattare."
-                    hideMrr
-                    showSource
-                    showAge
-                    sortBy="createdAt"
-                    onContactClick={handleContactClick}
-                  />
-                  <ThemedLeadsTable
-                    title="Interessato"
-                    count={filteredLists?.lists.interessato?.length || 0}
-                    items={filteredLists?.lists.interessato || []}
-                    headerBg="bg-blue-50"
-                    headerText="text-blue-800"
-                    badgeBg="bg-blue-100"
-                    badgeText="text-blue-700"
-                    accentBorder="border-t-blue-500"
-                    emptyIcon={<Users className="h-8 w-8" />}
-                    emptyMessage="Nessun lead interessato."
-                    showAge
-                    ageFrom="lastActivityAt"
-                    onContactClick={handleContactClick}
-                  />
-                  <ThemedLeadsTable
-                    title="QR inviato"
-                    count={filteredLists?.lists.qrFollowUp?.length || 0}
-                    items={filteredLists?.lists.qrFollowUp || []}
-                    headerBg="bg-purple-50"
-                    headerText="text-purple-800"
-                    badgeBg="bg-purple-100"
-                    badgeText="text-purple-700"
-                    accentBorder="border-t-purple-500"
-                    emptyIcon={<CheckCircle2 className="h-8 w-8" />}
-                    emptyMessage="Nessun QR in attesa."
-                    showCloseDate
-                    showAge
-                    ageFrom="lastActivityAt"
-                    onContactClick={handleContactClick}
-                  />
-                  <ThemedLeadsTable
-                    title="In free trial"
-                    count={filteredLists?.lists.freeTrial?.length || 0}
-                    items={filteredLists?.lists.freeTrial || []}
-                    headerBg="bg-emerald-50"
-                    headerText="text-emerald-800"
-                    badgeBg="bg-emerald-100"
-                    badgeText="text-emerald-700"
-                    accentBorder="border-t-emerald-500"
-                    emptyIcon={<PartyPopper className="h-8 w-8" />}
-                    emptyMessage="Nessun free trial attivo."
-                    showCloseDate
-                    showAge
-                    ageFrom="lastActivityAt"
-                    onContactClick={handleContactClick}
-                  />
-                  <ThemedLeadsTable
-                    title="Won"
-                    count={filteredLists?.lists.won?.length || 0}
-                    items={filteredLists?.lists.won || []}
-                    headerBg="bg-green-50"
-                    headerText="text-green-800"
-                    badgeBg="bg-green-100"
-                    badgeText="text-green-700"
-                    accentBorder="border-t-green-600"
-                    emptyIcon={<Trophy className="h-8 w-8" />}
-                    emptyMessage="Nessun deal vinto ancora."
-                    onContactClick={handleContactClick}
-                  />
-                </div>
-              )}
-
-              {pipelineView === 'kanban' && (
-                <div className="flex gap-4 overflow-x-auto pb-4">
-                  {([
-                    { key: 'daContattare' as const, label: 'Da contattare', color: 'border-t-amber-400',   headerBg: 'bg-amber-50',   headerText: 'text-amber-800',   badgeBg: 'bg-amber-100' },
-                    { key: 'interessato'  as const, label: 'Interessato',   color: 'border-t-blue-400',    headerBg: 'bg-blue-50',    headerText: 'text-blue-800',    badgeBg: 'bg-blue-100' },
-                    { key: 'qrFollowUp'   as const, label: 'QR inviato',    color: 'border-t-purple-400',  headerBg: 'bg-purple-50',  headerText: 'text-purple-800',  badgeBg: 'bg-purple-100' },
-                    { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
-                    { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
-                  ]).map(col => {
-                    const items = (filteredLists?.lists[col.key] || []) as DashboardListItem[];
-                    return (
-                      <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
-                        <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>
-                          <span className={`text-sm font-semibold ${col.headerText}`}>{col.label}</span>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${col.badgeBg} ${col.headerText}`}>{items.length}</span>
-                        </div>
-                        <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
-                          {items.length === 0 ? (
-                            <p className="text-xs text-gray-400 text-center py-6">Nessun lead</p>
-                          ) : items.map(c => {
-                            const age = formatAge(c.lastActivityAt);
-                            return (
-                              <div
-                                key={c._id}
-                                className="bg-white border border-gray-100 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
-                                onClick={() => handleContactClick(c._id)}
-                              >
-                                <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
-                                {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
-                                <div className="mt-2 flex items-center justify-between">
-                                  {typeof c.mrr === 'number'
-                                    ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
-                                    : <span />
-                                  }
-                                  {age && (
-                                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${age.className}`}>
-                                      <Clock className="h-2.5 w-2.5" />{age.label}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Source filter */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-gray-500">Fonte</span>
+                {availableSources.map(src => {
+                  const active = pipelineSources.length === 0 || pipelineSources.includes(src);
+                  return (
+                    <button
+                      key={src}
+                      type="button"
+                      onClick={() => {
+                        setPipelineSources(prev => {
+                          if (prev.length === 0) return [src];
+                          if (prev.includes(src)) {
+                            const next = prev.filter(s => s !== src);
+                            return next;
+                          }
+                          return [...prev, src];
+                        });
+                      }}
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? 'bg-blue-100 text-blue-800 ring-1 ring-blue-300'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      {sourceLabel(src)}
+                    </button>
+                  );
+                })}
+                {pipelineSources.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPipelineSources([])}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline ml-1"
+                  >
+                    Tutte
+                  </button>
+                )}
+              </div>
             </div>
-          )}
+
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {([
+                { key: 'daContattare' as const, label: 'Da contattare', color: 'border-t-amber-400',   headerBg: 'bg-amber-50',   headerText: 'text-amber-800',   badgeBg: 'bg-amber-100' },
+                { key: 'interessato'  as const, label: 'Interessato',   color: 'border-t-blue-400',    headerBg: 'bg-blue-50',    headerText: 'text-blue-800',    badgeBg: 'bg-blue-100' },
+                { key: 'qrFollowUp'   as const, label: 'QR inviato',    color: 'border-t-purple-400',  headerBg: 'bg-purple-50',  headerText: 'text-purple-800',  badgeBg: 'bg-purple-100' },
+                { key: 'freeTrial'    as const, label: 'Free trial',    color: 'border-t-emerald-400', headerBg: 'bg-emerald-50', headerText: 'text-emerald-800', badgeBg: 'bg-emerald-100' },
+                { key: 'won'          as const, label: 'Won',           color: 'border-t-green-500',   headerBg: 'bg-green-50',   headerText: 'text-green-800',   badgeBg: 'bg-green-100' },
+              ]).map(col => {
+                const items = (filteredLists?.lists[col.key] || []) as DashboardListItem[];
+                return (
+                  <div key={col.key} className={`flex-shrink-0 w-72 rounded-xl border border-gray-200 border-t-4 ${col.color} bg-white overflow-hidden`}>
+                    <div className={`px-4 py-3 flex items-center justify-between ${col.headerBg}`}>
+                      <span className={`text-sm font-semibold ${col.headerText}`}>{col.label}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold ${col.badgeBg} ${col.headerText}`}>{items.length}</span>
+                    </div>
+                    <div className="p-2 space-y-2 max-h-[600px] overflow-y-auto">
+                      {items.length === 0 ? (
+                        <p className="text-xs text-gray-400 text-center py-6">Nessun lead</p>
+                      ) : items.map(c => {
+                        const age = formatAge(c.lastActivityAt);
+                        return (
+                          <div
+                            key={c._id}
+                            className="bg-white border border-gray-100 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow-sm transition-all"
+                            onClick={() => handleContactClick(c._id)}
+                          >
+                            <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
+                            {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
+                            <div className="mt-2 flex items-center justify-between">
+                              {typeof c.mrr === 'number'
+                                ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
+                                : <span />
+                              }
+                              {age && (
+                                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${age.className}`}>
+                                  <Clock className="h-2.5 w-2.5" />{age.label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </main>
 

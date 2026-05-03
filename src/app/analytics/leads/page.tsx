@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import apiClient from "@/lib/api";
 import { usePersistedState } from "@/hooks/usePersistedState";
@@ -503,10 +503,14 @@ export default function LeadAnalyticsPage() {
     }
   };
 
+  const loadedForUser = useRef<string | null>(null);
   useEffect(() => {
-    if (isAuthenticated && canAccess) loadAll();
+    if (!isAuthenticated || !canAccess || !user?._id) return;
+    if (loadedForUser.current === user._id) return;
+    loadedForUser.current = user._id;
+    loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, canAccess, user?._id]);
+  }, [isAuthenticated, canAccess, user?._id, ownerFrom, ownerTo, funnelFrom, funnelTo, closeDateFrom, closeDateTo, selectedSources, ownerCohortTypes, funnelCohortTypes, wonFilterEnabled, wonFrom, wonTo]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {

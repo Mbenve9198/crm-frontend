@@ -506,7 +506,7 @@ export default function LeadAnalyticsPage() {
   useEffect(() => {
     if (isAuthenticated && canAccess) loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, canAccess]);
+  }, [isAuthenticated, canAccess, user?._id]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -984,7 +984,7 @@ export default function LeadAnalyticsPage() {
                 <div className="px-5 py-3.5 bg-violet-50 border-b flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-violet-800 flex items-center gap-1.5">
                     <Target className="h-4 w-4" />
-                    Prove attive
+                    Free trial iniziati
                   </h3>
                   <span className="text-xs text-violet-600">
                     Conv. stimata {Math.round(fc.totals.conversionRate * 100)}%
@@ -1022,11 +1022,11 @@ export default function LeadAnalyticsPage() {
                     <>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
-                          <p className="text-xs font-medium text-gray-500 uppercase">Prove attive</p>
+                          <p className="text-xs font-medium text-gray-500 uppercase">Free trial iniziati</p>
                           <button
                             className="text-2xl font-bold text-gray-900 mt-1 hover:text-violet-700 hover:underline cursor-pointer"
                             onClick={() => setGenericDrilldown({
-                              title: `Prove attive (${fc.contacts.length})`,
+                              title: `Free trial iniziati (${fc.contacts.length})`,
                               dotColor: "bg-violet-500",
                               contacts: fc.contacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
                             })}
@@ -1065,7 +1065,7 @@ export default function LeadAnalyticsPage() {
                                       onClick={() => {
                                         const ownerContacts = fc.contacts.filter(c => c.owner === o.ownerId);
                                         setGenericDrilldown({
-                                          title: `${o.ownerName} · Prove attive`,
+                                          title: `${o.ownerName} · Free trial iniziati`,
                                           dotColor: "bg-violet-500",
                                           contacts: ownerContacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
                                         });
@@ -1086,7 +1086,7 @@ export default function LeadAnalyticsPage() {
                       <button
                         className="text-xs font-medium text-violet-600 hover:text-violet-800 hover:underline cursor-pointer"
                         onClick={() => setGenericDrilldown({
-                          title: `Prove attive (${fc.contacts.length})`,
+                          title: `Free trial iniziati (${fc.contacts.length})`,
                           dotColor: "bg-violet-500",
                           contacts: fc.contacts.map(c => ({ id: c.id, name: c.name, email: c.email || undefined, source: c.source, mrr: c.mrr, status: c.status })),
                         })}

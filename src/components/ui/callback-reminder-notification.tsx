@@ -1,14 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import { useCallbacks } from "@/context/CallbackContext";
-import { Phone, X, Clock, AlarmClock } from "lucide-react";
+import { Phone, X, Clock, AlarmClock, CheckCircle2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { it } from "date-fns/locale";
 
 export function CallbackReminderNotification() {
-  const { visibleCallbacks, snooze, dismiss, dismissAll, setPendingContactId } = useCallbacks();
+  const { visibleCallbacks, snooze, dismiss, dismissAll, complete, setPendingContactId } = useCallbacks();
+  const [done, setDone] = useState<Set<string>>(new Set());
   const router = useRouter();
+
+  const handleComplete = (contactId: string) => {
+    if (done.has(contactId)) return;
+    setDone(prev => new Set(prev).add(contactId));
+    setTimeout(() => complete(contactId), 600);
+  };
 
   const openContact = (contactId: string) => {
     dismiss(contactId);
@@ -47,8 +55,9 @@ export function CallbackReminderNotification() {
             : null;
           const isOverdue = callbackDate ? isPast(callbackDate) : false;
 
+          const isDone = done.has(contact._id);
           return (
-            <div key={contact._id} className="p-3 hover:bg-gray-50 transition-colors">
+            <div key={contact._id} className={`p-3 hover:bg-gray-50 transition-colors ${isDone ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">
@@ -75,13 +84,24 @@ export function CallbackReminderNotification() {
                     </p>
                   )}
                 </div>
-                <button
-                  onClick={() => dismiss(contact._id)}
-                  className="text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors"
-                  title="Ignora"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => handleComplete(contact._id)}
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                      isDone ? 'border-green-500 bg-green-500 text-white' : 'border-gray-300 hover:border-green-400'
+                    }`}
+                    title="Completato"
+                  >
+                    {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                  </button>
+                  <button
+                    onClick={() => dismiss(contact._id)}
+                    className="text-gray-300 hover:text-gray-500 transition-colors"
+                    title="Ignora"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex gap-2 mt-2">

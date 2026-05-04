@@ -19,6 +19,7 @@ type CallbackContextType = {
   snooze: (contactId: string) => void;
   dismiss: (contactId: string) => void;
   dismissAll: () => void;
+  complete: (contactId: string) => void;
   pendingContactId: string | null;
   setPendingContactId: (id: string | null) => void;
 };
@@ -28,6 +29,7 @@ const CallbackContext = createContext<CallbackContextType>({
   snooze: () => {},
   dismiss: () => {},
   dismissAll: () => {},
+  complete: () => {},
   pendingContactId: null,
   setPendingContactId: () => {},
 });
@@ -83,6 +85,14 @@ export function CallbackProvider({ children }: { children: React.ReactNode }) {
     setDismissedKeys((prev) => new Set([...prev, ...keys]));
   }, [dueCallbacks]);
 
+  const complete = useCallback(async (contactId: string) => {
+    dismiss(contactId);
+    try {
+      await apiClient.updateContactCallback(contactId, { callbackAt: null, callbackNote: null });
+      setDueCallbacks((prev) => prev.filter((c) => c._id !== contactId));
+    } catch {}
+  }, [dismiss]);
+
   const now = Date.now();
   const visibleCallbacks = dueCallbacks.filter((c) => {
     if (dismissedKeys.has(getDismissKey(c))) return false;
@@ -92,7 +102,7 @@ export function CallbackProvider({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <CallbackContext.Provider value={{ visibleCallbacks, snooze, dismiss, dismissAll, pendingContactId, setPendingContactId }}>
+    <CallbackContext.Provider value={{ visibleCallbacks, snooze, dismiss, dismissAll, complete, pendingContactId, setPendingContactId }}>
       {children}
     </CallbackContext.Provider>
   );

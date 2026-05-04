@@ -13,15 +13,25 @@ import { toast } from "sonner";
 type CallState = 'idle' | 'initiating' | 'calling-you' | 'connecting-contact' | 'in-conversation' | 'finished' | 'error';
 
 const outcomeLabels: Record<Exclude<CallOutcome, 'not-logged'>, string> = {
-  'interested': 'Interessato',
-  'not-interested': 'Non interessato',
+  // Nuovi esiti
+  'first-call': 'Prima chiamata',
+  'follow-up': 'Follow-up',
   'callback': 'Da richiamare',
   'voicemail': 'Segreteria',
+  'no-answer': 'Nessuna risposta',
+  'free-trial-sold': 'Free trial venduto',
+  'deal-closed': 'Chiusura deal',
+  // Legacy (solo display per chiamate vecchie)
+  'interested': 'Interessato',
+  'not-interested': 'Non interessato',
   'wrong-number': 'Numero sbagliato',
   'meeting-set': 'Appuntamento fissato',
   'sale-made': 'Vendita conclusa',
-  'no-answer': 'Nessuna risposta',
 };
+
+const newOutcomes: Exclude<CallOutcome, 'not-logged'>[] = [
+  'first-call', 'follow-up', 'callback', 'voicemail', 'no-answer', 'free-trial-sold', 'deal-closed',
+];
 
 export interface CallDialogHandle {
   close: () => Promise<void>;
@@ -329,8 +339,8 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
                   <SelectValue placeholder="Come è andata la chiamata?" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(outcomeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  {newOutcomes.map((value) => (
+                    <SelectItem key={value} value={value}>{outcomeLabels[value]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

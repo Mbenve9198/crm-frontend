@@ -67,7 +67,11 @@ export type CallOutcome =
   | 'meeting-set'
   | 'sale-made'
   | 'no-answer'
-  | 'not-logged';
+  | 'not-logged'
+  | 'first-call'
+  | 'follow-up'
+  | 'free-trial-sold'
+  | 'deal-closed';
 
 export interface InitiateCallRequest {
   contactId: string;

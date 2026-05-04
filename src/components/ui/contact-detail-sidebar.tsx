@@ -2188,14 +2188,18 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                       <SelectValue placeholder="Seleziona esito" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="interested">Interessato</SelectItem>
-                                      <SelectItem value="not-interested">Non interessato</SelectItem>
+                                      <SelectItem value="first-call">Prima chiamata</SelectItem>
+                                      <SelectItem value="follow-up">Follow-up</SelectItem>
                                       <SelectItem value="callback">Da richiamare</SelectItem>
                                       <SelectItem value="voicemail">Segreteria</SelectItem>
-                                      <SelectItem value="wrong-number">Numero sbagliato</SelectItem>
-                                      <SelectItem value="meeting-set">Appuntamento fissato</SelectItem>
-                                      <SelectItem value="sale-made">Vendita conclusa</SelectItem>
                                       <SelectItem value="no-answer">Nessuna risposta</SelectItem>
+                                      <SelectItem value="free-trial-sold">Free trial venduto</SelectItem>
+                                      <SelectItem value="deal-closed">Chiusura deal</SelectItem>
+                                      <SelectItem value="interested">Interessato (legacy)</SelectItem>
+                                      <SelectItem value="not-interested">Non interessato (legacy)</SelectItem>
+                                      <SelectItem value="wrong-number">Numero sbagliato (legacy)</SelectItem>
+                                      <SelectItem value="meeting-set">Appuntamento fissato (legacy)</SelectItem>
+                                      <SelectItem value="sale-made">Vendita conclusa (legacy)</SelectItem>
                                     </SelectContent>
                                   </Select>
                                 </div>

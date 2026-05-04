@@ -2242,6 +2242,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                   </Badge>
                                 </div>
                               )}
+
+                              {activity.data?.notes && (
+                                <p className="text-sm text-gray-600 mt-1">{activity.data.notes}</p>
+                              )}
                               
                               {activity.data?.recordingSid && (
                                 <div className="mt-3">

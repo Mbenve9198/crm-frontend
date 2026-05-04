@@ -13,6 +13,7 @@ export interface ActivityData {
   recordingUrl?: string;
   recordingSid?: string;
   recordingDuration?: number; // in secondi
+  notes?: string;
   
   // Per WhatsApp e Instagram DM
   messageText?: string;

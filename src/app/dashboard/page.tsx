@@ -523,13 +523,11 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
 
   useEffect(() => { setPage(1); }, [items]);
 
-  const toggleDone = (id: string, e: React.MouseEvent) => {
+  const toggleDone = (item: DashboardListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    setDone(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    if (done.has(item._id)) return;
+    setDone(prev => new Set(prev).add(item._id));
+    setTimeout(() => onDeleteCallback(item), 600);
   };
 
   const overdueCount = items.filter(c => {
@@ -588,7 +586,7 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={(e) => toggleDone(c._id, e)}
+                              onClick={(e) => toggleDone(c, e)}
                               className={`flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                                 isDone
                                   ? 'border-green-500 bg-green-500 text-white'

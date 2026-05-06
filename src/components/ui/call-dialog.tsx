@@ -350,11 +350,8 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Aggiungi note sulla conversazione..." rows={3} />
             </div>
             <div className="flex gap-2">
-              <Button onClick={handleSaveAndClose} disabled={!outcome || isSaving} className="flex-1">
+              <Button onClick={handleSaveAndClose} disabled={!outcome || isSaving} className="w-full">
                 {isSaving ? 'Salvando...' : 'Salva Esito'}
-              </Button>
-              <Button variant="outline" onClick={handleClose} className="flex-1">
-                Chiudi senza salvare
               </Button>
             </div>
           </div>
@@ -400,12 +397,14 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
             </div>
             <div className="flex items-center gap-2">
               <GripHorizontal className="h-4 w-4 text-gray-400" />
-              <button
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
-              >
-                ×
-              </button>
+              {callState !== 'finished' && (
+                <button
+                  onClick={handleClose}
+                  className="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
 

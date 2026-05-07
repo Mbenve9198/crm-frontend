@@ -1670,12 +1670,20 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                 <span className="font-bold text-blue-600">{contact.rankCheckerData.dailyCovers}</span>
                               </div>
                             )}
-                            {contact.rankCheckerData?.estimatedMonthlyReviews && (
-                              <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Potenziale recensioni</span>
-                                <span className="font-bold text-green-600">~{contact.rankCheckerData.estimatedMonthlyReviews}/mese</span>
-                              </div>
-                            )}
+                          </div>
+                        )}
+
+                        {/* Pitch mostrato al lead */}
+                        {contact.rankCheckerData?.estimatedMonthlyReviews && contact.rankCheckerData?.dailyCovers && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
+                            <p className="text-xs text-emerald-700 font-medium mb-1">Pitch mostrato al lead</p>
+                            <p className="text-4xl font-black text-emerald-600 leading-none">
+                              {contact.rankCheckerData.estimatedMonthlyReviews}
+                            </p>
+                            <p className="text-sm font-semibold text-emerald-800 mt-1">recensioni/mese potenziali</p>
+                            <p className="text-xs text-emerald-600 mt-1">
+                              calcolate su {contact.rankCheckerData.dailyCovers} coperti/giorno
+                            </p>
                           </div>
                         )}
 

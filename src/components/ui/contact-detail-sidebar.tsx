@@ -1652,6 +1652,19 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         {(contact.properties?.contactName || contact.rankCheckerData?.dailyCovers || contact.email?.includes('@') && !contact.email?.includes('@landing.menuchat.it')) && (
                           <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
                             <div className="text-xs font-bold text-gray-700 mb-2">👤 Qualificazione Form</div>
+                            {(contact.properties as any)?.reviewInterest && (
+                              <div className="mb-1">
+                                {(contact.properties as any).reviewInterest === 'full' ? (
+                                  <span className="inline-block bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded-full">
+                                    📊 Vuole menu + recensioni automatiche
+                                  </span>
+                                ) : (
+                                  <span className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded-full">
+                                    📱 Solo menu per ora
+                                  </span>
+                                )}
+                              </div>
+                            )}
                             {contact.properties?.contactName && (
                               <div className="flex justify-between text-sm">
                                 <span className="text-gray-500">Titolare</span>

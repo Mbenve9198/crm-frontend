@@ -1648,6 +1648,37 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           </a>
                         )}
 
+                        {/* Dati qualificazione dal form */}
+                        {(contact.properties?.contactName || contact.rankCheckerData?.dailyCovers || contact.email?.includes('@') && !contact.email?.includes('@landing.menuchat.it')) && (
+                          <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
+                            <div className="text-xs font-bold text-gray-700 mb-2">👤 Qualificazione Form</div>
+                            {contact.properties?.contactName && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Titolare</span>
+                                <span className="font-medium text-gray-900">{contact.properties.contactName as string}</span>
+                              </div>
+                            )}
+                            {contact.email && !contact.email.includes('@landing.menuchat.it') && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Email</span>
+                                <span className="font-medium text-gray-900">{contact.email}</span>
+                              </div>
+                            )}
+                            {contact.rankCheckerData?.dailyCovers && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Coperti/giorno</span>
+                                <span className="font-bold text-blue-600">{contact.rankCheckerData.dailyCovers}</span>
+                              </div>
+                            )}
+                            {contact.rankCheckerData?.estimatedMonthlyReviews && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Potenziale recensioni</span>
+                                <span className="font-bold text-green-600">~{contact.rankCheckerData.estimatedMonthlyReviews}/mese</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Dati ristorante dal form */}
                         {contact.rankCheckerData?.restaurantData && (
                           <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">

@@ -2327,7 +2327,9 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           
                           <div className="mt-2">
                             <span className="text-xs text-gray-500">
-                              di {activity.createdBy.firstName} {activity.createdBy.lastName}
+                              {activity.createdBy
+                                ? `di ${activity.createdBy.firstName} ${activity.createdBy.lastName}`
+                                : 'di Utente eliminato'}
                             </span>
                           </div>
                         </div>

@@ -43,7 +43,7 @@ export interface Activity {
   title: string;
   description?: string;
   data?: ActivityData;
-  createdBy: User;
+  createdBy: User | null;
   status: ActivityStatus;
   priority: ActivityPriority;
   createdAt: string;

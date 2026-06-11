@@ -66,39 +66,11 @@ const KANBAN_COL_STATUS: Record<KanbanColKey, ContactStatus> = {
   won:          'won',
 };
 
-// Su iOS (Safari e Chrome, entrambi WebKit) il tap su un elemento non interattivo
-// (tr/div) non genera in modo affidabile l'evento `click`, così gli onClick su
-// righe/card non aprivano la scheda al tocco mentre i link <a> funzionavano.
-// Rileviamo il tap direttamente da touchstart/touchend: se il dito non si è mosso
-// (non è uno scroll/drag) apriamo la scheda. I tap che finiscono su un elemento
-// interattivo annidato (link WhatsApp/email, bottoni) vengono ignorati.
-let tapStart: { x: number; y: number } | null = null;
-
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && !!target.closest("a, button, input, select, textarea, [role='button']");
-}
-
-function tapHandlers(onTap: () => void) {
-  return {
-    onClick: (e: React.MouseEvent) => {
-      if (!isInteractiveTarget(e.target)) onTap();
-    },
-    onTouchStart: (e: React.TouchEvent) => {
-      const t = e.touches[0];
-      tapStart = t ? { x: t.clientX, y: t.clientY } : null;
-    },
-    onTouchEnd: (e: React.TouchEvent) => {
-      const start = tapStart;
-      tapStart = null;
-      if (!start || isInteractiveTarget(e.target)) return;
-      const t = e.changedTouches[0];
-      if (t && Math.abs(t.clientX - start.x) < 10 && Math.abs(t.clientY - start.y) < 10) {
-        e.preventDefault(); // evita il doppio scatto se il browser sintetizza anche il click
-        onTap();
-      }
-    },
-  };
-}
+// Nome del lead cliccabile: stesso schema della pagina "Tutti i contatti", che
+// funziona al tocco su iOS. iOS WebKit genera il `click` solo se l'elemento
+// effettivamente toccato è "cliccabile" (onClick + cursor:pointer su di esso):
+// mettere l'onClick sul <tr> genitore non basta. Da usare per il testo del nome.
+const LEAD_NAME_CLICKABLE = "cursor-pointer hover:text-blue-600 transition-colors";
 
 function WhatsAppLink({ phone }: { phone: string }) {
   const cleaned = phone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
@@ -282,27 +254,20 @@ function MiniStat({
 function DraggableCard({
   id,
   children,
-  onClick,
 }: {
   id: string;
   children: React.ReactNode;
-  onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id });
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
-  const tap = tapHandlers(onClick);
-  const dndOnTouchStart = (listeners as Record<string, ((e: React.TouchEvent) => void) | undefined> | undefined)?.onTouchStart;
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      onClick={(e) => { if (!isDragging) tap.onClick(e); }}
-      onTouchStart={(e) => { dndOnTouchStart?.(e); tap.onTouchStart(e); }}
-      onTouchEnd={(e) => { if (!isDragging) tap.onTouchEnd(e); }}
       className={`bg-white border border-gray-100 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm transition-all ${
         isDragging ? 'opacity-40' : ''
       }`}
@@ -486,11 +451,15 @@ function ThemedLeadsTable({
                   {paged.map((c) => (
                     <tr
                       key={c._id}
-                      className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                      {...tapHandlers(() => onContactClick?.(c._id))}
+                      className="border-b last:border-0 hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{c.name}</div>
+                        <div
+                          className={`font-medium text-gray-900 ${LEAD_NAME_CLICKABLE}`}
+                          onClick={() => onContactClick?.(c._id)}
+                        >
+                          {c.name}
+                        </div>
                         <div className="text-xs text-gray-500">
                           {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
                         </div>
@@ -619,8 +588,7 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                     return (
                       <tr
                         key={c._id}
-                        className={`border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors ${isDone ? 'opacity-50' : ''}`}
-                        {...tapHandlers(() => onContactClick?.(c._id))}
+                        className={`border-b last:border-0 hover:bg-gray-50 transition-colors ${isDone ? 'opacity-50' : ''}`}
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -635,7 +603,12 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                               {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
                             </button>
                             <div>
-                              <div className={`font-medium text-gray-900 ${isDone ? 'line-through text-gray-400' : ''}`}>{c.name}</div>
+                              <div
+                                className={`font-medium text-gray-900 ${LEAD_NAME_CLICKABLE} ${isDone ? 'line-through text-gray-400' : ''}`}
+                                onClick={() => onContactClick?.(c._id)}
+                              >
+                                {c.name}
+                              </div>
                               <div className="text-xs text-gray-500">
                                 {c.email || "—"}{c.phone ? <>{" · "}<WhatsAppLink phone={c.phone} /></> : ""}
                               </div>
@@ -1144,9 +1117,13 @@ export default function DashboardPage() {
                               <DraggableCard
                                 key={c._id}
                                 id={c._id}
-                                onClick={() => handleContactClick(c._id)}
                               >
-                                <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
+                                <div
+                                  className={`font-medium text-sm text-gray-900 truncate ${LEAD_NAME_CLICKABLE}`}
+                                  onClick={() => handleContactClick(c._id)}
+                                >
+                                  {c.name}
+                                </div>
                                 {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
                                 <div className="mt-2 flex items-center justify-between">
                                   {typeof c.mrr === 'number'

@@ -12,7 +12,8 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   useDraggable,
@@ -728,7 +729,8 @@ export default function DashboardPage() {
   const [draggingItem, setDraggingItem] = useState<DashboardListItem | null>(null);
 
   const kanbanSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
   const [callbackDialogOpen, setCallbackDialogOpen] = useState(false);

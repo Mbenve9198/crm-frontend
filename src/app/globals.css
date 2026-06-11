@@ -120,18 +120,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/*
- * iOS Safari/WebKit (anche Chrome su iPhone/iPad usa WebKit) non genera l'evento
- * `click` quando si tocca un elemento non interattivo (div, tr, td, span) privo di
- * `cursor: pointer`. Con la delega eventi di React questo fa sì che gli onClick su
- * righe/card (es. nomi dei lead nella dashboard) non scattino al tap, mentre i link
- * <a> funzionano perché nativamente cliccabili. `cursor` è ereditato: impostarlo sul
- * body lo propaga a tutti i discendenti e fa trattare i tap come click. Limitato ai
- * dispositivi touch così da non alterare i cursori su desktop.
- */
-@media (hover: none) and (pointer: coarse) {
-  body {
-    cursor: pointer;
-  }
-}

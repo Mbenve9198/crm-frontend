@@ -66,6 +66,40 @@ const KANBAN_COL_STATUS: Record<KanbanColKey, ContactStatus> = {
   won:          'won',
 };
 
+// Su iOS (Safari e Chrome, entrambi WebKit) il tap su un elemento non interattivo
+// (tr/div) non genera in modo affidabile l'evento `click`, così gli onClick su
+// righe/card non aprivano la scheda al tocco mentre i link <a> funzionavano.
+// Rileviamo il tap direttamente da touchstart/touchend: se il dito non si è mosso
+// (non è uno scroll/drag) apriamo la scheda. I tap che finiscono su un elemento
+// interattivo annidato (link WhatsApp/email, bottoni) vengono ignorati.
+let tapStart: { x: number; y: number } | null = null;
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && !!target.closest("a, button, input, select, textarea, [role='button']");
+}
+
+function tapHandlers(onTap: () => void) {
+  return {
+    onClick: (e: React.MouseEvent) => {
+      if (!isInteractiveTarget(e.target)) onTap();
+    },
+    onTouchStart: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      tapStart = t ? { x: t.clientX, y: t.clientY } : null;
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const start = tapStart;
+      tapStart = null;
+      if (!start || isInteractiveTarget(e.target)) return;
+      const t = e.changedTouches[0];
+      if (t && Math.abs(t.clientX - start.x) < 10 && Math.abs(t.clientY - start.y) < 10) {
+        e.preventDefault(); // evita il doppio scatto se il browser sintetizza anche il click
+        onTap();
+      }
+    },
+  };
+}
+
 function WhatsAppLink({ phone }: { phone: string }) {
   const cleaned = phone.replace(/[^0-9+]/g, "").replace(/^\+/, "");
   return (
@@ -258,13 +292,17 @@ function DraggableCard({
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
+  const tap = tapHandlers(onClick);
+  const dndOnTouchStart = (listeners as Record<string, ((e: React.TouchEvent) => void) | undefined> | undefined)?.onTouchStart;
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...listeners}
       {...attributes}
-      onClick={onClick}
+      {...listeners}
+      onClick={(e) => { if (!isDragging) tap.onClick(e); }}
+      onTouchStart={(e) => { dndOnTouchStart?.(e); tap.onTouchStart(e); }}
+      onTouchEnd={(e) => { if (!isDragging) tap.onTouchEnd(e); }}
       className={`bg-white border border-gray-100 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-gray-300 hover:shadow-sm transition-all ${
         isDragging ? 'opacity-40' : ''
       }`}
@@ -449,7 +487,7 @@ function ThemedLeadsTable({
                     <tr
                       key={c._id}
                       className="border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => onContactClick?.(c._id)}
+                      {...tapHandlers(() => onContactClick?.(c._id))}
                     >
                       <td className="px-4 py-3">
                         <div className="font-medium text-gray-900">{c.name}</div>
@@ -582,7 +620,7 @@ function CallbackTable({ items, onSetCallback, onDeleteCallback, deletingId, onC
                       <tr
                         key={c._id}
                         className={`border-b last:border-0 hover:bg-gray-50 cursor-pointer transition-colors ${isDone ? 'opacity-50' : ''}`}
-                        onClick={() => onContactClick?.(c._id)}
+                        {...tapHandlers(() => onContactClick?.(c._id))}
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">

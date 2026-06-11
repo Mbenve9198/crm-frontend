@@ -814,14 +814,20 @@ export default function DashboardPage() {
   };
 
   const handleContactClick = async (id: string) => {
+    // DIAGNOSTICA TEMPORANEA: prova che il tap arriva qui e mostra l'esito della fetch.
+    if (typeof window !== "undefined") window.alert("TAP OK — apro contatto…");
     try {
       const res = await apiClient.getContact(id);
       if (res.success && res.data) {
         setSelectedContact(res.data);
         setIsContactSidebarOpen(true);
+      } else if (typeof window !== "undefined") {
+        window.alert(`Risposta non valida: ${JSON.stringify(res).slice(0, 300)}`);
       }
-    } catch {
-      // silent
+    } catch (e) {
+      if (typeof window !== "undefined") {
+        window.alert(`Errore fetch contatto: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
   };
 
@@ -941,6 +947,7 @@ export default function DashboardPage() {
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 Panoramica operativa e liste di lavoro.
+                <span className="ml-2 text-[10px] text-gray-300">build: tap-diag-1</span>
               </p>
             </div>
             <div className="flex items-center gap-2">

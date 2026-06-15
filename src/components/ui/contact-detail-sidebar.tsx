@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink, CreditCard, RefreshCw, ExternalLink as LinkIcon, Search, Loader2, Link } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -641,6 +641,104 @@ function BonificoSection({ contact, onContactUpdate }: { contact: Contact; onCon
 
 const BUBBLE_PREVIEW = 220;
 
+type AgentConversation = {
+  _id: string;
+  status: string;
+  stage: string;
+  channel: string;
+  agentIdentity: { name: string; surname: string };
+  messages: Array<{ role: string; content: string; channel: string; createdAt: string }>;
+  metrics: { messagesCount: number; agentMessagesCount: number; humanInterventions: number };
+  context: { nextAction?: string };
+  updatedAt: string;
+};
+
+type TimelineItem =
+  | { kind: "activity"; id: string; sortAt: string; activity: Activity }
+  | { kind: "conversation"; id: string; sortAt: string; conversation: AgentConversation };
+
+const CONVERSATION_STAGE_LABELS: Record<string, string> = {
+  initial_reply: "Prima risposta",
+  objection_handling: "Gestione obiezioni",
+  qualification: "Qualificazione",
+  scheduling: "Prenotazione call",
+  handoff: "Passaggio al team",
+};
+
+function ConversationTimelineMessages({
+  messages,
+}: {
+  messages: AgentConversation["messages"];
+}) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const toggle = (i: number) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+
+  if (!messages.length) {
+    return <p className="text-sm text-gray-500 mt-1">Nessun messaggio nella conversazione</p>;
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {messages.map((msg, i) => {
+        const isLead = msg.role === "lead";
+        const isHuman = msg.role === "human";
+        const isLong = msg.content.length > BUBBLE_PREVIEW;
+        const isExpanded = expanded.has(i);
+        const displayText =
+          isLong && !isExpanded ? msg.content.slice(0, BUBBLE_PREVIEW) + "…" : msg.content;
+
+        return (
+          <div
+            key={i}
+            className={`flex flex-col gap-0.5 ${isLead ? "items-start" : "items-end"}`}
+          >
+            <span className="text-[10px] text-gray-400 px-1">
+              {isLead ? "Cliente" : isHuman ? "Team" : "AI"}
+              {msg.createdAt &&
+                ` · ${new Date(msg.createdAt).toLocaleDateString("it-IT", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`}
+              {msg.channel === "whatsapp" && (
+                <MessageCircle className="inline h-3 w-3 text-green-500 ml-1" />
+              )}
+            </span>
+            <div
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line ${
+                isLead
+                  ? "bg-gray-100 text-gray-800 rounded-tl-sm"
+                  : isHuman
+                    ? "bg-blue-600 text-white rounded-tr-sm"
+                    : "bg-violet-600 text-white rounded-tr-sm"
+              }`}
+            >
+              {displayText}
+              {isLong && (
+                <button
+                  onClick={() => toggle(i)}
+                  className={`block mt-1 text-[11px] underline opacity-70 hover:opacity-100 ${
+                    isLead ? "text-gray-500" : "text-violet-200"
+                  }`}
+                >
+                  {isExpanded ? "Mostra meno" : "Leggi tutto"}
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AiAgentActivity({ description }: { description: string }) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
@@ -767,17 +865,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   };
 
   // Stato per conversazioni AI Agent
-  const [agentConversations, setAgentConversations] = useState<Array<{
-    _id: string;
-    status: string;
-    stage: string;
-    channel: string;
-    agentIdentity: { name: string; surname: string };
-    messages: Array<{ role: string; content: string; channel: string; createdAt: string }>;
-    metrics: { messagesCount: number; agentMessagesCount: number; humanInterventions: number };
-    context: { nextAction?: string };
-    updatedAt: string;
-  }>>([]);
+  const [agentConversations, setAgentConversations] = useState<AgentConversation[]>([]);
   const [isLoadingAgent, setIsLoadingAgent] = useState(false);
 
   // Stato per nuova activity
@@ -865,18 +953,45 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     if (!contact) return;
     try {
       setIsLoadingAgent(true);
-      const res = await apiClient.request<{ data: typeof agentConversations; total: number }>(
+      const res = await apiClient.request<AgentConversation[]>(
         `/agent/conversations?contactId=${contact._id}&status=all&limit=10`
       );
       if (res.success && res.data) {
-        setAgentConversations(res.data.data || []);
+        setAgentConversations(Array.isArray(res.data) ? res.data : []);
       }
-    } catch {
-      // Agent endpoint potrebbe non esistere ancora
+    } catch (error) {
+      console.error("Errore caricamento conversazioni agent:", error);
     } finally {
       setIsLoadingAgent(false);
     }
   }, [contact]);
+
+  const timelineItems = useMemo<TimelineItem[]>(() => {
+    const items: TimelineItem[] = [];
+
+    for (const activity of activities) {
+      items.push({
+        kind: "activity",
+        id: activity._id,
+        sortAt: activity.createdAt,
+        activity,
+      });
+    }
+
+    for (const conversation of agentConversations) {
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      items.push({
+        kind: "conversation",
+        id: `conv-${conversation._id}`,
+        sortAt: lastMessage?.createdAt || conversation.updatedAt,
+        conversation,
+      });
+    }
+
+    return items.sort(
+      (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime()
+    );
+  }, [activities, agentConversations]);
 
   // Carica activities quando cambia il contatto
   useEffect(() => {
@@ -896,7 +1011,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
         });
       }
     }
-  }, [contact, isOpen, loadActivities, initialActivity]);
+  }, [contact, isOpen, loadActivities, loadAgentConversations, initialActivity]);
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;
@@ -2015,76 +2130,6 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
 
-            {/* Sezione AI Agent */}
-            {agentConversations.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Bot className="h-4 w-4 text-purple-600" />
-                  <h4 className="font-semibold text-purple-900">AI Agent</h4>
-                </div>
-                {agentConversations.map((conv) => {
-                  const statusColors: Record<string, string> = {
-                    active: 'bg-green-100 text-green-700',
-                    awaiting_human: 'bg-orange-100 text-orange-700',
-                    paused: 'bg-gray-100 text-gray-600',
-                    escalated: 'bg-blue-100 text-blue-700',
-                    converted: 'bg-emerald-100 text-emerald-700',
-                    dead: 'bg-red-100 text-red-600',
-                  };
-                  const stageLabels: Record<string, string> = {
-                    initial_reply: 'Prima risposta',
-                    objection_handling: 'Gestione obiezioni',
-                    qualification: 'Qualificazione',
-                    scheduling: 'Prenotazione call',
-                    handoff: 'Passaggio al team',
-                  };
-                  return (
-                    <div key={conv._id} className="border border-purple-200 rounded-lg p-3 mb-2 bg-purple-50/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[conv.status] || 'bg-gray-100'}`}>
-                            {conv.status === 'awaiting_human' ? 'In attesa review' : conv.status}
-                          </span>
-                          <span className="text-xs text-gray-500">{stageLabels[conv.stage] || conv.stage}</span>
-                        </div>
-                        {conv.status === 'awaiting_human' && (
-                          <a href={`/agent/review?id=${conv._id}`} className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1">
-                            Review <ExternalLink className="h-3 w-3" />
-                          </a>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 mb-2">
-                        Agent: {conv.agentIdentity?.name} | {conv.metrics.messagesCount} msg | {conv.metrics.humanInterventions} interventi umani
-                      </div>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                        {conv.messages.slice(-6).map((msg, i) => (
-                          <div key={i} className={`text-xs p-1.5 rounded ${
-                            msg.role === 'lead' ? 'bg-white border' :
-                            msg.role === 'human' ? 'bg-blue-50 border border-blue-200' :
-                            'bg-purple-100 border border-purple-200'
-                          }`}>
-                            <span className="font-medium text-gray-500">
-                              {msg.role === 'lead' ? 'Lead' : msg.role === 'human' ? 'Marco' : 'AI'}
-                            </span>
-                            <span className="text-gray-400 ml-1">
-                              {new Date(msg.createdAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            {msg.channel === 'whatsapp' && <MessageCircle className="inline h-3 w-3 text-green-500 ml-1" />}
-                            <p className="text-gray-700 mt-0.5 line-clamp-2">{msg.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                      {conv.context?.nextAction && (
-                        <div className="mt-2 text-xs text-orange-600 bg-orange-50 rounded p-1.5">
-                          Prossima azione: {conv.context.nextAction}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold">Cronologia Activities</h4>
               <Button 
@@ -2171,17 +2216,85 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
               </div>
             )}
 
-            {/* Lista activities */}
-            {isLoadingActivities ? (
+            {/* Timeline: activities + conversazioni agent */}
+            {isLoadingActivities || isLoadingAgent ? (
               <div className="text-center py-8 text-gray-500">
-                Caricamento activities...
+                Caricamento cronologia...
               </div>
-            ) : activities.length > 0 ? (
+            ) : timelineItems.length > 0 ? (
               <div className="space-y-4">
-                {activities.map((activity) => {
+                {timelineItems.map((item) => {
+                  if (item.kind === "conversation") {
+                    const conv = item.conversation;
+                    const statusColors: Record<string, string> = {
+                      active: "bg-green-100 text-green-700",
+                      awaiting_human: "bg-orange-100 text-orange-700",
+                      paused: "bg-gray-100 text-gray-600",
+                      escalated: "bg-blue-100 text-blue-700",
+                      converted: "bg-emerald-100 text-emerald-700",
+                      dead: "bg-red-100 text-red-600",
+                    };
+
+                    return (
+                      <div key={item.id} className="border border-purple-200 rounded-lg p-4 bg-purple-50/30">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-full bg-purple-100 text-purple-700">
+                            <Bot className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                {formatDateTime(item.sortAt)}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="outline" className="text-xs">
+                                  ai_agent
+                                </Badge>
+                                {conv.status === "awaiting_human" && (
+                                  <a
+                                    href={`/agent/review?id=${conv._id}`}
+                                    className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                                  >
+                                    Review <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                            <h5 className="text-sm text-gray-700 mb-1">
+                              Conversazione AI — {CONVERSATION_STAGE_LABELS[conv.stage] || conv.stage}
+                            </h5>
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                              <span
+                                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                  statusColors[conv.status] || "bg-gray-100"
+                                }`}
+                              >
+                                {conv.status === "awaiting_human" ? "In attesa review" : conv.status}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {conv.agentIdentity?.name} · {conv.metrics.messagesCount} msg
+                              </span>
+                            </div>
+                            <ConversationTimelineMessages messages={conv.messages} />
+                            {conv.context?.nextAction && (
+                              <div className="mt-2 text-xs text-orange-600 bg-orange-50 rounded p-1.5">
+                                Prossima azione: {conv.context.nextAction}
+                              </div>
+                            )}
+                            <div className="mt-2">
+                              <span className="text-xs text-gray-500">AI Agent</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  const activity = item.activity;
                   const IconComponent = getActivityIcon(activity.type);
                   return (
-                    <div key={activity._id} className="border rounded-lg p-4 bg-white">
+                    <div key={item.id} className="border rounded-lg p-4 bg-white">
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-full ${getActivityColor(activity.type)}`}>
                           <IconComponent className="h-4 w-4" />

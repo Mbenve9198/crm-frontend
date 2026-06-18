@@ -812,6 +812,126 @@ function AiAgentActivity({ description }: { description: string }) {
   );
 }
 
+const SMARTLEAD_STRUCTURED_KEYS = new Set([
+  'rating', 'reviews_count', 'site', 'address', 'street', 'cap', 'region', 'city',
+  'google_maps_link', 'reviews_link', 'landline_phone', 'phone_carrier_type',
+  'restaurant_type', 'category', 'facebook', 'instagram', 'whatsapp',
+  'reply_from_email', 'smartlead_email', 'smartlead_lead_id', 'supabase_lead_id',
+  'intent', 'score', 'email_quality', 'source_query', 'name_for_emails',
+  'review_velocity_week', 'competitor_rating', 'competitor_reviews', 'competitor_review_velocity',
+  'segmentation', 'place_id',
+]);
+
+function SmartleadOutboundSection({ contact }: { contact: Contact }) {
+  const props = contact.properties || {};
+  const slEmail = (props.smartlead_email as string) || contact.email;
+  const replyFrom = props.reply_from_email as string | undefined;
+  const mapsLink = props.google_maps_link as string | undefined;
+  const site = props.site as string | undefined;
+  const rating = props.rating as number | string | undefined;
+  const reviews = props.reviews_count as number | string | undefined;
+  const intent = props.intent as string | undefined;
+  const score = props.score as number | string | undefined;
+  const landline = props.landline_phone as string | undefined;
+  const address = props.address as string | undefined;
+  const hasData = slEmail || replyFrom || rating || site || mapsLink || intent;
+
+  if (!hasData) return null;
+
+  return (
+    <div className="border-t pt-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">📧</span>
+        <h4 className="font-medium text-gray-900">Smartlead Outbound</h4>
+      </div>
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 space-y-3">
+        {slEmail && (
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="text-xs text-gray-500 mb-1">Email Smartlead (campagna)</div>
+            <a href={`mailto:${slEmail}`} className="text-sm font-medium text-blue-700 hover:underline break-all">
+              {slEmail}
+            </a>
+          </div>
+        )}
+        {replyFrom && (
+          <div className="bg-white rounded-lg p-3 shadow-sm border border-emerald-200">
+            <div className="text-xs text-gray-500 mb-1">Risposta ricevuta da</div>
+            <a href={`mailto:${replyFrom}`} className="text-sm font-semibold text-emerald-800 hover:underline break-all">
+              {replyFrom}
+            </a>
+            {slEmail && replyFrom.toLowerCase() !== slEmail.toLowerCase() && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                Diverso dall&apos;email di contatto in campagna
+              </p>
+            )}
+          </div>
+        )}
+        {(rating || reviews) && (
+          <div className="bg-white rounded-lg p-3 shadow-sm flex items-center gap-2">
+            <span className="text-yellow-500">⭐</span>
+            <span className="font-bold text-lg">{rating ?? '—'}</span>
+            {reviews != null && (
+              <span className="text-gray-500 text-sm">({reviews} recensioni)</span>
+            )}
+          </div>
+        )}
+        {address && (
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="text-xs text-gray-500 mb-1">📍 Indirizzo</div>
+            <div className="text-sm text-gray-900">{address}</div>
+          </div>
+        )}
+        {landline && (
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="text-xs text-gray-500 mb-1">☎️ Telefono fisso</div>
+            <div className="text-sm font-medium text-gray-900">{landline}</div>
+          </div>
+        )}
+        {site && (
+          <div className="bg-white rounded-lg p-3 shadow-sm">
+            <div className="text-xs text-gray-500 mb-1">🌐 Sito web</div>
+            <a
+              href={site.startsWith('http') ? site : `https://${site}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-700 hover:underline break-all"
+            >
+              {site}
+            </a>
+          </div>
+        )}
+        {mapsLink && (
+          <a
+            href={mapsLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 bg-white rounded-lg p-3 shadow-sm text-sm text-blue-700 hover:bg-blue-50"
+          >
+            <ExternalLink className="h-4 w-4 shrink-0" />
+            Apri su Google Maps
+          </a>
+        )}
+        {(intent || score != null) && (
+          <div className="grid grid-cols-2 gap-2">
+            {intent && (
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Intent</div>
+                <div className="text-sm font-bold text-gray-900">{intent}</div>
+              </div>
+            )}
+            {score != null && (
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <div className="text-xs text-gray-500 mb-1">Score</div>
+                <div className="text-sm font-bold text-blue-600">{score}/10</div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -993,13 +1113,23 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     );
   }, [activities, agentConversations]);
 
-  // Carica activities quando cambia il contatto
+  // Carica activities e dati freschi quando si apre la sidebar
   useEffect(() => {
     if (contact && isOpen) {
+      let cancelled = false;
+      apiClient.getContact(contact._id).then((res) => {
+        if (cancelled) return;
+        if (res.success && res.data) {
+          setEditedContact({ ...res.data });
+        } else {
+          setEditedContact({ ...contact });
+        }
+      }).catch(() => {
+        if (!cancelled) setEditedContact({ ...contact });
+      });
       loadActivities();
       loadAgentConversations();
       loadLandingConversation();
-      setEditedContact({ ...contact });
       
       // Se c'è un'activity iniziale, apri il form e precompilalo
       if (initialActivity) {
@@ -1011,7 +1141,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
         });
       }
     }
-  }, [contact, isOpen, loadActivities, loadAgentConversations, initialActivity]);
+    return () => { cancelled = true; };
+  }, [contact?._id, isOpen, loadActivities, loadAgentConversations, initialActivity]);
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;
@@ -1651,6 +1782,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     )}
                   </div>
 
+                  {(contact.source === 'smartlead_outbound' || contact.properties?.smartlead_lead_id) && (
+                    <SmartleadOutboundSection contact={editedContact || contact} />
+                  )}
+
                   {/* Sezione Pagamento */}
                   {contact.stripeCustomerId || contact.stripeData?.subscriptionId ? (
                     <>
@@ -2076,12 +2211,22 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     </div>
                   )}
 
-                  {/* Proprietà dinamiche */}
-                  {contact.properties && Object.keys(contact.properties).length > 0 && (
+                  {/* Proprietà dinamiche (escluse quelle già in sezioni dedicate) */}
+                  {contact.properties && Object.keys(contact.properties).filter((key) => {
+                    if (contact.source === 'smartlead_outbound' && SMARTLEAD_STRUCTURED_KEYS.has(key)) {
+                      return false;
+                    }
+                    return true;
+                  }).length > 0 && (
                     <div className="border-t pt-4">
                       <h4 className="font-medium text-gray-900 mb-3">Proprietà Aggiuntive</h4>
                       <div className="space-y-3">
-                        {Object.entries(contact.properties).map(([key]) => (
+                        {Object.entries(contact.properties).filter(([key]) => {
+                          if (contact.source === 'smartlead_outbound' && SMARTLEAD_STRUCTURED_KEYS.has(key)) {
+                            return false;
+                          }
+                          return true;
+                        }).map(([key]) => (
                           <div key={key}>
                             <label className="text-sm font-medium text-gray-700 block mb-1 capitalize">
                               {key.replace(/_/g, ' ')}

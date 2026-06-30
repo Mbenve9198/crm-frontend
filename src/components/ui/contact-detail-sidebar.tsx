@@ -1050,24 +1050,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     }
   }, [contact]);
 
+  // Conversazione landing legacy — usa agentConversations (funnel disattivato)
   const loadLandingConversation = useCallback(async () => {
-    if (!contact?.properties?.agentSessionId) return;
-    try {
-      setIsLoadingConversation(true);
-      const sessionId = contact.properties.agentSessionId as string;
-      const res = await fetch(
-        `https://menuchat-backend.onrender.com/api/menu-landing/conversation/${sessionId}`
-      );
-      const data = await res.json();
-      if (data.success && data.messages) {
-        setLandingConversation(data.messages);
-      }
-    } catch {
-      // Endpoint potrebbe non essere disponibile
-    } finally {
-      setIsLoadingConversation(false);
-    }
-  }, [contact]);
+    setLandingConversation([]);
+  }, []);
 
   const loadAgentConversations = useCallback(async () => {
     if (!contact) return;
@@ -2001,31 +1987,15 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         {/* Conversazione WhatsApp con l'agente */}
                         {isLoadingConversation ? (
                           <div className="text-xs text-gray-400 text-center py-2">Caricamento conversazione...</div>
-                        ) : landingConversation.length > 0 ? (
+                        ) : agentConversations.length > 0 ? (
                           <div className="bg-white rounded-lg p-3 shadow-sm">
-                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione WhatsApp</div>
-                            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                              {landingConversation.map((msg, i) => (
-                                <div key={i} className={`text-xs p-2 rounded-lg ${
-                                  msg.role === 'lead'
-                                    ? 'bg-gray-100 border border-gray-200'
-                                    : 'bg-emerald-50 border border-emerald-200'
-                                }`}>
-                                  <span className="font-medium text-gray-500">
-                                    {msg.role === 'lead' ? 'Cliente' : 'Marco (AI)'}
-                                  </span>
-                                  {msg.timestamp && (
-                                    <span className="text-gray-300 ml-1 text-[10px]">
-                                      {new Date(msg.timestamp).toLocaleString('it-IT', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  )}
-                                  <p className="text-gray-700 mt-0.5">{msg.content}</p>
-                                </div>
-                              ))}
+                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione agente</div>
+                            <div className="text-xs text-gray-500 mb-2">
+                              {agentConversations[0].channel} · {agentConversations[0].status}
                             </div>
                           </div>
                         ) : contact.properties?.agentSessionId ? (
-                          <div className="text-xs text-gray-400 text-center py-2">Nessun messaggio nella conversazione</div>
+                          <div className="text-xs text-gray-400 text-center py-2">Conversazione landing non più disponibile (funnel disattivato)</div>
                         ) : null}
                       </div>
                     </div>

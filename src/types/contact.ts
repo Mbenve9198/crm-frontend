@@ -103,6 +103,7 @@ export type Contact = {
     lastName: string;
     email: string;
   };
+  reactivatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };

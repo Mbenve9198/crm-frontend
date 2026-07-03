@@ -964,11 +964,17 @@ function ContactsTable({
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          {contact.createdAt && new Date(contact.createdAt).toDateString() === new Date().toDateString() && (
+                          {contact.reactivatedAt &&
+                          new Date(contact.reactivatedAt).toDateString() === new Date().toDateString() ? (
+                            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-teal-500 hover:bg-teal-500 text-white shrink-0">
+                              reactivated
+                            </Badge>
+                          ) : contact.createdAt &&
+                            new Date(contact.createdAt).toDateString() === new Date().toDateString() ? (
                             <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500 hover:bg-emerald-500 text-white shrink-0">
                               new
                             </Badge>
-                          )}
+                          ) : null}
                         </div>
                         {contact.properties?.company && (
                           <TooltipProvider>

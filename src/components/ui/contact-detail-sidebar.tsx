@@ -1989,10 +1989,13 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           <div className="text-xs text-gray-400 text-center py-2">Caricamento conversazione...</div>
                         ) : agentConversations.length > 0 ? (
                           <div className="bg-white rounded-lg p-3 shadow-sm">
-                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione agente</div>
-                            <div className="text-xs text-gray-500 mb-2">
-                              {agentConversations[0].channel} · {agentConversations[0].status}
-                            </div>
+                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione WhatsApp</div>
+                            <ConversationTimelineMessages
+                              messages={
+                                agentConversations.find((c) => c.channel === "whatsapp")?.messages
+                                || agentConversations[0].messages
+                              }
+                            />
                           </div>
                         ) : contact.properties?.agentSessionId ? (
                           <div className="text-xs text-gray-400 text-center py-2">Conversazione landing non più disponibile (funnel disattivato)</div>
@@ -2126,6 +2129,35 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             🗺️ Vedi su Google Maps
                           </a>
                         )}
+
+                        {/* Conversazione WhatsApp onboarding */}
+                        {contact.phone && (
+                          <a
+                            href={`https://wa.me/${contact.phone.replace('+', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-lg transition-colors text-sm"
+                          >
+                            💬 Apri Chat WhatsApp
+                          </a>
+                        )}
+                        {isLoadingAgent ? (
+                          <div className="text-xs text-gray-400 text-center py-2">Caricamento conversazione...</div>
+                        ) : agentConversations.length > 0 ? (
+                          <div className="bg-white rounded-lg p-3 shadow-sm">
+                            <div className="text-xs font-bold text-gray-700 mb-2">💬 Conversazione WhatsApp</div>
+                            <ConversationTimelineMessages
+                              messages={
+                                agentConversations.find((c) => c.channel === "whatsapp")?.messages
+                                || agentConversations[0].messages
+                              }
+                            />
+                          </div>
+                        ) : contact.properties?.onboardingLastEvent === 'engaged' ? (
+                          <div className="text-xs text-gray-500 text-center py-2 bg-white rounded-lg p-3">
+                            Il lead ha risposto su WhatsApp — la conversazione comparirà qui dopo il prossimo sync.
+                          </div>
+                        ) : null}
 
                         {/* 🆕 Link al Report Rank Checker */}
                         {(contact.properties?.rankCheckerReport || contact.properties?.rankCheckerBaseReport) && (

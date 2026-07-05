@@ -1050,8 +1050,8 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   // Carica activities e dati freschi quando si apre la sidebar
   useEffect(() => {
+    let cancelled = false;
     if (contact && isOpen) {
-      let cancelled = false;
       apiClient.getContact(contact._id).then((res) => {
         if (cancelled) return;
         if (res.success && res.data) {

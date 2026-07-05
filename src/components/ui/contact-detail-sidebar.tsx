@@ -647,7 +647,13 @@ type AgentConversation = {
   stage: string;
   channel: string;
   agentIdentity: { name: string; surname: string };
-  messages: Array<{ role: string; content: string; channel: string; createdAt: string }>;
+  messages: Array<{
+    role: string;
+    content: string;
+    channel: string;
+    createdAt: string;
+    metadata?: { isAutoresponder?: boolean; source?: string; wasAutoSent?: boolean };
+  }>;
   metrics: { messagesCount: number; agentMessagesCount: number; humanInterventions: number };
   context: { nextAction?: string };
   updatedAt: string;
@@ -687,7 +693,6 @@ function ConversationTimelineMessages({
     <div className="mt-2 space-y-2">
       {messages.map((msg, i) => {
         const isLead = msg.role === "lead";
-        const isHuman = msg.role === "human";
         const isLong = msg.content.length > BUBBLE_PREVIEW;
         const isExpanded = expanded.has(i);
         const displayText =
@@ -698,8 +703,13 @@ function ConversationTimelineMessages({
             key={i}
             className={`flex flex-col gap-0.5 ${isLead ? "items-start" : "items-end"}`}
           >
-            <span className="text-[10px] text-gray-400 px-1">
-              {isLead ? "Cliente" : isHuman ? "Team" : "AI"}
+            <span className="text-[10px] text-gray-400 px-1 flex items-center gap-1 flex-wrap">
+              {isLead ? "Cliente" : "Noi"}
+              {msg.metadata?.isAutoresponder && (
+                <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 border-amber-300 text-amber-700 bg-amber-50">
+                  Auto-risposta
+                </Badge>
+              )}
               {msg.createdAt &&
                 ` · ${new Date(msg.createdAt).toLocaleDateString("it-IT", {
                   day: "2-digit",
@@ -708,16 +718,14 @@ function ConversationTimelineMessages({
                   minute: "2-digit",
                 })}`}
               {msg.channel === "whatsapp" && (
-                <MessageCircle className="inline h-3 w-3 text-green-500 ml-1" />
+                <MessageCircle className="inline h-3 w-3 text-green-500" />
               )}
             </span>
             <div
               className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-line ${
                 isLead
                   ? "bg-gray-100 text-gray-800 rounded-tl-sm"
-                  : isHuman
-                    ? "bg-blue-600 text-white rounded-tr-sm"
-                    : "bg-violet-600 text-white rounded-tr-sm"
+                  : "bg-violet-600 text-white rounded-tr-sm"
               }`}
             >
               {displayText}
@@ -2156,6 +2164,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                         ) : contact.properties?.onboardingLastEvent === 'engaged' ? (
                           <div className="text-xs text-gray-500 text-center py-2 bg-white rounded-lg p-3">
                             Il lead ha risposto su WhatsApp — la conversazione comparirà qui dopo il prossimo sync.
+                          </div>
+                        ) : contact.properties?.onboardingLastEvent === 'autoresponder_detected' ? (
+                          <div className="text-xs text-amber-700 text-center py-2 bg-amber-50 rounded-lg p-3 border border-amber-200">
+                            Auto-risposta WhatsApp rilevata — non conteggiata come interesse. Verifica la timeline quando disponibile.
                           </div>
                         ) : null}
 

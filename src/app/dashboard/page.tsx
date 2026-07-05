@@ -52,8 +52,32 @@ import {
 } from "lucide-react";
 import { getStatusLabel } from "@/lib/status-utils";
 import { MessageCircle } from "lucide-react";
+import { WaEngagementBadge } from "@/components/ui/wa-engagement-badge";
+import {
+  isRankCheckerInboundSource,
+  resolveWaEngagementStatus,
+  WaEngagementStatus,
+} from "@/lib/wa-engagement";
 
 const PAGE_SIZE = 10;
+
+type WaEngagementFilter = "all" | "engaged" | "outbound_only";
+
+function getItemWaStatus(item: DashboardListItem): WaEngagementStatus | null {
+  if (!isRankCheckerInboundSource(item.source)) return null;
+  return resolveWaEngagementStatus(
+    item.properties as Record<string, string | number | boolean> | undefined
+  );
+}
+
+function matchesWaFilter(item: DashboardListItem, filter: WaEngagementFilter): boolean {
+  if (filter === "all") return true;
+  const status = getItemWaStatus(item);
+  if (!status) return filter !== "engaged" && filter !== "outbound_only";
+  if (filter === "engaged") return status === "engaged";
+  if (filter === "outbound_only") return status === "outbound_only" || status === "empty";
+  return true;
+}
 
 type KanbanColKey = 'daContattare' | 'interessato' | 'qrFollowUp' | 'freeTrial' | 'won';
 
@@ -357,6 +381,7 @@ type ThemedTableProps = {
   showAge?: boolean;
   ageFrom?: "createdAt" | "lastActivityAt";
   sortBy?: "createdAt" | "lastActivityAt";
+  showWaEngagement?: boolean;
   onContactClick?: (id: string) => void;
 };
 
@@ -383,6 +408,7 @@ function ThemedLeadsTable({
   showAge,
   ageFrom = "createdAt",
   sortBy = "lastActivityAt",
+  showWaEngagement,
   onContactClick,
 }: ThemedTableProps) {
   const [page, setPage] = useState(1);
@@ -436,6 +462,11 @@ function ThemedLeadsTable({
                         {ageFrom === "lastActivityAt" ? "Ultimo tocco" : "In attesa da"}
                       </th>
                     )}
+                    {showWaEngagement && (
+                      <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        WhatsApp
+                      </th>
+                    )}
                     {!hideMrr && (
                       <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         MRR
@@ -481,6 +512,17 @@ function ThemedLeadsTable({
                           </td>
                         );
                       })()}
+                      {showWaEngagement && (
+                        <td className="px-4 py-3">
+                          {isRankCheckerInboundSource(c.source) ? (
+                            <WaEngagementBadge
+                              properties={c.properties as Record<string, string | number | boolean>}
+                            />
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                       {!hideMrr && (
                         <td className="px-4 py-3 text-right text-gray-700">
                           {typeof c.mrr === "number" ? formatEur(c.mrr) : "—"}
@@ -724,6 +766,10 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [pipelineSources, setPipelineSources] = usePersistedState<string[]>('dashboard:pipelineSources', []);
+  const [waEngagementFilter, setWaEngagementFilter] = usePersistedState<WaEngagementFilter>(
+    'dashboard:waEngagementFilter',
+    'all'
+  );
   const [pipelineView, setPipelineView] = usePersistedState<'pipeline' | 'extended'>('dashboard:pipelineView', 'pipeline');
   const [draggingItem, setDraggingItem] = useState<DashboardListItem | null>(null);
 
@@ -874,20 +920,29 @@ export default function DashboardPage() {
 
   const filteredLists = useMemo(() => {
     if (!data) return data;
-    if (pipelineSources.length === 0) return data;
-    const filter = (items: DashboardListItem[]) => items.filter(i => pipelineSources.includes(i.source ?? ''));
+    const applyFilters = (items: DashboardListItem[]) => {
+      let out = items;
+      if (pipelineSources.length > 0) {
+        out = out.filter((i) => pipelineSources.includes(i.source ?? ""));
+      }
+      if (waEngagementFilter !== "all") {
+        out = out.filter((i) => matchesWaFilter(i, waEngagementFilter));
+      }
+      return out;
+    };
     return {
       ...data,
       lists: {
         ...data.lists,
-        daContattare: filter(data.lists.daContattare || []),
-        interessato: filter(data.lists.interessato || []),
-        qrFollowUp: filter(data.lists.qrFollowUp || []),
-        freeTrial: filter(data.lists.freeTrial || []),
-        won: filter(data.lists.won || []),
+        callback: applyFilters(data.lists.callback || []),
+        daContattare: applyFilters(data.lists.daContattare || []),
+        interessato: applyFilters(data.lists.interessato || []),
+        qrFollowUp: applyFilters(data.lists.qrFollowUp || []),
+        freeTrial: applyFilters(data.lists.freeTrial || []),
+        won: applyFilters(data.lists.won || []),
       },
     };
-  }, [data, pipelineSources]);
+  }, [data, pipelineSources, waEngagementFilter]);
 
   if (authLoading) {
     return (
@@ -1076,6 +1131,29 @@ export default function DashboardPage() {
                   </button>
                 )}
               </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="text-xs text-gray-500 font-medium">WhatsApp:</span>
+                {(
+                  [
+                    ["all", "Tutti"],
+                    ["engaged", "Solo ingaggiati"],
+                    ["outbound_only", "Non risposti"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setWaEngagementFilter(value)}
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                      waEngagementFilter === value
+                        ? "bg-teal-100 text-teal-800 ring-1 ring-teal-300"
+                        : "bg-gray-100 text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {pipelineView === 'pipeline' ? (
@@ -1110,6 +1188,13 @@ export default function DashboardPage() {
                               >
                                 <div className="font-medium text-sm text-gray-900 truncate">{c.name}</div>
                                 {c.phone && <div className="mt-1"><WhatsAppLink phone={c.phone} /></div>}
+                                {isRankCheckerInboundSource(c.source) && (
+                                  <div className="mt-1.5">
+                                    <WaEngagementBadge
+                                      properties={c.properties as Record<string, string | number | boolean>}
+                                    />
+                                  </div>
+                                )}
                                 <div className="mt-2 flex items-center justify-between">
                                   {typeof c.mrr === 'number'
                                     ? <span className="text-xs font-semibold text-gray-600">{formatEur(c.mrr)}/m</span>
@@ -1158,6 +1243,7 @@ export default function DashboardPage() {
                     emptyIcon: <Users className="h-8 w-8" />,
                     emptyMessage: 'Nessun lead da contattare',
                     showSource: true,
+                    showWaEngagement: true,
                     showAge: true,
                     ageFrom: 'createdAt' as const,
                     sortBy: 'createdAt' as const,
@@ -1172,6 +1258,7 @@ export default function DashboardPage() {
                     badgeText: 'text-blue-800',
                     emptyIcon: <Users className="h-8 w-8" />,
                     emptyMessage: 'Nessun lead interessato',
+                    showWaEngagement: true,
                     showAge: true,
                     ageFrom: 'lastActivityAt' as const,
                     sortBy: 'lastActivityAt' as const,
@@ -1232,6 +1319,7 @@ export default function DashboardPage() {
                     emptyMessage={col.emptyMessage}
                     showCloseDate={'showCloseDate' in col ? col.showCloseDate : false}
                     showSource={'showSource' in col ? col.showSource : false}
+                    showWaEngagement={'showWaEngagement' in col ? col.showWaEngagement : false}
                     showAge={'showAge' in col ? col.showAge : false}
                     ageFrom={'ageFrom' in col ? col.ageFrom : 'lastActivityAt'}
                     sortBy={col.sortBy}

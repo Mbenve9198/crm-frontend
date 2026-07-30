@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useCallbacks } from "@/context/CallbackContext";
@@ -50,6 +50,10 @@ function Dashboard() {
   const [ownerFilter, setOwnerFilter] = usePersistedState<string>("contacts:owner", "all");
   const [serverColumnFilters, setServerColumnFilters] = usePersistedState<Record<string, ColumnFilter>>("contacts:columnFilters", {});
   const [serverSorting, setServerSorting] = usePersistedState<SortingState | null>("contacts:sorting", { column: 'Created', direction: 'desc' });
+  const requestIdRef = useRef(0);
+
+  const filtersChanged = (prev: unknown, next: unknown) =>
+    JSON.stringify(prev) !== JSON.stringify(next);
 
   // Apri scheda contatto richiesta dalla notifica di richiamata
   useEffect(() => {
@@ -87,26 +91,36 @@ function Dashboard() {
 
   // Carica contatti con paginazione server-side (ottimizzato per grandi dataset)
   const loadContacts = useCallback(async (listFilter: string | null = selectedList, searchQuery?: string) => {
+    const requestId = ++requestIdRef.current;
+
     try {
       setIsLoadingContacts(true);
       setContactsError(null);
-      
+
+      // Escludi filtro colonna Owner se già attivo il dropdown proprietario
+      const columnFiltersForApi = { ...serverColumnFilters };
+      if (ownerFilter && ownerFilter !== 'all') {
+        delete columnFiltersForApi['Owner'];
+      }
+
       console.log(`🔄 Caricamento contatti pagina ${currentPage}: lista ${listFilter || 'tutte'}, ricerca ${searchQuery || 'nessuna'}`);
       const response = await apiClient.getContacts({
         page: currentPage,
-        limit: currentLimit, // 🚀 Usa paginazione vera invece di caricare tutto
+        limit: currentLimit,
         list: listFilter || undefined,
         search: searchQuery || undefined,
         owner: ownerFilter && ownerFilter !== 'all' ? ownerFilter : undefined,
         sort_by: serverSorting?.column,
         sort_direction: serverSorting?.direction,
-        column_filters: serverColumnFilters && Object.keys(serverColumnFilters).length > 0 ? serverColumnFilters : undefined,
+        column_filters: Object.keys(columnFiltersForApi).length > 0 ? columnFiltersForApi : undefined,
       });
-      
+
+      // Ignora risposte obsolete (race condition paginazione)
+      if (requestId !== requestIdRef.current) return;
+
       if (response.success && response.data) {
         console.log('✅ Contatti caricati:', response.data.contacts.length);
         setContacts(response.data.contacts);
-        // 🚀 Usa la paginazione dal backend invece di caricare tutto
         if (response.data.pagination) {
           setPagination(response.data.pagination);
         }
@@ -114,12 +128,15 @@ function Dashboard() {
         throw new Error('Errore nel caricamento contatti');
       }
     } catch (error) {
+      if (requestId !== requestIdRef.current) return;
       console.error('❌ Errore caricamento contatti:', error);
       setContactsError(error instanceof Error ? error.message : 'Errore sconosciuto');
     } finally {
-      setIsLoadingContacts(false);
+      if (requestId === requestIdRef.current) {
+        setIsLoadingContacts(false);
+      }
     }
-  }, [selectedList, currentPage, currentLimit, ownerFilter, serverColumnFilters, serverSorting]); // 🚀 Aggiornate dipendenze
+  }, [selectedList, currentPage, currentLimit, ownerFilter, serverColumnFilters, serverSorting]);
 
   // Carica i contatti al mount e quando refreshKey cambia (solo dopo aver caricato le preferenze)
   useEffect(() => {
@@ -131,13 +148,14 @@ function Dashboard() {
   // Ricerca manuale su richiesta (Enter o click)
   const performSearch = (query: string) => {
     console.log(`🔍 Ricerca manuale attivata per: "${query}"`);
+    setCurrentPage(1);
     setSearchQuery(query);
-    loadContacts(selectedList, query);
   };
 
   // 🚀 Gestione cambio pagina - server-side
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
   };
 
   // 🚀 Gestione cambio limite per pagina - server-side
@@ -148,20 +166,26 @@ function Dashboard() {
 
   // Cambio filtro proprietario (owner) lato server
   const handleOwnerFilterChange = (value: string) => {
+    if (value !== ownerFilter) {
+      setCurrentPage(1);
+    }
     setOwnerFilter(value);
-    setCurrentPage(1);
   };
 
   // Cambio filtri di colonna lato server
   const handleServerColumnFiltersChange = (filters: Record<string, ColumnFilter>) => {
+    if (filtersChanged(serverColumnFilters, filters)) {
+      setCurrentPage(1);
+    }
     setServerColumnFilters(filters);
-    setCurrentPage(1);
   };
 
   // Cambio ordinamento lato server
   const handleServerSortingChange = (sorting: SortingState | null) => {
+    if (filtersChanged(serverSorting, sorting)) {
+      setCurrentPage(1);
+    }
     setServerSorting(sorting);
-    setCurrentPage(1);
   };
 
   // Gestione selezione lista dalla sidebar

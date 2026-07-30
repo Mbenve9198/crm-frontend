@@ -188,7 +188,6 @@ function ContactsTable({
 
   // Hook per gestire filtri e ordinamento locali
   const {
-    filteredContacts: localFilteredContacts,
     columnValues,
     columnFilters,
     sorting,
@@ -342,27 +341,21 @@ function ContactsTable({
 
   // Propaga filtri e ordinamento verso il genitore per filtraggio lato server
   useEffect(() => {
+    if (!preferencesLoaded) return;
     if (onServerColumnFiltersChange) {
       onServerColumnFiltersChange(columnFilters);
     }
-  }, [columnFilters, onServerColumnFiltersChange]);
+  }, [columnFilters, onServerColumnFiltersChange, preferencesLoaded]);
 
   useEffect(() => {
+    if (!preferencesLoaded) return;
     if (onServerSortingChange) {
       onServerSortingChange(sorting);
     }
-  }, [sorting, onServerSortingChange]);
+  }, [sorting, onServerSortingChange, preferencesLoaded]);
 
-  // Filtraggio combinato: owner filter + filtri locali
-  const allFilteredContacts = localFilteredContacts.filter((contact) => {
-    const matchesOwner = !ownerFilter || ownerFilter === "all" || (contact.owner && contact.owner._id === ownerFilter);
-    return matchesOwner;
-  });
-
-  // Paginazione: usa sempre i dati di paginazione dal backend
-  const hasActiveFilters = activeFiltersCount > 0 || hasActiveSort || (ownerFilter && ownerFilter !== "all");
-
-  const filteredContacts = allFilteredContacts;
+  // I filtri sono applicati lato server: mostra i contatti così come arrivano dall'API
+  const filteredContacts = contacts;
   const calculatedPagination = pagination || {
     currentPage: 1,
     totalPages: 1,
@@ -456,9 +449,9 @@ function ContactsTable({
   };
 
   const selectAllContacts = () => {
-    // Seleziona TUTTI i contatti filtrati, non solo quelli della pagina corrente
-    const allContactIds = allFilteredContacts.map(contact => contact._id);
-    setSelectedContacts(new Set(allContactIds));
+    // Seleziona i contatti della pagina corrente (selezione cross-page via banner)
+    const pageContactIds = filteredContacts.map(contact => contact._id);
+    setSelectedContacts(new Set(pageContactIds));
   };
 
   const selectPageContacts = () => {
@@ -475,8 +468,8 @@ function ContactsTable({
     setSelectedContacts(new Set());
   };
 
-  // Controlla se tutti i contatti filtrati sono selezionati
-  const isAllFilteredSelected = allFilteredContacts.length > 0 && allFilteredContacts.every(contact => selectedContacts.has(contact._id));
+  // Controlla se tutti i contatti della pagina corrente sono selezionati
+  const isAllFilteredSelected = filteredContacts.length > 0 && filteredContacts.every(contact => selectedContacts.has(contact._id));
   // Controlla se tutti i contatti della pagina corrente sono selezionati
   const isCurrentPageSelected = filteredContacts.length > 0 && filteredContacts.every(contact => selectedContacts.has(contact._id));
   const isSomeSelected = selectedContacts.size > 0;
@@ -1192,15 +1185,7 @@ function ContactsTable({
       </Table>
       </div>
 
-      {/* Banner informativo per filtri con grandi dataset */}
-      {hasActiveFilters && pagination && pagination.totalContacts > currentLimit && (
-        <div className="px-2 py-2 bg-amber-50 border border-amber-200 rounded-lg mx-2 mb-2">
-          <p className="text-xs text-amber-800">
-            ⚠️ I filtri funzionano solo sui contatti caricati in questa pagina ({contacts.length}/{pagination.totalContacts} totali).
-            Usa la <strong>ricerca</strong> per cercare in tutto il database.
-          </p>
-        </div>
-      )}
+      {/* Banner informativo rimosso: i filtri sono applicati lato server su tutto il database */}
 
       {/* Controlli di paginazione */}
       {calculatedPagination && (

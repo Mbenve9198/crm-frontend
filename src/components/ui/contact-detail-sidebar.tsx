@@ -40,6 +40,40 @@ const STRIPE_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   paused: { label: "In pausa", color: "bg-gray-100 text-gray-600" },
 };
 
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  "https://menuchat-crm-backend-production.up.railway.app";
+
+/** Player audio isolato: non si smonta quando la timeline si aggiorna in background */
+const CallRecordingPlayer = React.memo(function CallRecordingPlayer({
+  recordingSid,
+  recordingDuration,
+}: {
+  recordingSid: string;
+  recordingDuration?: number;
+}) {
+  return (
+    <div className="mt-3">
+      <p className="text-xs text-gray-500 mb-2">Registrazione chiamata:</p>
+      <audio
+        controls
+        className="w-full h-8"
+        preload="metadata"
+        style={{ maxWidth: "100%" }}
+      >
+        <source src={`${BACKEND_URL}/api/calls/recording/${recordingSid}`} type="audio/wav" />
+        Il tuo browser non supporta l&apos;elemento audio.
+      </audio>
+      {recordingDuration != null && recordingDuration > 0 && (
+        <p className="text-xs text-gray-400 mt-1">
+          Durata: {Math.floor(recordingDuration / 60)}:
+          {(recordingDuration % 60).toString().padStart(2, "0")}
+        </p>
+      )}
+    </div>
+  );
+});
+
 function StripeSection({ contact, onContactUpdate }: { contact: Contact; onContactUpdate: (c: Contact) => void }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [invoices, setInvoices] = useState<StripeInvoice[]>([]);
@@ -945,7 +979,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       await apiClient.updateActivity(activityId, editingData);
       setEditingActivity(null);
       setEditingData({});
-      await loadActivities(); // Ricarica le attività
+      await loadActivities({ silent: true }); // Ricarica le attività
     } catch (error) {
       console.error('Errore nel salvare l\'attività:', error);
     }
@@ -958,7 +992,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
     try {
       await apiClient.deleteActivity(activityId);
-      await loadActivities(); // Ricarica le attività
+      await loadActivities({ silent: true }); // Ricarica le attività
     } catch (error) {
       console.error('Errore nell\'eliminare l\'attività:', error);
     }
@@ -969,34 +1003,36 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     setEditingData({});
   };
 
-  const loadActivities = useCallback(async () => {
-    if (!contact) return;
-    
+  const contactId = contact?._id;
+
+  const loadActivities = useCallback(async (options?: { silent?: boolean }) => {
+    if (!contactId) return;
+
     try {
-      setIsLoadingActivities(true);
-      const response = await apiClient.getContactActivities(contact._id, { limit: 50 });
-      
+      if (!options?.silent) setIsLoadingActivities(true);
+      const response = await apiClient.getContactActivities(contactId, { limit: 50 });
+
       if (response.success) {
         setActivities(response.data.activities);
       }
     } catch (error) {
       console.error('Errore caricamento activities:', error);
     } finally {
-      setIsLoadingActivities(false);
+      if (!options?.silent) setIsLoadingActivities(false);
     }
-  }, [contact]);
+  }, [contactId]);
 
   // Conversazione landing legacy — usa agentConversations (funnel disattivato)
   const loadLandingConversation = useCallback(async () => {
     setLandingConversation([]);
   }, []);
 
-  const loadAgentConversations = useCallback(async () => {
-    if (!contact) return;
+  const loadAgentConversations = useCallback(async (options?: { silent?: boolean }) => {
+    if (!contactId) return;
     try {
-      setIsLoadingAgent(true);
+      if (!options?.silent) setIsLoadingAgent(true);
       const res = await apiClient.request<AgentConversation[]>(
-        `/agent/conversations?contactId=${contact._id}&status=all&limit=10`
+        `/agent/conversations?contactId=${contactId}&status=all&limit=10`
       );
       if (res.success && res.data) {
         setAgentConversations(Array.isArray(res.data) ? res.data : []);
@@ -1004,9 +1040,9 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     } catch (error) {
       console.error("Errore caricamento conversazioni agent:", error);
     } finally {
-      setIsLoadingAgent(false);
+      if (!options?.silent) setIsLoadingAgent(false);
     }
-  }, [contact]);
+  }, [contactId]);
 
   const timelineItems = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = [];
@@ -1077,15 +1113,15 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       }
     }
     return () => { cancelled = true; };
-  }, [contact?._id, isOpen, loadActivities, loadAgentConversations, initialActivity]);
+  }, [contactId, isOpen, loadActivities, loadAgentConversations, initialActivity]);
 
   useEffect(() => {
-    if (!contact || !isOpen) return;
+    if (!contactId || !isOpen) return;
     const interval = setInterval(() => {
-      loadAgentConversations();
+      loadAgentConversations({ silent: true });
     }, 30000);
     return () => clearInterval(interval);
-  }, [contact?._id, isOpen, loadAgentConversations]);
+  }, [contactId, isOpen, loadAgentConversations]);
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;
@@ -1131,7 +1167,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       if (response.success && response.data) {
         setEditedContact(response.data);
         onContactUpdate(response.data);
-        loadActivities();
+        loadActivities({ silent: true });
         
         setShowMRRInput(false);
         setPendingMRR(undefined);
@@ -2311,7 +2347,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
             )}
 
             {/* Timeline: activities + conversazioni agent */}
-            {isLoadingActivities || isLoadingAgent ? (
+            {(isLoadingActivities || isLoadingAgent) && timelineItems.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Caricamento cronologia...
               </div>
@@ -2517,23 +2553,10 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                               )}
                               
                               {activity.data?.recordingSid && (
-                                <div className="mt-3">
-                                  <p className="text-xs text-gray-500 mb-2">Registrazione chiamata:</p>
-                                  <audio 
-                                    controls 
-                                    className="w-full h-8" 
-                                    preload="metadata"
-                                    style={{ maxWidth: '100%' }}
-                                  >
-                                    <source src={`${process.env.NEXT_PUBLIC_BACKEND_URL || 'https://menuchat-crm-backend-production.up.railway.app'}/api/calls/recording/${activity.data.recordingSid}`} type="audio/wav" />
-                                    Il tuo browser non supporta l&apos;elemento audio.
-                                  </audio>
-                                  {activity.data?.recordingDuration && (
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      Durata: {Math.floor(activity.data.recordingDuration / 60)}:{(activity.data.recordingDuration % 60).toString().padStart(2, '0')}
-                                    </p>
-                                  )}
-                                </div>
+                                <CallRecordingPlayer
+                                  recordingSid={activity.data.recordingSid}
+                                  recordingDuration={activity.data.recordingDuration}
+                                />
                               )}
                             </>
                           )}

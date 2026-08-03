@@ -1446,7 +1446,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       Chiama
                     </Button>
                   }
-                  onCallComplete={loadActivities}
+                  onCallComplete={() => { void loadActivities({ silent: true }); }}
                 />
               )}
               <Button variant="ghost" size="sm" onClick={handleSidebarClose}>

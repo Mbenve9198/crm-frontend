@@ -121,7 +121,7 @@ export default function UpcomingPaymentsPage() {
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
             </div>
-          ) : data && data.months.length > 0 ? (
+          ) : data ? (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
@@ -157,8 +157,9 @@ export default function UpcomingPaymentsPage() {
               <div className="space-y-4">
                 {data.months.map(monthData => {
                   const isOpen = expandedMonths.has(monthData.month);
+                  const isCurrent = monthData.month === data.currentMonth;
                   return (
-                    <Card key={monthData.month}>
+                    <Card key={monthData.month} className={isCurrent ? "ring-2 ring-teal-200" : ""}>
                       <CardHeader className="pb-2">
                         <button
                           onClick={() => toggleMonth(monthData.month)}
@@ -168,23 +169,31 @@ export default function UpcomingPaymentsPage() {
                             {isOpen
                               ? <ChevronDown className="w-4 h-4 text-gray-400" />
                               : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                            <CalendarDays className="w-5 h-5 text-teal-600" />
+                            <CalendarDays className={`w-5 h-5 ${isCurrent ? "text-teal-700" : "text-teal-600"}`} />
                             <div>
-                              <CardTitle className="text-base font-semibold group-hover:text-teal-700 transition-colors">
-                                {monthTitle(monthData.month)}
-                              </CardTitle>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <CardTitle className="text-base font-semibold group-hover:text-teal-700 transition-colors">
+                                  {monthTitle(monthData.month)}
+                                </CardTitle>
+                                {isCurrent && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">
+                                    Corrente
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-500 mt-0.5">
                                 {monthData.paymentCount} pagament{monthData.paymentCount === 1 ? "o" : "i"}
                               </p>
                             </div>
                           </div>
-                          <span className="text-lg font-bold text-teal-700 tabular-nums">
+                          <span className={`text-lg font-bold tabular-nums ${isCurrent ? "text-teal-800" : "text-teal-700"}`}>
                             {fmtEur(monthData.totalAmount)}
                           </span>
                         </button>
                       </CardHeader>
                       {isOpen && (
                         <CardContent className="pt-0">
+                          {monthData.payments.length > 0 ? (
                           <div className="divide-y divide-gray-100 border rounded-lg overflow-hidden">
                             {monthData.payments.map((p, i) => (
                               <div key={`${p.source}-${p.contactId || p.subscriptionId}-${p.date}-${i}`} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50/50 transition-colors">
@@ -218,6 +227,11 @@ export default function UpcomingPaymentsPage() {
                               </div>
                             ))}
                           </div>
+                          ) : (
+                            <p className="text-sm text-gray-400 text-center py-6 border rounded-lg bg-gray-50/50">
+                              Nessun pagamento previsto questo mese
+                            </p>
+                          )}
                         </CardContent>
                       )}
                     </Card>

@@ -151,6 +151,7 @@ export interface UpcomingPaymentsMonth {
 
 export interface UpcomingPaymentsData {
   months: UpcomingPaymentsMonth[];
+  currentMonth: string;
   grandTotal: number;
   subscriptionCount: number;
   bonificoCount: number;

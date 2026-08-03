@@ -30,6 +30,8 @@ function SourceBadge({ source }: { source: 'stripe' | 'bonifico' }) {
       Stripe
     </span>
   );
+}
+
 function formatDay(d: string) {
   const date = new Date(d);
   return date.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });

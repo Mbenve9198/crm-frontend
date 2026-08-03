@@ -108,7 +108,7 @@ export default function UpcomingPaymentsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Prossimi Pagamenti</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Previsione incassi Stripe + bonifico bancario · prossimi 6 mesi
+                Previsione incassi Stripe + bonifico bancario · prossimi 6 mesi · importi IVA inclusa
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>

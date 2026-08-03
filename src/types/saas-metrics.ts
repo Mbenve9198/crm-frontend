@@ -152,6 +152,7 @@ export interface UpcomingPaymentsMonth {
 export interface UpcomingPaymentsData {
   months: UpcomingPaymentsMonth[];
   currentMonth: string;
+  amountsIncludeVat: boolean;
   grandTotal: number;
   subscriptionCount: number;
   bonificoCount: number;

@@ -129,3 +129,29 @@ export interface UnmatchedStripeData {
   totalStripe: number;
   totalLinked: number;
 }
+
+export interface UpcomingPayment {
+  date: string;
+  amount: number;
+  contactId: string | null;
+  contactName: string;
+  planName: string;
+  billingLabel: string;
+  subscriptionId: string | null;
+  status: string;
+  source: 'stripe' | 'bonifico';
+}
+
+export interface UpcomingPaymentsMonth {
+  month: string;
+  totalAmount: number;
+  paymentCount: number;
+  payments: UpcomingPayment[];
+}
+
+export interface UpcomingPaymentsData {
+  months: UpcomingPaymentsMonth[];
+  grandTotal: number;
+  subscriptionCount: number;
+  bonificoCount: number;
+}

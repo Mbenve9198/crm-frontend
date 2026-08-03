@@ -1,6 +1,6 @@
 import { Contact, ContactsResponse, User, ApiResponse, ContactFilters, TablePreferences, TablePreferencesResponse, UpdateStatusRequest, StatusUpdateResponse, UpdateContactRequest, StripeInvoice } from '@/types/contact';
 import { ActivitiesResponse, ActivityStatsResponse, ActivityResponse, CreateActivityRequest, UpdateActivityRequest, ActivityFilters } from '@/types/activity';
-import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData, CustomersListData, UnmatchedStripeData } from '@/types/saas-metrics';
+import { SaasOverview, MrrOverviewData, PlansData, PlansTrendData, PlansFromContactsData, CustomersListData, UnmatchedStripeData, UpcomingPaymentsData } from '@/types/saas-metrics';
 import { 
   Call, 
   InitiateCallRequest, 
@@ -1053,6 +1053,10 @@ class ApiClient {
     if (params?.order) qs.set('order', params.order);
     const query = qs.toString();
     return this.request<CustomersListData>(`/saas-metrics/customers${query ? `?${query}` : ''}`);
+  }
+
+  async getUpcomingPayments(months = 6): Promise<ApiResponse<UpcomingPaymentsData>> {
+    return this.request<UpcomingPaymentsData>(`/saas-metrics/upcoming-payments?months=${months}`);
   }
 
   async generateSnapshot(): Promise<ApiResponse<unknown>> {

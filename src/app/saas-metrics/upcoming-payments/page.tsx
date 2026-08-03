@@ -108,7 +108,7 @@ export default function UpcomingPaymentsPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Prossimi Pagamenti</h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                Previsione incassi Stripe + bonifico bancario · prossimi 6 mesi · importi IVA inclusa
+                Previsione incassi Stripe + bonifico bancario · prossimi 6 mesi · importi IVA esclusa
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -128,6 +128,9 @@ export default function UpcomingPaymentsPage() {
                   <CardContent className="p-5">
                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Totale previsto</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">{fmtEur(data.grandTotal)}</p>
+                    {data.grandTotalGross > 0 && (
+                      <p className="text-xs text-gray-400 mt-1">IVA incl. {fmtEur(data.grandTotalGross)}</p>
+                    )}
                   </CardContent>
                 </Card>
                 <Card>
@@ -186,9 +189,16 @@ export default function UpcomingPaymentsPage() {
                               </p>
                             </div>
                           </div>
-                          <span className={`text-lg font-bold tabular-nums ${isCurrent ? "text-teal-800" : "text-teal-700"}`}>
-                            {fmtEur(monthData.totalAmount)}
-                          </span>
+                          <div className="text-right">
+                            <span className={`text-lg font-bold tabular-nums block ${isCurrent ? "text-teal-800" : "text-teal-700"}`}>
+                              {fmtEur(monthData.totalAmount)}
+                            </span>
+                            {monthData.totalAmountGross > 0 && (
+                              <span className="text-[11px] text-gray-400 tabular-nums">
+                                IVA incl. {fmtEur(monthData.totalAmountGross)}
+                              </span>
+                            )}
+                          </div>
                         </button>
                       </CardHeader>
                       {isOpen && (

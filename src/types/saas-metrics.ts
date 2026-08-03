@@ -133,6 +133,7 @@ export interface UnmatchedStripeData {
 export interface UpcomingPayment {
   date: string;
   amount: number;
+  amountGross: number;
   contactId: string | null;
   contactName: string;
   planName: string;
@@ -145,6 +146,7 @@ export interface UpcomingPayment {
 export interface UpcomingPaymentsMonth {
   month: string;
   totalAmount: number;
+  totalAmountGross: number;
   paymentCount: number;
   payments: UpcomingPayment[];
 }
@@ -154,6 +156,7 @@ export interface UpcomingPaymentsData {
   currentMonth: string;
   amountsIncludeVat: boolean;
   grandTotal: number;
+  grandTotalGross: number;
   subscriptionCount: number;
   bonificoCount: number;
 }

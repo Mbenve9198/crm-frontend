@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, Bot, Activity, TrendingUp, PieChart, LineChart, Settings, CalendarDays } from "lucide-react";
+import { User, LogOut, Upload, Users, Menu, List, ChevronDown, ChevronRight, BarChart3, LayoutDashboard, Phone, PhoneCall, Bot, Activity, TrendingUp, PieChart, LineChart, Settings, CalendarDays } from "lucide-react";
 import { Button } from "./button";
 import { useAuth } from "@/context/AuthContext";
 import { useCallbacks } from "@/context/CallbackContext";
@@ -45,6 +45,12 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       active: pathname === "/" && selectedList === null,
       href: "/",
       onClick: () => onListSelect?.(null),
+    },
+    {
+      icon: PhoneCall,
+      label: "Dialer",
+      active: pathname === "/dialer",
+      href: "/dialer",
     },
     ...(user?.role === "admin"
       ? [

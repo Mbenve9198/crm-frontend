@@ -14,6 +14,7 @@ import {
 } from '@/types/call';
 import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData, OwnerPerformanceData } from '@/types/analytics';
 import { DashboardData } from '@/types/dashboard';
+import { ColdCallScript, DialerQueueData, DialerQueueParams } from '@/types/dialer';
 
 export type SourceRule = {
   sources: string[];
@@ -936,6 +937,11 @@ class ApiClient {
     return this.request(url);
   }
 
+  // Script cold call strutturato (template + visibility card)
+  async getColdCallScript(contactId: string): Promise<ApiResponse<ColdCallScript>> {
+    return this.request<ColdCallScript>(`/contacts/${contactId}/cold-call-script`);
+  }
+
   // === METODI PER LE CHIAMATE ===
 
   async initiateCall(request: InitiateCallRequest): Promise<ApiResponse<InitiateCallResponse>> {
@@ -944,6 +950,18 @@ class ApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
+  }
+
+  // Coda Power Dialer
+  async getDialerQueue(params: DialerQueueParams = {}): Promise<ApiResponse<DialerQueueData>> {
+    const sp = new URLSearchParams();
+    if (params.list) sp.append('list', params.list);
+    if (params.status) sp.append('status', params.status);
+    if (params.limit != null) sp.append('limit', String(params.limit));
+    if (params.offset != null) sp.append('offset', String(params.offset));
+    if (params.owner) sp.append('owner', params.owner);
+    const qs = sp.toString();
+    return this.request<DialerQueueData>(`/calls/dialer-queue${qs ? `?${qs}` : ''}`);
   }
 
   // Metodi getMyCalls e getCallsByContact rimossi - non servono più con il nuovo sistema semplificato

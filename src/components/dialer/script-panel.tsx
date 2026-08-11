@@ -152,11 +152,16 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
         closeSheet();
         return;
       }
-      // Tasti 1–9: obiezione diretta (utile mid-call)
+      // Tasti 1–9: obiezione diretta (solo se non stai interagendo con form/UI)
       if (e.key >= "1" && e.key <= "9" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const target = e.target as HTMLElement | null;
-        const tag = target?.tagName?.toLowerCase();
-        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+        if (
+          target?.closest(
+            'input, textarea, select, button, a, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [role="dialog"]'
+          )
+        ) {
+          return;
+        }
         const idx = Number(e.key) - 1;
         if (idx < objections.length) {
           e.preventDefault();

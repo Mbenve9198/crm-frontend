@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api";
 import { Call, CallOutcome, InitiateCallRequest } from "@/types/call";
 import { ContactStatus } from "@/types/contact";
-import { DialerContact } from "@/types/dialer";
+import { ColdCallDiscoveryQuestion, DialerContact } from "@/types/dialer";
 import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DiscoveryNotes,
+  formatDialerNotes,
+} from "@/components/dialer/script-panel";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -46,12 +50,24 @@ const DIALER_OUTCOMES: { value: CallOutcome; label: string; statusHint?: Contact
 interface DialerCallDockProps {
   contact: DialerContact;
   disabled?: boolean;
+  discovery?: ColdCallDiscoveryQuestion[];
+  discoveryNotes: DiscoveryNotes;
   onSkip: () => void;
   onComplete: () => void;
   onBusyChange?: (busy: boolean) => void;
+  onClearDiscoveryNotes?: () => void;
 }
 
-export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyChange }: DialerCallDockProps) {
+export function DialerCallDock({
+  contact,
+  disabled,
+  discovery,
+  discoveryNotes,
+  onSkip,
+  onComplete,
+  onBusyChange,
+  onClearDiscoveryNotes,
+}: DialerCallDockProps) {
   const [callState, setCallState] = useState<CallState>("idle");
   const [callResult, setCallResult] = useState<Call | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -122,6 +138,10 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
     if (hint) setStatus(hint);
   };
 
+  const answeredDiscovery = (discovery || []).filter(
+    (q) => (discoveryNotes[q.id] || "").trim()
+  );
+
   const handleSaveAndNext = useCallback(async () => {
     if (!outcome) {
       toast.error("Seleziona un esito");
@@ -129,8 +149,12 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
     }
     setIsSaving(true);
     try {
+      const mergedNotes = formatDialerNotes(discovery, discoveryNotes, notes);
       if (callResult) {
-        await apiClient.updateCall(callResult._id, { notes: notes || undefined, outcome });
+        await apiClient.updateCall(callResult._id, {
+          notes: mergedNotes || undefined,
+          outcome,
+        });
       }
       if (status !== contact.status) {
         await apiClient.updateContactStatus(contact._id, { status });
@@ -140,13 +164,25 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
       setCallResult(null);
       setOutcome("");
       setNotes("");
+      onClearDiscoveryNotes?.();
       onComplete();
     } catch {
       toast.error("Errore nel salvataggio");
     } finally {
       setIsSaving(false);
     }
-  }, [outcome, callResult, notes, status, contact.status, contact._id, onComplete]);
+  }, [
+    outcome,
+    callResult,
+    notes,
+    status,
+    contact.status,
+    contact._id,
+    discovery,
+    discoveryNotes,
+    onComplete,
+    onClearDiscoveryNotes,
+  ]);
 
   const busy = callState !== "idle" && callState !== "wrap" && callState !== "error";
 
@@ -242,6 +278,21 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
               </button>
             ))}
           </div>
+
+          {answeredDiscovery.length > 0 && (
+            <div className="rounded-md border border-amber-100 bg-amber-50/70 px-3 py-2 text-xs text-amber-950">
+              <p className="font-semibold text-amber-800">Qualificazione (dallo script)</p>
+              <ul className="mt-1.5 space-y-0.5">
+                {answeredDiscovery.map((q) => (
+                  <li key={q.id}>
+                    <span className="font-medium">{q.label}:</span>{" "}
+                    {discoveryNotes[q.id]}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-500">Status contatto</label>
@@ -259,11 +310,13 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
               </Select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Note</label>
+              <label className="mb-1 block text-xs font-medium text-gray-500">
+                Note extra (DM, fascia, WhatsApp…)
+              </label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Nome DM, fascia richiamo, WhatsApp…"
+                placeholder="Aggiungi ciò che non sta nelle Q…"
                 className="min-h-[42px] resize-none bg-white"
                 rows={2}
               />
@@ -271,7 +324,7 @@ export function DialerCallDock({ contact, disabled, onSkip, onComplete, onBusyCh
           </div>
           <Button className="w-full" size="lg" onClick={handleSaveAndNext} disabled={isSaving || !outcome}>
             {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            Salva e prossimo
+            Salva tutto e prossimo
           </Button>
         </div>
       )}

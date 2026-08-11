@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/select";
 import { DialerQueueList } from "@/components/dialer/queue-list";
 import { VisibilityCardSummary } from "@/components/dialer/visibility-card-summary";
-import { DialerScriptPanel } from "@/components/dialer/script-panel";
+import {
+  DialerScriptPanel,
+  DiscoveryNotes,
+} from "@/components/dialer/script-panel";
 import { DialerCallDock } from "@/components/dialer/call-dock";
 import { getColdCallScript, getDialerQueue } from "@/lib/dialer-api";
 import {
@@ -44,6 +47,7 @@ export default function DialerPage() {
   const [scriptError, setScriptError] = useState<string | null>(null);
   const scriptRequestId = useRef(0);
 
+  const [discoveryNotes, setDiscoveryNotes] = useState<DiscoveryNotes>({});
   const [callActive, setCallActive] = useState(false);
 
   const selectedContact = useMemo(
@@ -118,16 +122,23 @@ export default function DialerPage() {
   }, [isAuthenticated, dialerOk, loadQueue]);
 
   useEffect(() => {
-    if (selectedId) loadScript(selectedId);
-    else {
+    if (selectedId) {
+      setDiscoveryNotes({});
+      loadScript(selectedId);
+    } else {
       setScript(null);
       setScriptError(null);
+      setDiscoveryNotes({});
     }
   }, [selectedId, loadScript]);
 
   const selectContact = (contact: DialerContact) => {
     if (callActive) return;
     setSelectedId(contact._id);
+  };
+
+  const handleDiscoveryNoteChange = (questionId: string, value: string) => {
+    setDiscoveryNotes((prev) => ({ ...prev, [questionId]: value }));
   };
 
   const advanceToNext = useCallback(() => {
@@ -318,6 +329,8 @@ export default function DialerPage() {
                       script={script}
                       isLoading={scriptLoading}
                       error={scriptError}
+                      discoveryNotes={discoveryNotes}
+                      onDiscoveryNoteChange={handleDiscoveryNoteChange}
                     />
                   </div>
                 )}
@@ -327,9 +340,12 @@ export default function DialerPage() {
                 <DialerCallDock
                   contact={selectedContact}
                   disabled={queueLoading}
+                  discovery={script?.discovery}
+                  discoveryNotes={discoveryNotes}
                   onSkip={handleSkip}
                   onComplete={handleCallComplete}
                   onBusyChange={setCallActive}
+                  onClearDiscoveryNotes={() => setDiscoveryNotes({})}
                 />
               )}
             </section>

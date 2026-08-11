@@ -37,8 +37,11 @@ export interface CallDialogHandle {
   close: () => Promise<void>;
 }
 
+/** Campi minimi per click-to-call (un Contact completo soddisfa il contratto). */
+export type CallDialogContact = Pick<Contact, '_id' | 'name'> & { phone?: string };
+
 interface CallDialogProps {
-  contact: Contact;
+  contact: CallDialogContact;
   trigger: React.ReactNode;
   onCallComplete?: (call: Call) => void;
   open?: boolean;

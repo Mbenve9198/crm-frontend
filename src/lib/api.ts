@@ -14,7 +14,6 @@ import {
 } from '@/types/call';
 import { LeadAnalyticsData, WonContactsAnalyticsData, LeadCohortFunnelAnalyticsData, OwnerPerformanceData } from '@/types/analytics';
 import { DashboardData } from '@/types/dashboard';
-
 export type SourceRule = {
   sources: string[];
   strategy: 'specific' | 'round_robin';

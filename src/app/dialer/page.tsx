@@ -338,7 +338,7 @@ export default function DialerPage() {
               </div>
 
               {selectedContact && script && !scriptLoading && !scriptError && (
-                <DialerScriptQuickBar script={script} />
+                <DialerScriptQuickBar script={script} discoveryNotes={discoveryNotes} />
               )}
 
               {selectedContact && (
@@ -347,6 +347,12 @@ export default function DialerPage() {
                   disabled={queueLoading}
                   discovery={script?.discovery}
                   discoveryNotes={discoveryNotes}
+                  currentReviews={
+                    script?.cardSummary?.reviews ??
+                    script?.projectionHints?.reviews ??
+                    selectedContact.cardSummary?.reviews ??
+                    null
+                  }
                   onSkip={handleSkip}
                   onComplete={handleCallComplete}
                   onBusyChange={setCallActive}

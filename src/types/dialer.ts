@@ -43,6 +43,7 @@ export type DialerCardSummary = {
   reviews?: number | null;
   velocityPerMonth?: number | null;
   competitorAhead?: DialerCompetitorAhead | null;
+  competitorsAhead?: DialerCompetitorAhead[] | null;
   nearbyClient?: DialerNearbyClient | null;
   nearbyClientStats?: DialerNearbyClientStats | null;
   nearbyProof?: string | null;
@@ -87,11 +88,19 @@ export type DialerQueueData = {
   offset: number;
 };
 
+export type ColdCallObjectionBranch = {
+  id: string;
+  label: string;
+  line: string;
+  needsCovers?: boolean;
+};
+
 export type ColdCallObjection = {
   id?: string;
   short?: string;
   trigger: string;
   line: string;
+  branches?: ColdCallObjectionBranch[];
 };
 
 export type ColdCallDiscoveryQuestion = {
@@ -100,6 +109,26 @@ export type ColdCallDiscoveryQuestion = {
   line: string;
   mode?: 'ask' | 'confirm';
   knownFact?: string;
+  inputType?: 'text' | 'number';
+  placeholder?: string;
+  drivesProjections?: boolean;
+  followUpIfPaper?: string;
+};
+
+export type ColdCallValueBlock = {
+  needsCovers?: boolean;
+  lines: string[];
+};
+
+export type ColdCallTrialStep = {
+  id: string;
+  title: string;
+  line: string;
+};
+
+export type ColdCallTrialBlock = {
+  needsCovers?: boolean;
+  steps: ColdCallTrialStep[];
 };
 
 export type ColdCallScript = {
@@ -109,13 +138,21 @@ export type ColdCallScript = {
   hook: string;
   discovery: ColdCallDiscoveryQuestion[];
   value: string;
+  valueBlock?: ColdCallValueBlock;
   busy: string;
   gate: string;
   trial: string;
+  trialBlock?: ColdCallTrialBlock;
   objections: ColdCallObjection[];
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   listHint?: string;
+  projectionHints?: {
+    reviews?: number | null;
+    rating?: number | null;
+    keyword?: string | null;
+    nearbyName?: string | null;
+  };
 };
 
 export function resolveDialerCardView(

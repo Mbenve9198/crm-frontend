@@ -52,6 +52,7 @@ interface DialerCallDockProps {
   disabled?: boolean;
   discovery?: ColdCallDiscoveryQuestion[];
   discoveryNotes: DiscoveryNotes;
+  currentReviews?: number | null;
   onSkip: () => void;
   onComplete: () => void;
   onBusyChange?: (busy: boolean) => void;
@@ -63,6 +64,7 @@ export function DialerCallDock({
   disabled,
   discovery,
   discoveryNotes,
+  currentReviews,
   onSkip,
   onComplete,
   onBusyChange,
@@ -149,7 +151,14 @@ export function DialerCallDock({
     }
     setIsSaving(true);
     try {
-      const mergedNotes = formatDialerNotes(discovery, discoveryNotes, notes);
+      const mergedNotes = formatDialerNotes(
+        discovery,
+        discoveryNotes,
+        notes,
+        currentReviews ??
+          contact.cardSummary?.reviews ??
+          null
+      );
       if (callResult) {
         await apiClient.updateCall(callResult._id, {
           notes: mergedNotes || undefined,
@@ -178,6 +187,8 @@ export function DialerCallDock({
     status,
     contact.status,
     contact._id,
+    contact.cardSummary?.reviews,
+    currentReviews,
     discovery,
     discoveryNotes,
     onComplete,

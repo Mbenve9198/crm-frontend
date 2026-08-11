@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { ColdCallScript } from "@/types/dialer";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface DialerScriptPanelProps {
   script: ColdCallScript | null;
@@ -10,30 +10,10 @@ interface DialerScriptPanelProps {
   error: string | null;
 }
 
-type SectionKey = "opening" | "hook" | "busy" | "gate" | "trial" | "objections";
-
-const SECTIONS: { key: SectionKey; label: string }[] = [
-  { key: "opening", label: "Apertura" },
-  { key: "hook", label: "Hook" },
-  { key: "busy", label: "Busy" },
-  { key: "gate", label: "Gate" },
-  { key: "trial", label: "Trial" },
-  { key: "objections", label: "Obiezioni" },
-];
+type Branch = "main" | "busy" | "gate" | "objections";
 
 export function DialerScriptPanel({ script, isLoading, error }: DialerScriptPanelProps) {
-  const [openSections, setOpenSections] = useState<Record<SectionKey, boolean>>({
-    opening: true,
-    hook: true,
-    busy: false,
-    gate: false,
-    trial: true,
-    objections: false,
-  });
-
-  const toggle = (key: SectionKey) => {
-    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  const [branch, setBranch] = useState<Branch>("main");
 
   if (isLoading) {
     return (
@@ -61,40 +41,113 @@ export function DialerScriptPanel({ script, isLoading, error }: DialerScriptPane
   }
 
   return (
-    <div className="space-y-2">
-      {SECTIONS.map(({ key, label }) => {
-        const isOpen = openSections[key];
-        return (
-          <div key={key} className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <button
-              type="button"
-              onClick={() => toggle(key)}
-              className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50"
-            >
-              <span className="text-sm font-semibold text-gray-900">{label}</span>
-              <ChevronDown
-                className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-            {isOpen && (
-              <div className="border-t border-gray-100 px-3 py-3 text-sm leading-relaxed text-gray-700">
-                {key === "objections" ? (
-                  <ul className="space-y-3">
-                    {(script.objections || []).map((obj, idx) => (
-                      <li key={idx} className="rounded-md bg-gray-50 px-3 py-2">
-                        <p className="text-xs font-semibold text-gray-500">{obj.trigger}</p>
-                        <p className="mt-1 text-gray-800">{obj.line}</p>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{script[key]}</p>
-                )}
-              </div>
-            )}
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ["main", "Talk track"],
+            ["busy", "Busy"],
+            ["gate", "Gatekeeper"],
+            ["objections", "Obiezioni"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setBranch(key)}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+              branch === key
+                ? "bg-gray-900 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {branch === "main" && (
+        <ol className="space-y-4">
+          <ScriptBlock step="1" title="Apertura" hint="Stop. Ascolta.">
+            {script.opening}
+          </ScriptBlock>
+
+          <ScriptBlock step="2" title="Hook (se sì)" hint="Vicino + numeri + Q1">
+            {script.hook}
+          </ScriptBlock>
+
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+              3 · Qualificazione (una alla volta)
+            </p>
+            <ul className="mt-3 space-y-3">
+              {(script.discovery || []).map((q, i) => (
+                <li key={q.id} className="rounded-md bg-white/80 px-3 py-2.5 border border-amber-100">
+                  <p className="text-[11px] font-semibold text-amber-700">
+                    Q{i + 1} · {q.label}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
+                </li>
+              ))}
+            </ul>
           </div>
-        );
-      })}
+
+          <ScriptBlock step="4" title="Value" hint="Solo dopo discovery">
+            {script.value}
+          </ScriptBlock>
+
+          <ScriptBlock step="5" title="Trial" hint="Solo se DM / influente">
+            {script.trial}
+          </ScriptBlock>
+        </ol>
+      )}
+
+      {branch === "busy" && (
+        <ScriptBlock step="↔" title="Busy / in servizio" hint="Zero pitch">
+          {script.busy}
+        </ScriptBlock>
+      )}
+
+      {branch === "gate" && (
+        <ScriptBlock step="↔" title="Gatekeeper — pack 4/4" hint="Nome · fascia · messaggio · canale">
+          {script.gate}
+        </ScriptBlock>
+      )}
+
+      {branch === "objections" && (
+        <ul className="space-y-2">
+          {(script.objections || []).map((obj, idx) => (
+            <li key={idx} className="rounded-lg border border-gray-200 bg-white px-3 py-2.5">
+              <p className="text-xs font-semibold text-gray-500">{obj.trigger}</p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-900">{obj.line}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ScriptBlock({
+  step,
+  title,
+  hint,
+  children,
+}: {
+  step: string;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-3 py-3">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          {step} · {title}
+        </p>
+        {hint ? <p className="text-[11px] text-gray-400">{hint}</p> : null}
+      </div>
+      <p className="text-[15px] leading-relaxed text-gray-900">{children}</p>
     </div>
   );
 }

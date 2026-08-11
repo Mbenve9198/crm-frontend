@@ -39,6 +39,7 @@ export type DialerCardSummary = {
   name?: string | null;
   keyword?: string | null;
   rank?: number | null;
+  rankKind?: 'rank1' | 'ranked' | 'out_of_top' | 'unknown' | string | null;
   rating?: number | null;
   reviews?: number | null;
   velocityPerMonth?: number | null;
@@ -100,7 +101,14 @@ export type ColdCallObjection = {
   short?: string;
   trigger: string;
   line: string;
+  placement?: 'early' | 'late';
   branches?: ColdCallObjectionBranch[];
+};
+
+export type ColdCallChoiceOption = {
+  id: string;
+  label: string;
+  opensObjection?: string;
 };
 
 export type ColdCallDiscoveryQuestion = {
@@ -112,7 +120,9 @@ export type ColdCallDiscoveryQuestion = {
   inputType?: 'text' | 'number';
   placeholder?: string;
   drivesProjections?: boolean;
+  choiceOptions?: ColdCallChoiceOption[];
   followUpIfPaper?: string;
+  followUpChoices?: ColdCallChoiceOption[];
 };
 
 export type ColdCallValueBlock = {
@@ -143,15 +153,18 @@ export type ColdCallScript = {
   gate: string;
   trial: string;
   trialBlock?: ColdCallTrialBlock;
+  earlyObjections?: ColdCallObjection[];
   objections: ColdCallObjection[];
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   listHint?: string;
+  agentName?: string | null;
   projectionHints?: {
     reviews?: number | null;
     rating?: number | null;
     keyword?: string | null;
     nearbyName?: string | null;
+    rankKind?: string | null;
   };
 };
 

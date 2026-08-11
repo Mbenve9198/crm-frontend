@@ -332,13 +332,18 @@ export default function DialerPage() {
                       error={scriptError}
                       discoveryNotes={discoveryNotes}
                       onDiscoveryNoteChange={handleDiscoveryNoteChange}
+                      agentName={user?.firstName || null}
                     />
                   </div>
                 )}
               </div>
 
               {selectedContact && script && !scriptLoading && !scriptError && (
-                <DialerScriptQuickBar script={script} discoveryNotes={discoveryNotes} />
+                <DialerScriptQuickBar
+                  script={script}
+                  discoveryNotes={discoveryNotes}
+                  agentName={user?.firstName || null}
+                />
               )}
 
               {selectedContact && (

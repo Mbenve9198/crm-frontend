@@ -165,7 +165,8 @@ export function DialerScriptPanel({
           {(script.discovery || []).map((q, i) => {
             const isCovers = q.drivesProjections || q.id === "q2_covers";
             const isMenu = q.id === "q3_menu";
-            const menuChoice = discoveryNotes.q3_menu || "";
+            const hasChoices = Boolean(q.choiceOptions?.length);
+            const selectedChoice = discoveryNotes[q.id] || "";
             const paperFollow =
               q.followUpIfPaper && projections
                 ? fillScriptTemplate(q.followUpIfPaper, templateVars)
@@ -175,6 +176,9 @@ export function DialerScriptPanel({
                       "… (inserisci coperti)"
                     )
                   : null;
+            const decisionPartner =
+              q.id === "q1b_decision" &&
+              (selectedChoice === "with_partner" || selectedChoice === "other");
 
             return (
               <li
@@ -202,21 +206,21 @@ export function DialerScriptPanel({
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
 
-                {isMenu && q.choiceOptions?.length ? (
+                {hasChoices ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {q.choiceOptions.map((opt) => (
+                    {q.choiceOptions!.map((opt) => (
                       <button
                         key={opt.id}
                         type="button"
                         onClick={() => {
-                          onDiscoveryNoteChange("q3_menu", opt.id);
-                          if (opt.id !== "cartaceo") {
+                          onDiscoveryNoteChange(q.id, opt.id);
+                          if (isMenu && opt.id !== "cartaceo") {
                             onDiscoveryNoteChange("q3_menu_follow", "");
                             setInlineObjectionId(null);
                           }
                         }}
                         className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                          menuChoice === opt.id
+                          selectedChoice === opt.id
                             ? "bg-gray-900 text-white"
                             : "bg-white text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
                         }`}
@@ -227,7 +231,13 @@ export function DialerScriptPanel({
                   </div>
                 ) : null}
 
-                {isMenu && menuChoice === "cartaceo" && paperFollow ? (
+                {decisionPartner ? (
+                  <p className="mt-2 text-xs text-amber-800">
+                    → Usa l’obiezione «Devo parlarne col socio» se prova a scaricare la decisione.
+                  </p>
+                ) : null}
+
+                {isMenu && selectedChoice === "cartaceo" && paperFollow ? (
                   <div className="mt-2 space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-2.5 py-2">
                     <p className="text-sm leading-relaxed text-amber-950">{paperFollow}</p>
                     <div className="flex flex-wrap gap-1.5">
@@ -279,7 +289,7 @@ export function DialerScriptPanel({
                   </div>
                 ) : null}
 
-                {!isMenu ? (
+                {!hasChoices ? (
                   <input
                     type={q.inputType === "number" ? "number" : "text"}
                     inputMode={q.inputType === "number" ? "numeric" : undefined}
@@ -344,6 +354,46 @@ export function DialerScriptPanel({
                   <p className="mt-0.5 text-[15px] leading-relaxed text-gray-900">
                     {fillScriptTemplate(step.line, templateVars)}
                   </p>
+                  {step.choiceOptions?.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {step.choiceOptions.map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() =>
+                            onDiscoveryNoteChange(`trial_${step.id}`, opt.id)
+                          }
+                          className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                            discoveryNotes[`trial_${step.id}`] === opt.id
+                              ? "bg-gray-900 text-white"
+                              : "bg-white text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  {step.fields?.length ? (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      {step.fields.map((field) => (
+                        <label key={field.id} className="block space-y-1">
+                          <span className="text-[11px] font-medium text-gray-600">
+                            {field.label}
+                          </span>
+                          <input
+                            type={field.inputType || "text"}
+                            value={discoveryNotes[field.id] || ""}
+                            onChange={(e) =>
+                              onDiscoveryNoteChange(field.id, e.target.value)
+                            }
+                            placeholder={field.placeholder || ""}
+                            className="w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ol>
@@ -638,6 +688,31 @@ export function formatDialerNotes(
       `Proiezioni: ~${proj.potentialMonthly} rec/mese (10% di ~${proj.coversMonthly} coperti/mese); anno ~${proj.yearReviews}`
     );
   }
+
+  const trialLabels: Record<string, string> = {
+    trial_start_timing: "Partenza prova",
+    trial_ship_address: "Indirizzo QR",
+    trial_ragione_sociale: "Ragione sociale",
+    trial_piva: "P.IVA",
+    trial_sede_legale: "Sede legale",
+    trial_codice_univoco: "Codice univoco",
+    trial_menu_asset: "Menu asset",
+    trial_whatsapp: "WhatsApp",
+    trial_qr_live: "Messa live QR",
+    trial_check_call: "Check post-arrivo",
+    trial_ops_owner: "Referente sala",
+  };
+  const trialFilled = Object.keys(trialLabels).filter((k) =>
+    (discoveryNotes[k] || "").trim()
+  );
+  if (trialFilled.length) {
+    lines.push("");
+    lines.push("Trial / setup:");
+    for (const k of trialFilled) {
+      lines.push(`- ${trialLabels[k]}: ${discoveryNotes[k].trim()}`);
+    }
+  }
+
   const free = freeNotes.trim();
   if (free) {
     if (lines.length) lines.push("");

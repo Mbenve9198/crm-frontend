@@ -338,7 +338,7 @@ export default function DialerPage() {
               </div>
 
               {selectedContact && script && !scriptLoading && !scriptError && (
-                <DialerScriptQuickBar script={script} />
+                <DialerScriptQuickBar script={script} discoveryNotes={discoveryNotes} />
               )}
 
               {selectedContact && (

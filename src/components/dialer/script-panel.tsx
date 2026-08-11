@@ -2,7 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ColdCallObjection, ColdCallScript } from "@/types/dialer";
-import { Loader2, X } from "lucide-react";
+import {
+  computeCoverProjections,
+  fillScriptTemplate,
+  parseCoversInput,
+} from "@/lib/dialer-projections";
+import { Loader2, Lock, X } from "lucide-react";
 
 export type DiscoveryNotes = Record<string, string>;
 
@@ -21,6 +26,27 @@ export function DialerScriptPanel({
   discoveryNotes,
   onDiscoveryNoteChange,
 }: DialerScriptPanelProps) {
+  const coversRaw = discoveryNotes.q2_covers || "";
+  const coversWeek = parseCoversInput(coversRaw);
+  const projections = useMemo(
+    () =>
+      computeCoverProjections(
+        coversWeek,
+        script?.cardSummary?.reviews ?? script?.projectionHints?.reviews
+      ),
+    [coversWeek, script?.cardSummary?.reviews, script?.projectionHints?.reviews]
+  );
+
+  const templateVars = useMemo(
+    () => ({
+      potentialMonthly: projections?.potentialMonthly,
+      yearReviews: projections?.yearReviews,
+      twoWeekPotential: projections?.twoWeekPotential,
+      nome: discoveryNotes.name_role?.split(/[,\s]/)[0] || "…",
+    }),
+    [projections, discoveryNotes.name_role]
+  );
+
   if (isLoading) {
     return (
       <div className="flex h-40 items-center justify-center text-gray-500">
@@ -46,13 +72,18 @@ export function DialerScriptPanel({
     );
   }
 
+  const valueLines =
+    script.valueBlock?.lines?.map((l) => fillScriptTemplate(l, templateVars)) ||
+    (script.value ? [script.value] : []);
+  const trialSteps = script.trialBlock?.steps || [];
+
   return (
     <ol className="space-y-4">
       <ScriptBlock step="1" title="Apertura" hint="Stop. Ascolta.">
         {script.opening}
       </ScriptBlock>
 
-      <ScriptBlock step="2" title="Hook (se sì)" hint="Vicino + numeri + Q1">
+      <ScriptBlock step="2" title="Hook (se sì)" hint="Maps + keyword + Q1">
         {script.hook}
       </ScriptBlock>
 
@@ -61,43 +92,136 @@ export function DialerScriptPanel({
           3 · Qualificazione (una alla volta)
         </p>
         <p className="mt-1 text-[11px] text-amber-700/80">
-          Se c’è un dato Maps noto, confirmalo — non chiedere a vuoto. Note sotto ogni Q.
+          Inserisci i coperti/settimana: sblocca value, trial e calcoli al 10%.
         </p>
         <ul className="mt-3 space-y-3">
-          {(script.discovery || []).map((q, i) => (
-            <li key={q.id} className="rounded-md border border-amber-100 bg-white/90 px-3 py-2.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-[11px] font-semibold text-amber-700">
-                  Q{i + 1} · {q.label}
-                  {q.mode === "confirm" ? " · conferma" : ""}
-                </p>
-                {q.knownFact ? (
-                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
-                    {q.knownFact}
-                  </span>
+          {(script.discovery || []).map((q, i) => {
+            const isCovers = q.drivesProjections || q.id === "q2_covers";
+            const paperFollow =
+              q.followUpIfPaper && projections
+                ? fillScriptTemplate(q.followUpIfPaper, templateVars)
+                : q.followUpIfPaper
+                  ? q.followUpIfPaper.replace(
+                      /\{\{potentialMonthly\}\}/g,
+                      "… (inserisci coperti)"
+                    )
+                  : null;
+
+            return (
+              <li
+                key={q.id}
+                className={`rounded-md border px-3 py-2.5 ${
+                  isCovers
+                    ? "border-amber-300 bg-white ring-1 ring-amber-200"
+                    : "border-amber-100 bg-white/90"
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[11px] font-semibold text-amber-700">
+                    Q{i + 1} · {q.label}
+                  </p>
+                  {q.knownFact ? (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+                      {q.knownFact}
+                    </span>
+                  ) : null}
+                  {isCovers ? (
+                    <span className="rounded bg-gray-900 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                      sblocca script
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
+                {paperFollow ? (
+                  <p className="mt-1.5 text-sm leading-relaxed text-amber-900/90">
+                    {paperFollow}
+                  </p>
                 ) : null}
-              </div>
-              <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
-              <input
-                type="text"
-                value={discoveryNotes[q.id] || ""}
-                onChange={(e) => onDiscoveryNoteChange(q.id, e.target.value)}
-                placeholder="Risposta / nota…"
-                className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-              />
-            </li>
-          ))}
+                <input
+                  type={q.inputType === "number" ? "number" : "text"}
+                  inputMode={q.inputType === "number" ? "numeric" : undefined}
+                  min={q.inputType === "number" ? 1 : undefined}
+                  value={discoveryNotes[q.id] || ""}
+                  onChange={(e) => onDiscoveryNoteChange(q.id, e.target.value)}
+                  placeholder={q.placeholder || "Risposta / nota…"}
+                  className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+              </li>
+            );
+          })}
         </ul>
+
+        {projections ? (
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <ProjChip label="Coperti/mese" value={`~${projections.coversMonthly}`} />
+            <ProjChip label="Potenziale rec/mese" value={`~${projections.potentialMonthly}`} />
+            <ProjChip label="Tra 1 anno" value={`~${projections.yearReviews} rec`} />
+            <ProjChip label="In 2 settimane" value={`~${projections.twoWeekPotential}`} />
+          </div>
+        ) : (
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-amber-800/80">
+            <Lock className="h-3.5 w-3.5" />
+            Value e trial compaiono dopo i coperti/settimana.
+          </p>
+        )}
       </div>
 
-      <ScriptBlock step="4" title="Value" hint="Solo dopo discovery">
-        {script.value}
-      </ScriptBlock>
+      {projections ? (
+        <>
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-3">
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                4 · Value
+              </p>
+              <p className="text-[11px] text-gray-400">Dopo i coperti</p>
+            </div>
+            <div className="space-y-2">
+              {valueLines.map((line, idx) => (
+                <p key={idx} className="text-[15px] leading-relaxed text-gray-900">
+                  {line}
+                </p>
+              ))}
+            </div>
+          </div>
 
-      <ScriptBlock step="5" title="Trial" hint="Solo se DM / influente">
-        {script.trial}
-      </ScriptBlock>
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-3">
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                5 · Trial
+              </p>
+              <p className="text-[11px] text-gray-400">Step by step</p>
+            </div>
+            <ol className="space-y-3">
+              {trialSteps.map((step, idx) => (
+                <li key={step.id} className="border-l-2 border-gray-200 pl-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                    {idx + 1}. {step.title}
+                  </p>
+                  <p className="mt-0.5 text-[15px] leading-relaxed text-gray-900">
+                    {fillScriptTemplate(step.line, templateVars)}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-6 text-center text-sm text-gray-500">
+          <Lock className="mx-auto mb-2 h-4 w-4 text-gray-400" />
+          Inserisci i <span className="font-medium text-gray-700">coperti/settimana</span> in Q2
+          per calcolare value e trial.
+        </div>
+      )}
     </ol>
+  );
+}
+
+function ProjChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-amber-200 bg-white px-2.5 py-2">
+      <p className="text-[10px] uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-sm font-semibold text-gray-900">{value}</p>
+    </div>
   );
 }
 
@@ -105,35 +229,53 @@ type QuickSheetMode = "busy" | "gate" | "objection" | null;
 
 interface DialerScriptQuickBarProps {
   script: ColdCallScript;
+  discoveryNotes?: DiscoveryNotes;
 }
 
 function objectionLabel(obj: ColdCallObjection): string {
   return obj.short || obj.trigger;
 }
 
-export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
+export function DialerScriptQuickBar({
+  script,
+  discoveryNotes = {},
+}: DialerScriptQuickBarProps) {
   const [sheetMode, setSheetMode] = useState<QuickSheetMode>(null);
   const [objectionIdx, setObjectionIdx] = useState<number | null>(null);
+  const [branchId, setBranchId] = useState<string | null>(null);
 
   const closeSheet = useCallback(() => {
     setSheetMode(null);
     setObjectionIdx(null);
+    setBranchId(null);
   }, []);
 
-  // Reset pannello quando cambia contatto/script
   useEffect(() => {
     closeSheet();
   }, [script.contactId, closeSheet]);
 
   const objections = script.objections || [];
+  const coversWeek = parseCoversInput(discoveryNotes.q2_covers || "");
+  const projections = computeCoverProjections(
+    coversWeek,
+    script.cardSummary?.reviews ?? script.projectionHints?.reviews
+  );
+  const templateVars = {
+    potentialMonthly: projections?.potentialMonthly ?? "…",
+    yearReviews: projections?.yearReviews ?? "…",
+    twoWeekPotential: projections?.twoWeekPotential ?? "…",
+    nome: discoveryNotes.name_role?.split(/[,\s]/)[0] || "…",
+  };
 
   const openBusy = () => {
     setObjectionIdx(null);
+    setBranchId(null);
     setSheetMode((m) => (m === "busy" ? null : "busy"));
   };
 
   const openGate = () => {
     setObjectionIdx(null);
+    setBranchId(null);
     setSheetMode((m) => (m === "gate" ? null : "gate"));
   };
 
@@ -143,6 +285,7 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
       return;
     }
     setObjectionIdx(idx);
+    setBranchId(null);
     setSheetMode("objection");
   };
 
@@ -152,7 +295,6 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
         closeSheet();
         return;
       }
-      // Tasti 1–9: obiezione diretta (solo se non stai interagendo con form/UI)
       if (e.key >= "1" && e.key <= "9" && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const target = e.target as HTMLElement | null;
         if (
@@ -166,6 +308,7 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
         if (idx < objections.length) {
           e.preventDefault();
           setObjectionIdx(idx);
+          setBranchId(null);
           setSheetMode("objection");
         }
       }
@@ -176,13 +319,26 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
 
   const activeObjection =
     sheetMode === "objection" && objectionIdx != null ? objections[objectionIdx] : null;
+  const activeBranch =
+    activeObjection?.branches?.find((b) => b.id === branchId) || null;
 
   const sheetTitle = useMemo(() => {
     if (sheetMode === "busy") return "Busy / in servizio";
     if (sheetMode === "gate") return "Gatekeeper";
+    if (activeBranch) return activeBranch.label;
     if (activeObjection) return activeObjection.trigger;
     return "";
-  }, [sheetMode, activeObjection]);
+  }, [sheetMode, activeObjection, activeBranch]);
+
+  const sheetBody = useMemo(() => {
+    if (sheetMode === "busy") return script.busy;
+    if (sheetMode === "gate") return script.gate;
+    if (activeBranch) {
+      return fillScriptTemplate(activeBranch.line, templateVars);
+    }
+    if (activeObjection) return fillScriptTemplate(activeObjection.line, templateVars);
+    return "";
+  }, [sheetMode, script.busy, script.gate, activeObjection, activeBranch, templateVars]);
 
   return (
     <div className="relative shrink-0 border-t border-gray-200 bg-white">
@@ -212,15 +368,31 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
               </button>
             </div>
 
-            <div className="px-4 py-3">
-              {sheetMode === "busy" && (
-                <p className="text-[15px] leading-relaxed text-gray-900">{script.busy}</p>
+            <div className="space-y-3 px-4 py-3">
+              <p className="text-lg leading-relaxed text-gray-900">{sheetBody}</p>
+              {activeObjection?.branches && activeObjection.branches.length > 0 && !activeBranch && (
+                <div className="flex flex-wrap gap-2">
+                  {activeObjection.branches.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setBranchId(b.id)}
+                      className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-gray-800 hover:bg-gray-100"
+                    >
+                      {b.label}
+                      {b.needsCovers && !projections ? " (serve coperti)" : ""}
+                    </button>
+                  ))}
+                </div>
               )}
-              {sheetMode === "gate" && (
-                <p className="text-[15px] leading-relaxed text-gray-900">{script.gate}</p>
-              )}
-              {sheetMode === "objection" && activeObjection && (
-                <p className="text-lg leading-relaxed text-gray-900">{activeObjection.line}</p>
+              {activeBranch && (
+                <button
+                  type="button"
+                  onClick={() => setBranchId(null)}
+                  className="text-xs font-medium text-blue-700 hover:underline"
+                >
+                  ← Torna all’obiezione
+                </button>
               )}
             </div>
           </div>
@@ -319,6 +491,14 @@ export function formatDialerNotes(
     for (const q of answered) {
       lines.push(`- ${q.label}: ${discoveryNotes[q.id].trim()}`);
     }
+  }
+  const covers = parseCoversInput(discoveryNotes.q2_covers || "");
+  const proj = computeCoverProjections(covers, null);
+  if (proj) {
+    lines.push("");
+    lines.push(
+      `Proiezioni: ~${proj.potentialMonthly} rec/mese (10% di ~${proj.coversMonthly} coperti/mese); anno ~${proj.yearReviews}`
+    );
   }
   const free = freeNotes.trim();
   if (free) {

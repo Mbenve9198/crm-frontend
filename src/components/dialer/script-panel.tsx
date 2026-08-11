@@ -176,10 +176,6 @@ export function DialerScriptPanel({
                       "… (inserisci coperti)"
                     )
                   : null;
-            const decisionPartner =
-              q.id === "q1b_decision" &&
-              (selectedChoice === "with_partner" || selectedChoice === "other");
-
             return (
               <li
                 key={q.id}
@@ -229,12 +225,6 @@ export function DialerScriptPanel({
                       </button>
                     ))}
                   </div>
-                ) : null}
-
-                {decisionPartner ? (
-                  <p className="mt-2 text-xs text-amber-800">
-                    → Usa l’obiezione «Devo parlarne col socio» se prova a scaricare la decisione.
-                  </p>
                 ) : null}
 
                 {isMenu && selectedChoice === "cartaceo" && paperFollow ? (

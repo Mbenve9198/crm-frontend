@@ -24,7 +24,6 @@ import {
   resolveDialerCardView,
 } from "@/types/dialer";
 import { Call } from "@/types/call";
-import { ContactStatus } from "@/types/contact";
 import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
 import {
@@ -234,7 +233,11 @@ export default function DialerPage() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={setStatusFilter}
+                  disabled={callOpen}
+                >
                   <SelectTrigger className="w-[200px] bg-white">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -255,7 +258,12 @@ export default function DialerPage() {
                   />
                   Avanza dopo chiamata
                 </label>
-                <Button variant="outline" size="sm" onClick={loadQueue} disabled={queueLoading}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadQueue}
+                  disabled={queueLoading || callOpen}
+                >
                   <RefreshCw className={`mr-1.5 h-4 w-4 ${queueLoading ? "animate-spin" : ""}`} />
                   Aggiorna
                 </Button>

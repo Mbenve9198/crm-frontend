@@ -120,6 +120,11 @@ export function DialerScriptQuickBar({ script }: DialerScriptQuickBarProps) {
     setObjectionIdx(null);
   }, []);
 
+  // Reset pannello quando cambia contatto/script
+  useEffect(() => {
+    closeSheet();
+  }, [script.contactId, closeSheet]);
+
   const objections = script.objections || [];
 
   const openBusy = () => {

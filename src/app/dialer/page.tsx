@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
-import { CallDialog } from "@/components/ui/call-dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -16,29 +15,22 @@ import {
 import { DialerQueueList } from "@/components/dialer/queue-list";
 import { VisibilityCardSummary } from "@/components/dialer/visibility-card-summary";
 import { DialerScriptPanel } from "@/components/dialer/script-panel";
+import { DialerCallDock } from "@/components/dialer/call-dock";
 import { getColdCallScript, getDialerQueue } from "@/lib/dialer-api";
 import {
   ColdCallScript,
   DIALER_DEFAULT_LIST,
   DialerContact,
+  canUseDialer,
   resolveDialerCardView,
 } from "@/types/dialer";
-import { Call } from "@/types/call";
 import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
-import {
-  Headphones,
-  Loader2,
-  Phone,
-  RefreshCw,
-  SkipForward,
-} from "lucide-react";
-
-const DIALER_ROLES = new Set(["agent", "manager", "admin"]);
+import { Headphones, Loader2, MapPin, RefreshCw } from "lucide-react";
 
 export default function DialerPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const canUseDialer = !!user && DIALER_ROLES.has(user.role);
+  const dialerOk = canUseDialer(user?.role);
 
   const [statusFilter, setStatusFilter] = useState("da contattare");
   const [contacts, setContacts] = useState<DialerContact[]>([]);
@@ -52,8 +44,7 @@ export default function DialerPage() {
   const [scriptError, setScriptError] = useState<string | null>(null);
   const scriptRequestId = useRef(0);
 
-  const [callOpen, setCallOpen] = useState(false);
-  const [autoAdvance, setAutoAdvance] = useState(true);
+  const [callActive, setCallActive] = useState(false);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c._id === selectedId) || null,
@@ -123,8 +114,8 @@ export default function DialerPage() {
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && canUseDialer) loadQueue();
-  }, [isAuthenticated, canUseDialer, loadQueue]);
+    if (isAuthenticated && dialerOk) loadQueue();
+  }, [isAuthenticated, dialerOk, loadQueue]);
 
   useEffect(() => {
     if (selectedId) loadScript(selectedId);
@@ -135,14 +126,14 @@ export default function DialerPage() {
   }, [selectedId, loadScript]);
 
   const selectContact = (contact: DialerContact) => {
-    if (callOpen) return;
+    if (callActive) return;
     setSelectedId(contact._id);
   };
 
   const advanceToNext = useCallback(() => {
     if (!selectedId || contacts.length === 0) return;
     if (contacts.length === 1) {
-      toast.message("Fine coda", { description: "Nessun altro contatto da chiamare." });
+      toast.message("Fine coda", { description: "Nessun altro contatto." });
       return;
     }
     const idx = contacts.findIndex((c) => c._id === selectedId);
@@ -150,26 +141,23 @@ export default function DialerPage() {
     setSelectedId(contacts[nextIdx]._id);
   }, [contacts, selectedId]);
 
-  const handleCallComplete = async (_call: Call) => {
-    setCallOpen(false);
+  const handleSkip = () => {
+    if (callActive) return;
+    advanceToNext();
+  };
+
+  const handleCallComplete = async () => {
+    setCallActive(false);
     const currentId = selectedId;
     let preferredNext: string | null = null;
-    if (autoAdvance && currentId && contacts.length > 0) {
+    if (currentId && contacts.length > 0) {
       const idx = contacts.findIndex((c) => c._id === currentId);
       const withoutCurrent = contacts.filter((c) => c._id !== currentId);
       preferredNext =
-        withoutCurrent[idx] ? withoutCurrent[idx]._id : withoutCurrent[0]?._id || null;
+        withoutCurrent[idx]?._id || withoutCurrent[0]?._id || null;
     }
     await loadQueue();
     if (preferredNext) setSelectedId(preferredNext);
-  };
-
-  const handleChiama = () => {
-    if (!selectedContact?.phone) {
-      toast.error("Questo contatto non ha un numero di telefono");
-      return;
-    }
-    setCallOpen(true);
   };
 
   if (authLoading) {
@@ -191,7 +179,7 @@ export default function DialerPage() {
     );
   }
 
-  if (!canUseDialer) {
+  if (!dialerOk) {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernSidebar />
@@ -215,20 +203,24 @@ export default function DialerPage() {
       .map((s) => ({ value: s, label: getStatusLabel(s) })),
   ];
 
+  const mapsUrl = cardSummary?.placeId
+    ? `https://www.google.com/maps/place/?q=place_id:${cardSummary.placeId}`
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <ModernSidebar />
       <main className="pl-16">
         <div className="flex h-screen flex-col">
-          <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h1 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
+                <h1 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
                   <Headphones className="h-5 w-5 text-blue-600" />
                   Power Dialer
                 </h1>
-                <p className="mt-0.5 text-sm text-gray-500">
-                  Lista: {DIALER_DEFAULT_LIST}
+                <p className="text-xs text-gray-500">
+                  {DIALER_DEFAULT_LIST}
                   {user ? ` · ${user.firstName}` : ""}
                 </p>
               </div>
@@ -236,9 +228,9 @@ export default function DialerPage() {
                 <Select
                   value={statusFilter}
                   onValueChange={setStatusFilter}
-                  disabled={callOpen}
+                  disabled={callActive}
                 >
-                  <SelectTrigger className="w-[200px] bg-white">
+                  <SelectTrigger className="w-[180px] bg-white h-9">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,20 +241,11 @@ export default function DialerPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <label className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={autoAdvance}
-                    onChange={(e) => setAutoAdvance(e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  Avanza dopo chiamata
-                </label>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={loadQueue}
-                  disabled={queueLoading || callOpen}
+                  disabled={queueLoading || callActive}
                 >
                   <RefreshCw className={`mr-1.5 h-4 w-4 ${queueLoading ? "animate-spin" : ""}`} />
                   Aggiorna
@@ -272,7 +255,7 @@ export default function DialerPage() {
           </div>
 
           {queueError && (
-            <div className="shrink-0 px-6 pt-4">
+            <div className="shrink-0 px-4 pt-3">
               <Alert variant="destructive" className="bg-white">
                 <AlertTitle>Errore coda</AlertTitle>
                 <AlertDescription>{queueError}</AlertDescription>
@@ -280,104 +263,96 @@ export default function DialerPage() {
             </div>
           )}
 
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 lg:grid-cols-[280px_1fr_360px]">
-            <section className="flex min-h-0 flex-col border-r border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Coda
+          {/* Layout: coda | script (hero) | scheda compatta */}
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+            <section className="flex min-h-0 flex-col border-r border-gray-200 bg-white p-3">
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Coda · {total}
               </h2>
               <DialerQueueList
                 contacts={contacts}
                 selectedId={selectedId}
                 isLoading={queueLoading}
                 total={total}
-                disabled={callOpen}
+                disabled={callActive}
                 onSelect={selectContact}
               />
             </section>
 
-            <section className="flex min-h-0 flex-col overflow-y-auto p-6">
-              {!selectedContact ? (
-                <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white text-sm text-gray-500">
-                  {queueLoading
-                    ? "Caricamento coda…"
-                    : contacts.length === 0
-                      ? "Nessun contatto in coda per i filtri selezionati."
-                      : "Seleziona un contatto dalla coda per iniziare."}
-                </div>
-              ) : (
-                <div className="mx-auto w-full max-w-xl space-y-5">
-                  <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
+            <section className="flex min-h-0 flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                {!selectedContact ? (
+                  <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white text-sm text-gray-500">
+                    {queueLoading
+                      ? "Caricamento…"
+                      : contacts.length === 0
+                        ? "Nessun contatto in coda."
+                        : "Seleziona un contatto."}
+                  </div>
+                ) : (
+                  <div className="mx-auto max-w-2xl space-y-3">
+                    <div className="flex flex-wrap items-end justify-between gap-2">
                       <div>
                         <h2 className="text-xl font-semibold text-gray-900">
                           {selectedContact.name}
                         </h2>
-                        <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-500">
-                          <Phone className="h-4 w-4" />
-                          {selectedContact.phone || "Nessun numero"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-400">
+                        <p className="text-sm text-gray-500">
                           {getStatusLabel(selectedContact.status)}
-                          {selectedContact.owner
-                            ? ` · ${selectedContact.owner.firstName} ${selectedContact.owner.lastName}`
-                            : ""}
+                          {cardSummary?.city ? ` · ${cardSummary.city}` : ""}
+                          {cardSummary?.category ? ` · ${cardSummary.category}` : ""}
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleChiama} disabled={!selectedContact.phone || callOpen}>
-                          <Phone className="mr-1.5 h-4 w-4" />
-                          Chiama
-                        </Button>
-                        <Button variant="outline" onClick={advanceToNext} disabled={callOpen}>
-                          <SkipForward className="mr-1.5 h-4 w-4" />
-                          Salta
-                        </Button>
-                      </div>
+                      {mapsUrl && (
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:underline"
+                        >
+                          <MapPin className="h-3.5 w-3.5" />
+                          Maps
+                        </a>
+                      )}
                     </div>
-                  </div>
-
-                  <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <h3 className="mb-3 text-sm font-semibold text-gray-900">
-                      Scheda visibilità
-                    </h3>
-                    <VisibilityCardSummary
-                      summary={cardSummary}
-                      hasVisibilityCard={hasVisibilityCard}
+                    <DialerScriptPanel
+                      script={script}
+                      isLoading={scriptLoading}
+                      error={scriptError}
                     />
                   </div>
-                </div>
+                )}
+              </div>
+
+              {selectedContact && (
+                <DialerCallDock
+                  contact={selectedContact}
+                  disabled={queueLoading}
+                  onSkip={handleSkip}
+                  onComplete={handleCallComplete}
+                  onBusyChange={setCallActive}
+                />
               )}
             </section>
 
-            <section className="flex min-h-0 flex-col border-l border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                Script cold call
+            <section className="hidden min-h-0 flex-col border-l border-gray-200 bg-white p-3 lg:flex">
+              <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                Scheda (slot script)
               </h2>
               <div className="min-h-0 flex-1 overflow-y-auto">
-                <DialerScriptPanel
-                  script={script}
-                  isLoading={scriptLoading}
-                  error={scriptError}
+                <VisibilityCardSummary
+                  summary={cardSummary}
+                  hasVisibilityCard={hasVisibilityCard}
                 />
+                <p className="mt-4 text-[11px] leading-relaxed text-gray-400">
+                  La scheda riempie apertura/hook: nome locale, cliente vicino + distanza,
+                  rating/recensioni, keyword e rank Maps. Le domande di qualificazione sono
+                  nello script (step 3).
+                </p>
               </div>
             </section>
           </div>
         </div>
       </main>
-
-      {selectedContact && (
-        <CallDialog
-          contact={{
-            _id: selectedContact._id,
-            name: selectedContact.name,
-            phone: selectedContact.phone,
-          }}
-          trigger={<span className="hidden" />}
-          open={callOpen}
-          onOpenChange={setCallOpen}
-          onCallComplete={handleCallComplete}
-        />
-      )}
     </div>
   );
 }

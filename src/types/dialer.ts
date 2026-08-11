@@ -2,6 +2,12 @@ import { Contact, ContactStatus } from '@/types/contact';
 
 export const DIALER_DEFAULT_LIST = 'Cold Call - Vicini Clienti';
 
+export const DIALER_ROLES = ['agent', 'manager', 'admin'] as const;
+
+export function canUseDialer(role?: string | null): boolean {
+  return !!role && (DIALER_ROLES as readonly string[]).includes(role);
+}
+
 export type DialerCompetitorAhead = {
   name: string;
   rank?: number | null;
@@ -70,11 +76,19 @@ export type ColdCallObjection = {
   line: string;
 };
 
+export type ColdCallDiscoveryQuestion = {
+  id: string;
+  label: string;
+  line: string;
+};
+
 export type ColdCallScript = {
   contactId: string;
   contactName: string;
   opening: string;
   hook: string;
+  discovery: ColdCallDiscoveryQuestion[];
+  value: string;
   busy: string;
   gate: string;
   trial: string;

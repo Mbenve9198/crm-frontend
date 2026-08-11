@@ -47,14 +47,14 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       onClick: () => onListSelect?.(null),
     },
     ...((user?.role === "agent" || user?.role === "manager" || user?.role === "admin")
-      ? [
+      ? ([
           {
             icon: PhoneCall,
             label: "Dialer",
             active: pathname === "/dialer",
             href: "/dialer",
-          } as const,
-        ]
+          },
+        ] as const)
       : []),
     ...(user?.role === "admin"
       ? [

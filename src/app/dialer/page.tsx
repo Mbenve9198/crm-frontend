@@ -37,8 +37,11 @@ export default function DialerPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const dialerOk = canUseDialer(user?.role);
 
-  const [statusFilter, setStatusFilter] = useState("da contattare");
+  /** actionable = da contattare + da richiamare (coda power di default). */
+  const [statusFilter, setStatusFilter] = useState("actionable");
   const [cityFilter, setCityFilter] = useState("all");
+  /** mine = solo assegnati a me (default); all = tutti (solo manager/admin). */
+  const [ownerFilter, setOwnerFilter] = useState<"mine" | "all">("mine");
   const [cities, setCities] = useState<DialerCityFacet[]>([]);
   const [contacts, setContacts] = useState<DialerContact[]>([]);
   const [total, setTotal] = useState(0);
@@ -67,6 +70,8 @@ export default function DialerPage() {
     script
   );
 
+  const canSeeAllOwners = user?.role === "manager" || user?.role === "admin";
+
   const loadQueue = useCallback(async (): Promise<DialerContact[]> => {
     setQueueLoading(true);
     setQueueError(null);
@@ -75,6 +80,10 @@ export default function DialerPage() {
         list: DIALER_DEFAULT_LIST,
         status: statusFilter,
         city: cityFilter === "all" ? undefined : cityFilter,
+        owner:
+          canSeeAllOwners && ownerFilter === "all"
+            ? "all"
+            : user?._id || undefined,
         limit: 100,
         offset: 0,
       });
@@ -107,7 +116,7 @@ export default function DialerPage() {
     } finally {
       setQueueLoading(false);
     }
-  }, [statusFilter, cityFilter]);
+  }, [statusFilter, cityFilter, ownerFilter, canSeeAllOwners, user?._id]);
 
   const loadScript = useCallback(async (contactId: string) => {
     const reqId = ++scriptRequestId.current;
@@ -269,10 +278,12 @@ export default function DialerPage() {
   }
 
   const statusOptions = [
-    { value: "da contattare", label: "Da contattare" },
+    { value: "actionable", label: "Da contattare + da richiamare" },
+    { value: "da contattare", label: "Solo da contattare" },
+    { value: "da richiamare", label: "Solo da richiamare" },
     { value: "all", label: "Tutti gli status" },
     ...getAllStatuses()
-      .filter((s) => s !== "da contattare")
+      .filter((s) => s !== "da contattare" && s !== "da richiamare")
       .map((s) => ({ value: s, label: getStatusLabel(s) })),
   ];
 
@@ -295,10 +306,28 @@ export default function DialerPage() {
                 <p className="text-xs text-gray-500">
                   {DIALER_DEFAULT_LIST}
                   {user ? ` · ${user.firstName}` : ""}
+                  {ownerFilter === "mine" ? " · solo i tuoi" : " · tutti gli owner"}
                   {powerSession ? " · sessione attiva (auto-dial)" : ""}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {canSeeAllOwners && (
+                  <Select
+                    value={ownerFilter}
+                    onValueChange={(v) => setOwnerFilter(v as "mine" | "all")}
+                    disabled={callActive || powerSession}
+                  >
+                    <SelectTrigger className="w-[150px] bg-white h-9">
+                      <SelectValue placeholder="Assegnazione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mine">
+                        Solo i miei{user?.firstName ? ` (${user.firstName})` : ""}
+                      </SelectItem>
+                      <SelectItem value="all">Tutti gli assegnati</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <Select
                   value={statusFilter}
                   onValueChange={(v) => {
@@ -307,7 +336,7 @@ export default function DialerPage() {
                   }}
                   disabled={callActive || powerSession}
                 >
-                  <SelectTrigger className="w-[180px] bg-white h-9">
+                  <SelectTrigger className="w-[220px] bg-white h-9">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>

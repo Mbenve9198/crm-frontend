@@ -17,6 +17,7 @@ interface DialerScriptPanelProps {
   error: string | null;
   discoveryNotes: DiscoveryNotes;
   onDiscoveryNoteChange: (questionId: string, value: string) => void;
+  agentName?: string | null;
 }
 
 export function DialerScriptPanel({
@@ -25,7 +26,16 @@ export function DialerScriptPanel({
   error,
   discoveryNotes,
   onDiscoveryNoteChange,
+  agentName,
 }: DialerScriptPanelProps) {
+  const [earlyObjId, setEarlyObjId] = useState<string | null>(null);
+  const [inlineObjectionId, setInlineObjectionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEarlyObjId(null);
+    setInlineObjectionId(null);
+  }, [script?.contactId]);
+
   const coversRaw = discoveryNotes.q2_covers || "";
   const coversWeek = parseCoversInput(coversRaw);
   const projections = useMemo(
@@ -37,14 +47,17 @@ export function DialerScriptPanel({
     [coversWeek, script?.cardSummary?.reviews, script?.projectionHints?.reviews]
   );
 
+  const resolvedAgent =
+    agentName || script?.agentName || "…";
+
   const templateVars = useMemo(
     () => ({
       potentialMonthly: projections?.potentialMonthly,
       yearReviews: projections?.yearReviews,
       twoWeekPotential: projections?.twoWeekPotential,
-      nome: discoveryNotes.name_role?.split(/[,\s]/)[0] || "…",
+      agentName: resolvedAgent,
     }),
-    [projections, discoveryNotes.name_role]
+    [projections, resolvedAgent]
   );
 
   if (isLoading) {
@@ -76,16 +89,70 @@ export function DialerScriptPanel({
     script.valueBlock?.lines?.map((l) => fillScriptTemplate(l, templateVars)) ||
     (script.value ? [script.value] : []);
   const trialSteps = script.trialBlock?.steps || [];
+  const earlyObjections =
+    script.earlyObjections ||
+    [
+      script.busy
+        ? { id: "busy", short: "Occupato", trigger: "Occupato", line: script.busy }
+        : null,
+      script.gate
+        ? { id: "gate", short: "Non è lui", trigger: "Non è lui", line: script.gate }
+        : null,
+    ].filter(Boolean) as ColdCallObjection[];
+
+  const activeEarly = earlyObjections.find((o) => o.id === earlyObjId) || null;
+  const noDigitalObj =
+    (script.objections || []).find((o) => o.id === "no_digital") || null;
+  const showNoDigital =
+    inlineObjectionId === "no_digital" ||
+    discoveryNotes.q3_menu_follow === "no";
+
+  const openingText = fillScriptTemplate(script.opening, templateVars);
 
   return (
     <ol className="space-y-4">
-      <ScriptBlock step="1" title="Apertura" hint="Stop. Ascolta.">
-        {script.opening}
+      <ScriptBlock step="1" title="Apertura" hint="Nome agente">
+        {openingText}
       </ScriptBlock>
 
-      <ScriptBlock step="2" title="Hook (se sì)" hint="Maps + keyword + Q1">
-        {script.hook}
-      </ScriptBlock>
+      <div className="rounded-lg border border-gray-200 bg-white px-3 py-3">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            2 · Hook (se sì)
+          </p>
+          <p className="text-[11px] text-gray-400">Maps + keyword + Q1</p>
+        </div>
+        <p className="text-[15px] leading-relaxed text-gray-900">{script.hook}</p>
+
+        <div className="mt-3 border-t border-gray-100 pt-3">
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            Se interrompe qui
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {earlyObjections.map((obj) => (
+              <button
+                key={obj.id}
+                type="button"
+                onClick={() =>
+                  setEarlyObjId((prev) => (prev === obj.id ? null : obj.id || null))
+                }
+                className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+                  earlyObjId === obj.id
+                    ? "bg-gray-900 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {obj.short || obj.trigger}
+              </button>
+            ))}
+          </div>
+          {activeEarly ? (
+            <p className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-relaxed text-gray-900">
+              {fillScriptTemplate(activeEarly.line, templateVars)}
+            </p>
+          ) : null}
+        </div>
+      </div>
 
       <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
@@ -97,6 +164,8 @@ export function DialerScriptPanel({
         <ul className="mt-3 space-y-3">
           {(script.discovery || []).map((q, i) => {
             const isCovers = q.drivesProjections || q.id === "q2_covers";
+            const isMenu = q.id === "q3_menu";
+            const menuChoice = discoveryNotes.q3_menu || "";
             const paperFollow =
               q.followUpIfPaper && projections
                 ? fillScriptTemplate(q.followUpIfPaper, templateVars)
@@ -132,20 +201,95 @@ export function DialerScriptPanel({
                   ) : null}
                 </div>
                 <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
-                {paperFollow ? (
-                  <p className="mt-1.5 text-sm leading-relaxed text-amber-900/90">
-                    {paperFollow}
-                  </p>
+
+                {isMenu && q.choiceOptions?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {q.choiceOptions.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          onDiscoveryNoteChange("q3_menu", opt.id);
+                          if (opt.id !== "cartaceo") {
+                            onDiscoveryNoteChange("q3_menu_follow", "");
+                            setInlineObjectionId(null);
+                          }
+                        }}
+                        className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                          menuChoice === opt.id
+                            ? "bg-gray-900 text-white"
+                            : "bg-white text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 ) : null}
-                <input
-                  type={q.inputType === "number" ? "number" : "text"}
-                  inputMode={q.inputType === "number" ? "numeric" : undefined}
-                  min={q.inputType === "number" ? 1 : undefined}
-                  value={discoveryNotes[q.id] || ""}
-                  onChange={(e) => onDiscoveryNoteChange(q.id, e.target.value)}
-                  placeholder={q.placeholder || "Risposta / nota…"}
-                  className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
-                />
+
+                {isMenu && menuChoice === "cartaceo" && paperFollow ? (
+                  <div className="mt-2 space-y-2 rounded-md border border-amber-200 bg-amber-50/80 px-2.5 py-2">
+                    <p className="text-sm leading-relaxed text-amber-950">{paperFollow}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(q.followUpChoices || [
+                        { id: "si", label: "Sì" },
+                        { id: "no", label: "No", opensObjection: "no_digital" },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            onDiscoveryNoteChange("q3_menu_follow", opt.id);
+                            if (opt.opensObjection === "no_digital" || opt.id === "no") {
+                              setInlineObjectionId("no_digital");
+                            } else {
+                              setInlineObjectionId(null);
+                            }
+                          }}
+                          className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                            discoveryNotes.q3_menu_follow === opt.id
+                              ? "bg-gray-900 text-white"
+                              : "bg-white text-gray-800 ring-1 ring-gray-200 hover:bg-gray-50"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {isMenu && showNoDigital && noDigitalObj ? (
+                  <div className="mt-2 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+                      Obiezione · {noDigitalObj.short || noDigitalObj.trigger}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-rose-950">
+                      {noDigitalObj.line}
+                    </p>
+                    {noDigitalObj.branches?.length ? (
+                      <div className="mt-2 space-y-1.5">
+                        {noDigitalObj.branches.map((b) => (
+                          <p key={b.id} className="text-xs text-rose-900/90">
+                            <span className="font-semibold">{b.label}:</span> {b.line}
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {!isMenu ? (
+                  <input
+                    type={q.inputType === "number" ? "number" : "text"}
+                    inputMode={q.inputType === "number" ? "numeric" : undefined}
+                    min={q.inputType === "number" ? 1 : undefined}
+                    value={discoveryNotes[q.id] || ""}
+                    onChange={(e) => onDiscoveryNoteChange(q.id, e.target.value)}
+                    placeholder={q.placeholder || "Risposta / nota…"}
+                    className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                ) : null}
               </li>
             );
           })}
@@ -225,11 +369,12 @@ function ProjChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-type QuickSheetMode = "busy" | "gate" | "objection" | null;
+type QuickSheetMode = "objection" | null;
 
 interface DialerScriptQuickBarProps {
   script: ColdCallScript;
   discoveryNotes?: DiscoveryNotes;
+  agentName?: string | null;
 }
 
 function objectionLabel(obj: ColdCallObjection): string {
@@ -239,6 +384,7 @@ function objectionLabel(obj: ColdCallObjection): string {
 export function DialerScriptQuickBar({
   script,
   discoveryNotes = {},
+  agentName,
 }: DialerScriptQuickBarProps) {
   const [sheetMode, setSheetMode] = useState<QuickSheetMode>(null);
   const [objectionIdx, setObjectionIdx] = useState<number | null>(null);
@@ -264,19 +410,7 @@ export function DialerScriptQuickBar({
     potentialMonthly: projections?.potentialMonthly ?? "…",
     yearReviews: projections?.yearReviews ?? "…",
     twoWeekPotential: projections?.twoWeekPotential ?? "…",
-    nome: discoveryNotes.name_role?.split(/[,\s]/)[0] || "…",
-  };
-
-  const openBusy = () => {
-    setObjectionIdx(null);
-    setBranchId(null);
-    setSheetMode((m) => (m === "busy" ? null : "busy"));
-  };
-
-  const openGate = () => {
-    setObjectionIdx(null);
-    setBranchId(null);
-    setSheetMode((m) => (m === "gate" ? null : "gate"));
+    agentName: agentName || script.agentName || "…",
   };
 
   const openObjection = (idx: number) => {
@@ -323,22 +457,18 @@ export function DialerScriptQuickBar({
     activeObjection?.branches?.find((b) => b.id === branchId) || null;
 
   const sheetTitle = useMemo(() => {
-    if (sheetMode === "busy") return "Busy / in servizio";
-    if (sheetMode === "gate") return "Gatekeeper";
     if (activeBranch) return activeBranch.label;
-    if (activeObjection) return activeObjection.trigger;
+    if (activeObjection) return activeObjection.short || activeObjection.trigger;
     return "";
-  }, [sheetMode, activeObjection, activeBranch]);
+  }, [activeObjection, activeBranch]);
 
   const sheetBody = useMemo(() => {
-    if (sheetMode === "busy") return script.busy;
-    if (sheetMode === "gate") return script.gate;
     if (activeBranch) {
       return fillScriptTemplate(activeBranch.line, templateVars);
     }
     if (activeObjection) return fillScriptTemplate(activeObjection.line, templateVars);
     return "";
-  }, [sheetMode, script.busy, script.gate, activeObjection, activeBranch, templateVars]);
+  }, [activeObjection, activeBranch, templateVars]);
 
   return (
     <div className="relative shrink-0 border-t border-gray-200 bg-white">
@@ -413,13 +543,6 @@ export function DialerScriptQuickBar({
       <div className="space-y-1.5 px-3 py-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-            Bypass
-          </span>
-          <QuickChip label="Busy" active={sheetMode === "busy"} onClick={openBusy} />
-          <QuickChip label="Gate" active={sheetMode === "gate"} onClick={openGate} />
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="mr-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
             Obiezioni
           </span>
           {objections.length === 0 ? (
@@ -453,7 +576,7 @@ function QuickChip({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex max-w-[11rem] items-center truncate rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+      className={`inline-flex max-w-[14rem] items-center truncate rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
         active
           ? "bg-gray-900 text-white"
           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -502,6 +625,9 @@ export function formatDialerNotes(
     lines.push("Qualificazione:");
     for (const q of answered) {
       lines.push(`- ${q.label}: ${discoveryNotes[q.id].trim()}`);
+      if (q.id === "q3_menu" && discoveryNotes.q3_menu_follow) {
+        lines.push(`  follow-up digitale: ${discoveryNotes.q3_menu_follow}`);
+      }
     }
   }
   const covers = parseCoversInput(discoveryNotes.q2_covers || "");

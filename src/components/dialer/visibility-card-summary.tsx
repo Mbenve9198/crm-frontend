@@ -41,7 +41,11 @@ export function VisibilityCardSummary({
         <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
           <p className="text-[11px] uppercase tracking-wide text-gray-400">Rank</p>
           <p className="mt-0.5 font-medium text-gray-900">
-            {summary?.rank != null ? `#${summary.rank}` : "—"}
+            {summary?.rank != null
+              ? `#${summary.rank}`
+              : summary?.rankKind === "out_of_top"
+                ? "Fuori top 20"
+                : "—"}
           </p>
         </div>
         <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">

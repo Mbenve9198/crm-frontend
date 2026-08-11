@@ -130,10 +130,19 @@ export type ColdCallValueBlock = {
   lines: string[];
 };
 
+export type ColdCallTrialField = {
+  id: string;
+  label: string;
+  placeholder?: string;
+  inputType?: 'text' | 'tel' | 'number';
+};
+
 export type ColdCallTrialStep = {
   id: string;
   title: string;
   line: string;
+  fields?: ColdCallTrialField[];
+  choiceOptions?: ColdCallChoiceOption[];
 };
 
 export type ColdCallTrialBlock = {

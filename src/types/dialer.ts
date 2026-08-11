@@ -72,6 +72,8 @@ export type DialerQueueData = {
 };
 
 export type ColdCallObjection = {
+  id?: string;
+  short?: string;
   trigger: string;
   line: string;
 };
@@ -80,6 +82,8 @@ export type ColdCallDiscoveryQuestion = {
   id: string;
   label: string;
   line: string;
+  mode?: 'ask' | 'confirm';
+  knownFact?: string;
 };
 
 export type ColdCallScript = {

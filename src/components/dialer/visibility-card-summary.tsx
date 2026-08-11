@@ -60,6 +60,14 @@ export function VisibilityCardSummary({
             </span>
           </p>
         </div>
+        {summary?.velocityPerMonth != null && (
+          <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-gray-400">Velocity</p>
+            <p className="mt-0.5 font-medium text-gray-900">
+              {summary.velocityPerMonth} rec/mese
+            </p>
+          </div>
+        )}
         <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
           <p className="text-[11px] uppercase tracking-wide text-gray-400">Competitor avanti</p>
           <p className="mt-0.5 font-medium text-gray-900">

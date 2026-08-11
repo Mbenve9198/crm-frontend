@@ -16,6 +16,7 @@ import { DialerQueueList } from "@/components/dialer/queue-list";
 import { VisibilityCardSummary } from "@/components/dialer/visibility-card-summary";
 import {
   DialerScriptPanel,
+  DialerScriptQuickBar,
   DiscoveryNotes,
 } from "@/components/dialer/script-panel";
 import { DialerCallDock } from "@/components/dialer/call-dock";
@@ -336,6 +337,10 @@ export default function DialerPage() {
                 )}
               </div>
 
+              {selectedContact && script && !scriptLoading && !scriptError && (
+                <DialerScriptQuickBar script={script} />
+              )}
+
               {selectedContact && (
                 <DialerCallDock
                   contact={selectedContact}
@@ -360,9 +365,9 @@ export default function DialerPage() {
                   hasVisibilityCard={hasVisibilityCard}
                 />
                 <p className="mt-4 text-[11px] leading-relaxed text-gray-400">
-                  La scheda riempie apertura/hook: nome locale, cliente vicino + distanza,
-                  rating/recensioni, keyword e rank Maps. Le domande di qualificazione sono
-                  nello script (step 3).
+                  La scheda condiziona apertura/hook/discovery/value: vicino, rating/rec,
+                  velocity/mese, keyword+rank, competitor. In call: barra sotto con Busy/Gate
+                  e obiezioni one-tap (tasti 1–9).
                 </p>
               </div>
             </section>

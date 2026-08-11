@@ -4,15 +4,25 @@ import React, { useState } from "react";
 import { ColdCallScript } from "@/types/dialer";
 import { Loader2 } from "lucide-react";
 
+export type DiscoveryNotes = Record<string, string>;
+
 interface DialerScriptPanelProps {
   script: ColdCallScript | null;
   isLoading: boolean;
   error: string | null;
+  discoveryNotes: DiscoveryNotes;
+  onDiscoveryNoteChange: (questionId: string, value: string) => void;
 }
 
 type Branch = "main" | "busy" | "gate" | "objections";
 
-export function DialerScriptPanel({ script, isLoading, error }: DialerScriptPanelProps) {
+export function DialerScriptPanel({
+  script,
+  isLoading,
+  error,
+  discoveryNotes,
+  onDiscoveryNoteChange,
+}: DialerScriptPanelProps) {
   const [branch, setBranch] = useState<Branch>("main");
 
   if (isLoading) {
@@ -80,13 +90,23 @@ export function DialerScriptPanel({ script, isLoading, error }: DialerScriptPane
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
               3 · Qualificazione (una alla volta)
             </p>
+            <p className="mt-1 text-[11px] text-amber-700/80">
+              Annota sotto ogni domanda — si salva tutto con l’esito a fine call.
+            </p>
             <ul className="mt-3 space-y-3">
               {(script.discovery || []).map((q, i) => (
-                <li key={q.id} className="rounded-md bg-white/80 px-3 py-2.5 border border-amber-100">
+                <li key={q.id} className="rounded-md border border-amber-100 bg-white/90 px-3 py-2.5">
                   <p className="text-[11px] font-semibold text-amber-700">
                     Q{i + 1} · {q.label}
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-gray-900">{q.line}</p>
+                  <input
+                    type="text"
+                    value={discoveryNotes[q.id] || ""}
+                    onChange={(e) => onDiscoveryNoteChange(q.id, e.target.value)}
+                    placeholder="Risposta / nota…"
+                    className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
                 </li>
               ))}
             </ul>
@@ -150,4 +170,26 @@ function ScriptBlock({
       <p className="text-[15px] leading-relaxed text-gray-900">{children}</p>
     </div>
   );
+}
+
+/** Formatta le note discovery + note libere per call.notes */
+export function formatDialerNotes(
+  discovery: ColdCallScript["discovery"] | undefined,
+  discoveryNotes: DiscoveryNotes,
+  freeNotes: string
+): string {
+  const lines: string[] = [];
+  const answered = (discovery || []).filter((q) => (discoveryNotes[q.id] || "").trim());
+  if (answered.length) {
+    lines.push("Qualificazione:");
+    for (const q of answered) {
+      lines.push(`- ${q.label}: ${discoveryNotes[q.id].trim()}`);
+    }
+  }
+  const free = freeNotes.trim();
+  if (free) {
+    if (lines.length) lines.push("");
+    lines.push(free);
+  }
+  return lines.join("\n");
 }

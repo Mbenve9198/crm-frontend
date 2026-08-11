@@ -20,6 +20,20 @@ export type DialerNearbyClient = {
   distM?: number | null;
 };
 
+export type DialerNearbyClientStats = {
+  restaurantId?: string | null;
+  name?: string | null;
+  city?: string | null;
+  initialReviewCount?: number | null;
+  currentReviewCount?: number | null;
+  reviewsGained?: number | null;
+  monthsActive?: number | null;
+  avgReviewsPerMonth?: number | null;
+  rating?: number | null;
+  startedAt?: string | null;
+  syncedAt?: string | null;
+};
+
 export type DialerCardSummary = {
   hasVisibilityCard?: boolean;
   name?: string | null;
@@ -30,6 +44,8 @@ export type DialerCardSummary = {
   velocityPerMonth?: number | null;
   competitorAhead?: DialerCompetitorAhead | null;
   nearbyClient?: DialerNearbyClient | null;
+  nearbyClientStats?: DialerNearbyClientStats | null;
+  nearbyProof?: string | null;
   address?: string | null;
   city?: string | null;
   category?: string | null;

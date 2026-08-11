@@ -87,6 +87,32 @@ export function VisibilityCardSummary({
         </p>
       </div>
 
+      {summary?.nearbyClientStats?.reviewsGained != null && (
+        <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
+          <p className="text-[11px] uppercase tracking-wide text-emerald-700">
+            Risultati ancora (Menu Chat)
+          </p>
+          <p className="mt-0.5 font-medium">
+            +{summary.nearbyClientStats.reviewsGained} rec
+            {summary.nearbyClientStats.monthsActive != null
+              ? ` in ${summary.nearbyClientStats.monthsActive} mesi`
+              : ""}
+          </p>
+          <p className="mt-0.5 text-xs text-emerald-800/80">
+            {summary.nearbyClientStats.initialReviewCount != null &&
+            summary.nearbyClientStats.currentReviewCount != null
+              ? `${summary.nearbyClientStats.initialReviewCount} → ${summary.nearbyClientStats.currentReviewCount}`
+              : null}
+            {summary.nearbyClientStats.startedAt
+              ? ` · dal ${String(summary.nearbyClientStats.startedAt).slice(0, 10)}`
+              : null}
+          </p>
+          {summary.nearbyProof ? (
+            <p className="mt-1.5 text-xs leading-relaxed text-emerald-900/90">{summary.nearbyProof}</p>
+          ) : null}
+        </div>
+      )}
+
       {summary?.hook && (
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-950">
           <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600">Hook</p>

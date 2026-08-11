@@ -30,7 +30,7 @@ import {
 } from "@/types/dialer";
 import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
-import { Headphones, Loader2, MapPin, RefreshCw } from "lucide-react";
+import { Headphones, Loader2, MapPin, Pause, Play, RefreshCw } from "lucide-react";
 
 export default function DialerPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -50,6 +50,9 @@ export default function DialerPage() {
 
   const [discoveryNotes, setDiscoveryNotes] = useState<DiscoveryNotes>({});
   const [callActive, setCallActive] = useState(false);
+  /** Sessione power: dopo Start le chiamate partono in automatico una dopo l’altra. */
+  const [powerSession, setPowerSession] = useState(false);
+  const [autoDialNonce, setAutoDialNonce] = useState(0);
 
   const selectedContact = useMemo(
     () => contacts.find((c) => c._id === selectedId) || null,
@@ -158,6 +161,26 @@ export default function DialerPage() {
     advanceToNext();
   };
 
+  const startPowerSession = () => {
+    if (contacts.length === 0) {
+      toast.error("Nessun contatto in coda");
+      return;
+    }
+    if (!selectedId && contacts[0]) setSelectedId(contacts[0]._id);
+    setPowerSession(true);
+    setAutoDialNonce((n) => n + 1);
+    toast.success("Sessione avviata", {
+      description: "Le chiamate partono in automatico. Salva → passa al prossimo.",
+    });
+  };
+
+  const pausePowerSession = () => {
+    setPowerSession(false);
+    toast.message("Sessione in pausa", {
+      description: "La chiamata in corso continua; il prossimo non parte da solo.",
+    });
+  };
+
   const handleCallComplete = async () => {
     setCallActive(false);
     const currentId = selectedId;
@@ -169,7 +192,12 @@ export default function DialerPage() {
         withoutCurrent[idx]?._id || withoutCurrent[0]?._id || null;
     }
     await loadQueue();
-    if (preferredNext) setSelectedId(preferredNext);
+    if (preferredNext) {
+      setSelectedId(preferredNext);
+    } else if (powerSession) {
+      setPowerSession(false);
+      toast.message("Coda finita", { description: "Sessione in pausa." });
+    }
   };
 
   if (authLoading) {
@@ -234,13 +262,14 @@ export default function DialerPage() {
                 <p className="text-xs text-gray-500">
                   {DIALER_DEFAULT_LIST}
                   {user ? ` · ${user.firstName}` : ""}
+                  {powerSession ? " · sessione attiva (auto-dial)" : ""}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value={statusFilter}
                   onValueChange={setStatusFilter}
-                  disabled={callActive}
+                  disabled={callActive || powerSession}
                 >
                   <SelectTrigger className="w-[180px] bg-white h-9">
                     <SelectValue placeholder="Status" />
@@ -262,6 +291,26 @@ export default function DialerPage() {
                   <RefreshCw className={`mr-1.5 h-4 w-4 ${queueLoading ? "animate-spin" : ""}`} />
                   Aggiorna
                 </Button>
+                {powerSession ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={pausePowerSession}
+                    className="border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                  >
+                    <Pause className="mr-1.5 h-4 w-4" />
+                    Pausa
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={startPowerSession}
+                    disabled={queueLoading || contacts.length === 0 || callActive}
+                  >
+                    <Play className="mr-1.5 h-4 w-4" />
+                    Start
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -350,6 +399,8 @@ export default function DialerPage() {
                 <DialerCallDock
                   contact={selectedContact}
                   disabled={queueLoading}
+                  autoDial={powerSession}
+                  autoDialNonce={autoDialNonce}
                   discovery={script?.discovery}
                   discoveryNotes={discoveryNotes}
                   currentReviews={
@@ -376,9 +427,9 @@ export default function DialerPage() {
                   hasVisibilityCard={hasVisibilityCard}
                 />
                 <p className="mt-4 text-[11px] leading-relaxed text-gray-400">
-                  La scheda condiziona apertura/hook/discovery/value: vicino, rating/rec,
-                  velocity/mese, keyword+rank, competitor. In call: barra sotto con Busy/Gate
-                  e obiezioni one-tap (tasti 1–9).
+                  Start: le chiamate partono una dopo l’altra. Salva esito → passa al prossimo e
+                  richiama subito. Pausa ferma l’auto-dial. Obiezioni one-tap sotto lo script
+                  (tasti 1–9).
                 </p>
               </div>
             </section>

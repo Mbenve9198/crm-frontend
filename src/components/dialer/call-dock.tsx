@@ -50,6 +50,10 @@ const DIALER_OUTCOMES: { value: CallOutcome; label: string; statusHint?: Contact
 interface DialerCallDockProps {
   contact: DialerContact;
   disabled?: boolean;
+  /** Sessione power attiva: avvia in automatico la chiamata su ogni contatto. */
+  autoDial?: boolean;
+  /** Incrementa a ogni Start sessione per ri-armare l’auto-dial sul contatto corrente. */
+  autoDialNonce?: number;
   discovery?: ColdCallDiscoveryQuestion[];
   discoveryNotes: DiscoveryNotes;
   currentReviews?: number | null;
@@ -62,6 +66,8 @@ interface DialerCallDockProps {
 export function DialerCallDock({
   contact,
   disabled,
+  autoDial = false,
+  autoDialNonce = 0,
   discovery,
   discoveryNotes,
   currentReviews,
@@ -81,6 +87,8 @@ export function DialerCallDock({
   const [isSaving, setIsSaving] = useState(false);
 
   const contactIdRef = useRef(contact._id);
+  const dialInFlightRef = useRef(false);
+  const lastAutoDialKeyRef = useRef<string | null>(null);
 
   // Reset dock when switching contact (not mid-call)
   useEffect(() => {
@@ -90,6 +98,7 @@ export function DialerCallDock({
       return;
     }
     contactIdRef.current = contact._id;
+    dialInFlightRef.current = false;
     setCallState("idle");
     setCallResult(null);
     setOutcome("");
@@ -109,11 +118,13 @@ export function DialerCallDock({
     }
   }, [callState, waitingStartTime]);
 
-  const handleInitiate = async () => {
+  const handleInitiate = useCallback(async () => {
     if (!contact.phone) {
       toast.error("Nessun numero di telefono");
       return;
     }
+    if (dialInFlightRef.current) return;
+    dialInFlightRef.current = true;
     setCallState("initiating");
     setErrorMessage("");
     try {
@@ -127,12 +138,46 @@ export function DialerCallDock({
       } else {
         setErrorMessage(response.message || "Errore avvio chiamata");
         setCallState("error");
+        dialInFlightRef.current = false;
       }
     } catch {
       setErrorMessage("Errore di connessione");
       setCallState("error");
+      dialInFlightRef.current = false;
     }
-  };
+  }, [contact._id, contact.phone]);
+
+  // Power session: appena idle su un contatto (o Start), parte la chiamata.
+  useEffect(() => {
+    if (!autoDial || disabled) return;
+    if (callState !== "idle") return;
+
+    const dialKey = `${autoDialNonce}:${contact._id}`;
+    if (lastAutoDialKeyRef.current === dialKey) return;
+
+    if (!contact.phone) {
+      lastAutoDialKeyRef.current = dialKey;
+      toast.message("Senza numero — salto", { description: contact.name });
+      const t = setTimeout(() => onSkip(), 350);
+      return () => clearTimeout(t);
+    }
+
+    lastAutoDialKeyRef.current = dialKey;
+    const t = setTimeout(() => {
+      void handleInitiate();
+    }, 450);
+    return () => clearTimeout(t);
+  }, [
+    autoDial,
+    autoDialNonce,
+    callState,
+    contact._id,
+    contact.phone,
+    contact.name,
+    disabled,
+    handleInitiate,
+    onSkip,
+  ]);
 
   const handleOutcomePick = (value: CallOutcome) => {
     setOutcome(value);
@@ -207,16 +252,27 @@ export function DialerCallDock({
         <div className="flex flex-wrap items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-gray-900">{contact.name}</p>
-            <p className="truncate text-xs text-gray-500">{contact.phone || "Nessun numero"}</p>
+            <p className="truncate text-xs text-gray-500">
+              {autoDial
+                ? "Sessione attiva — la chiamata parte da sola…"
+                : contact.phone || "Nessun numero"}
+            </p>
           </div>
           <Button variant="outline" onClick={onSkip} disabled={disabled || busy}>
             <SkipForward className="mr-1.5 h-4 w-4" />
             Salta
           </Button>
-          <Button onClick={handleInitiate} disabled={disabled || !contact.phone} size="lg">
-            <Phone className="mr-1.5 h-4 w-4" />
-            Chiama
-          </Button>
+          {!autoDial ? (
+            <Button onClick={handleInitiate} disabled={disabled || !contact.phone} size="lg">
+              <Phone className="mr-1.5 h-4 w-4" />
+              Chiama
+            </Button>
+          ) : (
+            <Button onClick={handleInitiate} disabled={disabled || !contact.phone} size="lg" variant="secondary">
+              <Phone className="mr-1.5 h-4 w-4" />
+              Chiama ora
+            </Button>
+          )}
         </div>
       )}
 
@@ -335,7 +391,7 @@ export function DialerCallDock({
           </div>
           <Button className="w-full" size="lg" onClick={handleSaveAndNext} disabled={isSaving || !outcome}>
             {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            Salva tutto e prossimo
+            {autoDial ? "Salva e chiama prossimo" : "Salva tutto e prossimo"}
           </Button>
         </div>
       )}

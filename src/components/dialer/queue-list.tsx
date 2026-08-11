@@ -2,7 +2,6 @@
 
 import { DialerContact } from "@/types/dialer";
 import { getStatusLabel } from "@/lib/status-utils";
-import { ContactStatus } from "@/types/contact";
 import { Loader2, Phone } from "lucide-react";
 
 interface DialerQueueListProps {
@@ -10,6 +9,7 @@ interface DialerQueueListProps {
   selectedId: string | null;
   isLoading: boolean;
   total: number;
+  disabled?: boolean;
   onSelect: (contact: DialerContact) => void;
 }
 
@@ -18,6 +18,7 @@ export function DialerQueueList({
   selectedId,
   isLoading,
   total,
+  disabled = false,
   onSelect,
 }: DialerQueueListProps) {
   if (isLoading) {
@@ -48,8 +49,9 @@ export function DialerQueueList({
             <li key={contact._id}>
               <button
                 type="button"
+                disabled={disabled}
                 onClick={() => onSelect(contact)}
-                className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors ${
+                className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   active
                     ? "border-blue-300 bg-blue-50"
                     : "border-transparent bg-white hover:border-gray-200 hover:bg-gray-50"
@@ -72,7 +74,7 @@ export function DialerQueueList({
                   )}
                 </div>
                 <p className="mt-1 text-[11px] text-gray-400">
-                  {getStatusLabel(contact.status as ContactStatus)}
+                  {getStatusLabel(contact.status)}
                   {contact.cardSummary?.keyword ? ` · ${contact.cardSummary.keyword}` : ""}
                 </p>
               </button>

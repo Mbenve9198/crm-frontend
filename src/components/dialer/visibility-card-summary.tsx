@@ -19,7 +19,7 @@ export function VisibilityCardSummary({
   summary,
   hasVisibilityCard,
 }: VisibilityCardSummaryProps) {
-  const complete = hasVisibilityCard ?? summary?.hasVisibilityCard ?? false;
+  const complete = !!hasVisibilityCard;
   const competitor = summary?.competitorAhead;
   const nearby = summary?.nearbyClient;
   const distLabel = formatDist(nearby?.distM);

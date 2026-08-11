@@ -1,4 +1,4 @@
-import { ContactStatus } from '@/types/contact';
+import { Contact, ContactStatus } from '@/types/contact';
 
 export const DIALER_DEFAULT_LIST = 'Cold Call - Vicini Clienti';
 
@@ -32,25 +32,15 @@ export type DialerCardSummary = {
   generatedAt?: string | null;
 };
 
-export type DialerContactOwner = {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email?: string;
-  role?: 'admin' | 'manager' | 'agent' | 'viewer';
-};
-
 export type DialerContact = {
   _id: string;
   name: string;
   phone?: string;
   email?: string;
-  status: ContactStatus | string;
+  status: ContactStatus;
   lists?: string[];
   source?: string;
-  owner?: DialerContactOwner;
-  properties?: Record<string, unknown>;
-  visibilityCard?: unknown;
+  owner?: Contact['owner'];
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   scriptReady?: boolean;
@@ -93,3 +83,13 @@ export type ColdCallScript = {
   hasVisibilityCard: boolean;
   listHint?: string;
 };
+
+export function resolveDialerCardView(
+  contact: DialerContact | null,
+  script: ColdCallScript | null
+): { summary: DialerCardSummary | null; hasVisibilityCard: boolean } {
+  const summary = script?.cardSummary || contact?.cardSummary || null;
+  const hasVisibilityCard =
+    script?.hasVisibilityCard ?? contact?.hasVisibilityCard ?? summary?.hasVisibilityCard ?? false;
+  return { summary, hasVisibilityCard };
+}

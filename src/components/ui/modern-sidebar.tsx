@@ -46,12 +46,16 @@ export function ModernSidebar({ onImportComplete, onListSelect, selectedList }: 
       href: "/",
       onClick: () => onListSelect?.(null),
     },
-    {
-      icon: PhoneCall,
-      label: "Dialer",
-      active: pathname === "/dialer",
-      href: "/dialer",
-    },
+    ...((user?.role === "agent" || user?.role === "manager" || user?.role === "admin")
+      ? [
+          {
+            icon: PhoneCall,
+            label: "Dialer",
+            active: pathname === "/dialer",
+            href: "/dialer",
+          } as const,
+        ]
+      : []),
     ...(user?.role === "admin"
       ? [
           {

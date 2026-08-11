@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { apiClient } from "@/lib/api";
 import { ModernSidebar } from "@/components/ui/modern-sidebar";
 import { CallDialog } from "@/components/ui/call-dialog";
 import { Button } from "@/components/ui/button";
@@ -17,13 +16,15 @@ import {
 import { DialerQueueList } from "@/components/dialer/queue-list";
 import { VisibilityCardSummary } from "@/components/dialer/visibility-card-summary";
 import { DialerScriptPanel } from "@/components/dialer/script-panel";
+import { getColdCallScript, getDialerQueue } from "@/lib/dialer-api";
 import {
   ColdCallScript,
   DIALER_DEFAULT_LIST,
   DialerContact,
+  resolveDialerCardView,
 } from "@/types/dialer";
 import { Call } from "@/types/call";
-import { Contact, ContactStatus } from "@/types/contact";
+import { ContactStatus } from "@/types/contact";
 import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
 import {
@@ -34,43 +35,11 @@ import {
   SkipForward,
 } from "lucide-react";
 
-function toCallContact(contact: DialerContact): Contact {
-  return {
-    _id: contact._id,
-    name: contact.name,
-    email: contact.email || "",
-    phone: contact.phone,
-    lists: contact.lists || [],
-    properties: {},
-    status: (contact.status as ContactStatus) || "da contattare",
-    owner: contact.owner
-      ? {
-          _id: contact.owner._id,
-          firstName: contact.owner.firstName,
-          lastName: contact.owner.lastName,
-          email: contact.owner.email || "",
-          role: contact.owner.role || "agent",
-        }
-      : {
-          _id: "",
-          firstName: "",
-          lastName: "",
-          email: "",
-          role: "agent",
-        },
-    createdBy: {
-      _id: "",
-      firstName: "",
-      lastName: "",
-      email: "",
-    },
-    createdAt: contact.createdAt || "",
-    updatedAt: contact.updatedAt || "",
-  };
-}
+const DIALER_ROLES = new Set(["agent", "manager", "admin"]);
 
 export default function DialerPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const canUseDialer = !!user && DIALER_ROLES.has(user.role);
 
   const [statusFilter, setStatusFilter] = useState("da contattare");
   const [contacts, setContacts] = useState<DialerContact[]>([]);
@@ -82,6 +51,7 @@ export default function DialerPage() {
   const [script, setScript] = useState<ColdCallScript | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
   const [scriptError, setScriptError] = useState<string | null>(null);
+  const scriptRequestId = useRef(0);
 
   const [callOpen, setCallOpen] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(true);
@@ -91,25 +61,26 @@ export default function DialerPage() {
     [contacts, selectedId]
   );
 
-  const cardSummary = script?.cardSummary || selectedContact?.cardSummary;
-  const hasVisibilityCard =
-    script?.hasVisibilityCard ?? selectedContact?.hasVisibilityCard ?? false;
+  const { summary: cardSummary, hasVisibilityCard } = resolveDialerCardView(
+    selectedContact,
+    script
+  );
 
   const loadQueue = useCallback(async () => {
     setQueueLoading(true);
     setQueueError(null);
     try {
-      const res = await apiClient.getDialerQueue({
+      const res = await getDialerQueue({
         list: DIALER_DEFAULT_LIST,
         status: statusFilter,
         limit: 100,
         offset: 0,
       });
       if (res.success && res.data) {
-        setContacts(res.data.contacts || []);
+        const list = res.data.contacts || [];
+        setContacts(list);
         setTotal(res.data.total || 0);
         setSelectedId((prev) => {
-          const list = res.data?.contacts || [];
           if (prev && list.some((c) => c._id === prev)) return prev;
           return list[0]?._id || null;
         });
@@ -117,37 +88,44 @@ export default function DialerPage() {
         setQueueError(res.message || "Errore nel caricamento della coda");
         setContacts([]);
         setTotal(0);
+        setSelectedId(null);
+        setScript(null);
       }
     } catch (e: unknown) {
       setQueueError(e instanceof Error ? e.message : "Errore nel caricamento della coda");
       setContacts([]);
       setTotal(0);
+      setSelectedId(null);
+      setScript(null);
     } finally {
       setQueueLoading(false);
     }
   }, [statusFilter]);
 
   const loadScript = useCallback(async (contactId: string) => {
+    const reqId = ++scriptRequestId.current;
     setScriptLoading(true);
     setScriptError(null);
     setScript(null);
     try {
-      const res = await apiClient.getColdCallScript(contactId);
+      const res = await getColdCallScript(contactId);
+      if (reqId !== scriptRequestId.current) return;
       if (res.success && res.data) {
         setScript(res.data);
       } else {
         setScriptError(res.message || "Errore nel caricamento dello script");
       }
     } catch (e: unknown) {
+      if (reqId !== scriptRequestId.current) return;
       setScriptError(e instanceof Error ? e.message : "Errore nel caricamento dello script");
     } finally {
-      setScriptLoading(false);
+      if (reqId === scriptRequestId.current) setScriptLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) loadQueue();
-  }, [isAuthenticated, loadQueue]);
+    if (isAuthenticated && canUseDialer) loadQueue();
+  }, [isAuthenticated, canUseDialer, loadQueue]);
 
   useEffect(() => {
     if (selectedId) loadScript(selectedId);
@@ -158,32 +136,33 @@ export default function DialerPage() {
   }, [selectedId, loadScript]);
 
   const selectContact = (contact: DialerContact) => {
+    if (callOpen) return;
     setSelectedId(contact._id);
   };
 
   const advanceToNext = useCallback(() => {
     if (!selectedId || contacts.length === 0) return;
-    const idx = contacts.findIndex((c) => c._id === selectedId);
-    const next = contacts[idx + 1] || contacts[0];
-    if (next && next._id !== selectedId) {
-      setSelectedId(next._id);
-    } else if (idx === contacts.length - 1 && contacts.length > 1) {
-      setSelectedId(contacts[0]._id);
-    } else {
+    if (contacts.length === 1) {
       toast.message("Fine coda", { description: "Nessun altro contatto da chiamare." });
+      return;
     }
+    const idx = contacts.findIndex((c) => c._id === selectedId);
+    const nextIdx = idx < 0 ? 0 : (idx + 1) % contacts.length;
+    setSelectedId(contacts[nextIdx]._id);
   }, [contacts, selectedId]);
 
-  const handleSkip = () => {
-    advanceToNext();
-  };
-
-  const handleCallComplete = (_call: Call) => {
+  const handleCallComplete = async (_call: Call) => {
     setCallOpen(false);
-    toast.success("Chiamata completata");
-    if (autoAdvance) {
-      advanceToNext();
+    const currentId = selectedId;
+    let preferredNext: string | null = null;
+    if (autoAdvance && currentId && contacts.length > 0) {
+      const idx = contacts.findIndex((c) => c._id === currentId);
+      const withoutCurrent = contacts.filter((c) => c._id !== currentId);
+      preferredNext =
+        withoutCurrent[idx] ? withoutCurrent[idx]._id : withoutCurrent[0]?._id || null;
     }
+    await loadQueue();
+    if (preferredNext) setSelectedId(preferredNext);
   };
 
   const handleChiama = () => {
@@ -213,6 +192,22 @@ export default function DialerPage() {
     );
   }
 
+  if (!canUseDialer) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <ModernSidebar />
+        <main className="flex min-h-screen items-center justify-center pl-16">
+          <Alert className="max-w-md bg-white">
+            <AlertTitle>Accesso negato</AlertTitle>
+            <AlertDescription>
+              Il Power Dialer è disponibile per agent, manager e admin.
+            </AlertDescription>
+          </Alert>
+        </main>
+      </div>
+    );
+  }
+
   const statusOptions = [
     { value: "da contattare", label: "Da contattare" },
     { value: "all", label: "Tutti gli status" },
@@ -226,7 +221,6 @@ export default function DialerPage() {
       <ModernSidebar />
       <main className="pl-16">
         <div className="flex h-screen flex-col">
-          {/* Header */}
           <div className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -278,9 +272,7 @@ export default function DialerPage() {
             </div>
           )}
 
-          {/* 3-column layout */}
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 lg:grid-cols-[280px_1fr_360px]">
-            {/* Left: queue */}
             <section className="flex min-h-0 flex-col border-r border-gray-200 bg-white p-4">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Coda
@@ -290,17 +282,19 @@ export default function DialerPage() {
                 selectedId={selectedId}
                 isLoading={queueLoading}
                 total={total}
+                disabled={callOpen}
                 onSelect={selectContact}
               />
             </section>
 
-            {/* Center: active contact */}
             <section className="flex min-h-0 flex-col overflow-y-auto p-6">
               {!selectedContact ? (
                 <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-white text-sm text-gray-500">
                   {queueLoading
                     ? "Caricamento coda…"
-                    : "Seleziona un contatto dalla coda per iniziare."}
+                    : contacts.length === 0
+                      ? "Nessun contatto in coda per i filtri selezionati."
+                      : "Seleziona un contatto dalla coda per iniziare."}
                 </div>
               ) : (
                 <div className="mx-auto w-full max-w-xl space-y-5">
@@ -315,18 +309,18 @@ export default function DialerPage() {
                           {selectedContact.phone || "Nessun numero"}
                         </p>
                         <p className="mt-1 text-xs text-gray-400">
-                          {getStatusLabel(selectedContact.status as ContactStatus)}
+                          {getStatusLabel(selectedContact.status)}
                           {selectedContact.owner
                             ? ` · ${selectedContact.owner.firstName} ${selectedContact.owner.lastName}`
                             : ""}
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={handleChiama} disabled={!selectedContact.phone}>
+                        <Button onClick={handleChiama} disabled={!selectedContact.phone || callOpen}>
                           <Phone className="mr-1.5 h-4 w-4" />
                           Chiama
                         </Button>
-                        <Button variant="outline" onClick={handleSkip}>
+                        <Button variant="outline" onClick={advanceToNext} disabled={callOpen}>
                           <SkipForward className="mr-1.5 h-4 w-4" />
                           Salta
                         </Button>
@@ -347,7 +341,6 @@ export default function DialerPage() {
               )}
             </section>
 
-            {/* Right: script */}
             <section className="flex min-h-0 flex-col border-l border-gray-200 bg-white p-4">
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Script cold call
@@ -366,7 +359,11 @@ export default function DialerPage() {
 
       {selectedContact && (
         <CallDialog
-          contact={toCallContact(selectedContact)}
+          contact={{
+            _id: selectedContact._id,
+            name: selectedContact.name,
+            phone: selectedContact.phone,
+          }}
           trigger={<span className="hidden" />}
           open={callOpen}
           onOpenChange={setCallOpen}

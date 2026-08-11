@@ -372,17 +372,28 @@ export function DialerScriptQuickBar({
               <p className="text-lg leading-relaxed text-gray-900">{sheetBody}</p>
               {activeObjection?.branches && activeObjection.branches.length > 0 && !activeBranch && (
                 <div className="flex flex-wrap gap-2">
-                  {activeObjection.branches.map((b) => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setBranchId(b.id)}
-                      className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-gray-800 hover:bg-gray-100"
-                    >
-                      {b.label}
-                      {b.needsCovers && !projections ? " (serve coperti)" : ""}
-                    </button>
-                  ))}
+                  {activeObjection.branches.map((b) => {
+                    const locked = Boolean(b.needsCovers && !projections);
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        disabled={locked}
+                        onClick={() => {
+                          if (!locked) setBranchId(b.id);
+                        }}
+                        title={locked ? "Inserisci prima i coperti/settimana (Q2)" : undefined}
+                        className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold ${
+                          locked
+                            ? "cursor-not-allowed border-gray-100 bg-gray-50 text-gray-400"
+                            : "border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100"
+                        }`}
+                      >
+                        {b.label}
+                        {locked ? " (serve coperti)" : ""}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
               {activeBranch && (
@@ -482,7 +493,8 @@ function ScriptBlock({
 export function formatDialerNotes(
   discovery: ColdCallScript["discovery"] | undefined,
   discoveryNotes: DiscoveryNotes,
-  freeNotes: string
+  freeNotes: string,
+  currentReviews?: number | null
 ): string {
   const lines: string[] = [];
   const answered = (discovery || []).filter((q) => (discoveryNotes[q.id] || "").trim());
@@ -493,7 +505,7 @@ export function formatDialerNotes(
     }
   }
   const covers = parseCoversInput(discoveryNotes.q2_covers || "");
-  const proj = computeCoverProjections(covers, null);
+  const proj = computeCoverProjections(covers, currentReviews ?? null);
   if (proj) {
     lines.push("");
     lines.push(

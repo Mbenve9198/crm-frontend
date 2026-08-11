@@ -65,6 +65,7 @@ export type DialerContact = {
   lists?: string[];
   source?: string;
   owner?: Contact['owner'];
+  city?: string | null;
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   scriptReady?: boolean;
@@ -72,9 +73,15 @@ export type DialerContact = {
   createdAt?: string;
 };
 
+export type DialerCityFacet = {
+  name: string;
+  count: number;
+};
+
 export type DialerQueueParams = {
   list?: string;
   status?: string;
+  city?: string;
   limit?: number;
   offset?: number;
   owner?: string;
@@ -85,6 +92,8 @@ export type DialerQueueData = {
   total: number;
   list: string;
   status: string;
+  city?: string;
+  cities?: DialerCityFacet[];
   limit: number;
   offset: number;
 };

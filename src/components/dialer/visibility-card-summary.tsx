@@ -90,7 +90,7 @@ export function VisibilityCardSummary({
       {summary?.nearbyClientStats?.reviewsGained != null && (
         <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-950">
           <p className="text-[11px] uppercase tracking-wide text-emerald-700">
-            Risultati ancora (Menu Chat)
+            Risultati ancora
           </p>
           <p className="mt-0.5 font-medium">
             +{summary.nearbyClientStats.reviewsGained} rec

@@ -8,6 +8,7 @@ export async function getDialerQueue(
   const sp = new URLSearchParams();
   if (params.list) sp.append('list', params.list);
   if (params.status) sp.append('status', params.status);
+  if (params.city) sp.append('city', params.city);
   if (params.limit != null) sp.append('limit', String(params.limit));
   if (params.offset != null) sp.append('offset', String(params.offset));
   if (params.owner) sp.append('owner', params.owner);

@@ -59,6 +59,8 @@ interface DialerCallDockProps {
   currentReviews?: number | null;
   onSkip: () => void;
   onComplete: () => void;
+  /** Troppi skip senza numero: pausa sessione. */
+  onSessionStall?: () => void;
   onBusyChange?: (busy: boolean) => void;
   onClearDiscoveryNotes?: () => void;
 }
@@ -73,6 +75,7 @@ export function DialerCallDock({
   currentReviews,
   onSkip,
   onComplete,
+  onSessionStall,
   onBusyChange,
   onClearDiscoveryNotes,
 }: DialerCallDockProps) {
@@ -89,6 +92,15 @@ export function DialerCallDock({
   const contactIdRef = useRef(contact._id);
   const dialInFlightRef = useRef(false);
   const lastAutoDialKeyRef = useRef<string | null>(null);
+  const consecutiveNoPhoneRef = useRef(0);
+  const onSkipRef = useRef(onSkip);
+  const onSessionStallRef = useRef(onSessionStall);
+  onSkipRef.current = onSkip;
+  onSessionStallRef.current = onSessionStall;
+
+  useEffect(() => {
+    consecutiveNoPhoneRef.current = 0;
+  }, [autoDialNonce]);
 
   // Reset dock when switching contact (not mid-call)
   useEffect(() => {
@@ -106,6 +118,12 @@ export function DialerCallDock({
     setErrorMessage("");
     setStatus(contact.status);
   }, [contact._id, contact.status, callState]);
+
+  useEffect(() => {
+    if (callState === "idle" || callState === "error" || callState === "wrap") {
+      dialInFlightRef.current = false;
+    }
+  }, [callState]);
 
   useEffect(() => {
     if (callState === "calling-you" && waitingStartTime) {
@@ -156,14 +174,24 @@ export function DialerCallDock({
     if (lastAutoDialKeyRef.current === dialKey) return;
 
     if (!contact.phone) {
-      lastAutoDialKeyRef.current = dialKey;
-      toast.message("Senza numero — salto", { description: contact.name });
-      const t = setTimeout(() => onSkip(), 350);
+      const t = setTimeout(() => {
+        if (lastAutoDialKeyRef.current === dialKey) return;
+        lastAutoDialKeyRef.current = dialKey;
+        consecutiveNoPhoneRef.current += 1;
+        toast.message("Senza numero — salto", { description: contact.name });
+        if (consecutiveNoPhoneRef.current >= 8) {
+          onSessionStallRef.current?.();
+          return;
+        }
+        onSkipRef.current();
+      }, 350);
       return () => clearTimeout(t);
     }
 
-    lastAutoDialKeyRef.current = dialKey;
     const t = setTimeout(() => {
+      if (lastAutoDialKeyRef.current === dialKey) return;
+      lastAutoDialKeyRef.current = dialKey;
+      consecutiveNoPhoneRef.current = 0;
       void handleInitiate();
     }, 450);
     return () => clearTimeout(t);
@@ -176,7 +204,6 @@ export function DialerCallDock({
     contact.name,
     disabled,
     handleInitiate,
-    onSkip,
   ]);
 
   const handleOutcomePick = (value: CallOutcome) => {

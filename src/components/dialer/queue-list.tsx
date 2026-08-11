@@ -73,9 +73,14 @@ export function DialerQueueList({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
-                  {getStatusLabel(contact.status)}
-                  {contact.cardSummary?.keyword ? ` · ${contact.cardSummary.keyword}` : ""}
+                <p className="mt-1 truncate text-[11px] text-gray-400">
+                  {[
+                    contact.city || contact.cardSummary?.city,
+                    getStatusLabel(contact.status),
+                    contact.cardSummary?.keyword,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </button>
             </li>

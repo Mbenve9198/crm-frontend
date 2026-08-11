@@ -24,6 +24,7 @@ import { getColdCallScript, getDialerQueue } from "@/lib/dialer-api";
 import {
   ColdCallScript,
   DIALER_DEFAULT_LIST,
+  DialerCityFacet,
   DialerContact,
   canUseDialer,
   resolveDialerCardView,
@@ -37,6 +38,8 @@ export default function DialerPage() {
   const dialerOk = canUseDialer(user?.role);
 
   const [statusFilter, setStatusFilter] = useState("da contattare");
+  const [cityFilter, setCityFilter] = useState("all");
+  const [cities, setCities] = useState<DialerCityFacet[]>([]);
   const [contacts, setContacts] = useState<DialerContact[]>([]);
   const [total, setTotal] = useState(0);
   const [queueLoading, setQueueLoading] = useState(false);
@@ -64,13 +67,14 @@ export default function DialerPage() {
     script
   );
 
-  const loadQueue = useCallback(async () => {
+  const loadQueue = useCallback(async (): Promise<DialerContact[]> => {
     setQueueLoading(true);
     setQueueError(null);
     try {
       const res = await getDialerQueue({
         list: DIALER_DEFAULT_LIST,
         status: statusFilter,
+        city: cityFilter === "all" ? undefined : cityFilter,
         limit: 100,
         offset: 0,
       });
@@ -78,27 +82,32 @@ export default function DialerPage() {
         const list = res.data.contacts || [];
         setContacts(list);
         setTotal(res.data.total || 0);
+        setCities(res.data.cities || []);
         setSelectedId((prev) => {
           if (prev && list.some((c) => c._id === prev)) return prev;
           return list[0]?._id || null;
         });
-      } else {
-        setQueueError(res.message || "Errore nel caricamento della coda");
-        setContacts([]);
-        setTotal(0);
-        setSelectedId(null);
-        setScript(null);
+        return list;
       }
-    } catch (e: unknown) {
-      setQueueError(e instanceof Error ? e.message : "Errore nel caricamento della coda");
+      setQueueError(res.message || "Errore nel caricamento della coda");
       setContacts([]);
+      setCities([]);
       setTotal(0);
       setSelectedId(null);
       setScript(null);
+      return [];
+    } catch (e: unknown) {
+      setQueueError(e instanceof Error ? e.message : "Errore nel caricamento della coda");
+      setContacts([]);
+      setCities([]);
+      setTotal(0);
+      setSelectedId(null);
+      setScript(null);
+      return [];
     } finally {
       setQueueLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, cityFilter]);
 
   const loadScript = useCallback(async (contactId: string) => {
     const reqId = ++scriptRequestId.current;
@@ -156,10 +165,24 @@ export default function DialerPage() {
     setSelectedId(contacts[nextIdx]._id);
   }, [contacts, selectedId]);
 
-  const handleSkip = () => {
+  const handleSkip = useCallback(() => {
     if (callActive) return;
     advanceToNext();
-  };
+  }, [callActive, advanceToNext]);
+
+  const pausePowerSession = useCallback(() => {
+    setPowerSession(false);
+    toast.message("Sessione in pausa", {
+      description: "La chiamata in corso continua; il prossimo non parte da solo.",
+    });
+  }, []);
+
+  const handleSessionStall = useCallback(() => {
+    setPowerSession(false);
+    toast.message("Sessione in pausa", {
+      description: "Troppi contatti senza numero utili — controlla la coda.",
+    });
+  }, []);
 
   const startPowerSession = () => {
     if (contacts.length === 0) {
@@ -174,26 +197,36 @@ export default function DialerPage() {
     });
   };
 
-  const pausePowerSession = () => {
-    setPowerSession(false);
-    toast.message("Sessione in pausa", {
-      description: "La chiamata in corso continua; il prossimo non parte da solo.",
-    });
-  };
-
   const handleCallComplete = async () => {
     setCallActive(false);
     const currentId = selectedId;
-    let preferredNext: string | null = null;
-    if (currentId && contacts.length > 0) {
-      const idx = contacts.findIndex((c) => c._id === currentId);
-      const withoutCurrent = contacts.filter((c) => c._id !== currentId);
-      preferredNext =
-        withoutCurrent[idx]?._id || withoutCurrent[0]?._id || null;
+    const idx = currentId
+      ? contacts.findIndex((c) => c._id === currentId)
+      : -1;
+
+    const fresh = await loadQueue();
+    if (fresh.length === 0) {
+      if (powerSession) {
+        setPowerSession(false);
+        toast.message("Coda finita", { description: "Sessione in pausa." });
+      }
+      return;
     }
-    await loadQueue();
-    if (preferredNext) {
-      setSelectedId(preferredNext);
+
+    const stillThere = currentId && fresh.some((c) => c._id === currentId);
+    let nextId: string | null = null;
+    if (stillThere && currentId) {
+      const newIdx = fresh.findIndex((c) => c._id === currentId);
+      nextId = fresh[(newIdx + 1) % fresh.length]?._id || null;
+      if (nextId === currentId) nextId = null;
+    } else if (idx >= 0) {
+      nextId = fresh[Math.min(idx, fresh.length - 1)]?._id || fresh[0]?._id || null;
+    } else {
+      nextId = fresh[0]?._id || null;
+    }
+
+    if (nextId) {
+      setSelectedId(nextId);
     } else if (powerSession) {
       setPowerSession(false);
       toast.message("Coda finita", { description: "Sessione in pausa." });
@@ -268,7 +301,10 @@ export default function DialerPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Select
                   value={statusFilter}
-                  onValueChange={setStatusFilter}
+                  onValueChange={(v) => {
+                    setStatusFilter(v);
+                    setCityFilter("all");
+                  }}
                   disabled={callActive || powerSession}
                 >
                   <SelectTrigger className="w-[180px] bg-white h-9">
@@ -330,6 +366,25 @@ export default function DialerPage() {
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                 Coda · {total}
               </h2>
+              <div className="mb-2">
+                <Select
+                  value={cityFilter}
+                  onValueChange={setCityFilter}
+                  disabled={callActive || powerSession || queueLoading}
+                >
+                  <SelectTrigger className="h-8 w-full bg-white text-xs">
+                    <SelectValue placeholder="Città" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutte le città</SelectItem>
+                    {cities.map((c) => (
+                      <SelectItem key={c.name} value={c.name}>
+                        {c.name} ({c.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <DialerQueueList
                 contacts={contacts}
                 selectedId={selectedId}
@@ -411,6 +466,7 @@ export default function DialerPage() {
                   }
                   onSkip={handleSkip}
                   onComplete={handleCallComplete}
+                  onSessionStall={handleSessionStall}
                   onBusyChange={setCallActive}
                   onClearDiscoveryNotes={() => setDiscoveryNotes({})}
                 />

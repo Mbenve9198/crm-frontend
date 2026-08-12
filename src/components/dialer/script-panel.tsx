@@ -681,6 +681,7 @@ export function formatDialerNotes(
 
   const trialLabels: Record<string, string> = {
     trial_start_timing: "Partenza prova",
+    trial_start_date_note: "Nota data partenza",
     trial_ship_address: "Indirizzo QR",
     trial_ragione_sociale: "Ragione sociale",
     trial_piva: "P.IVA",
@@ -692,6 +693,12 @@ export function formatDialerNotes(
     trial_check_call: "Check post-arrivo",
     trial_ops_owner: "Referente sala",
   };
+  const trialChoiceLabels: Record<string, string> = {
+    this_week: "Questa settimana",
+    next_week: "La prossima",
+    other_date: "Altra data",
+    later: "Altra data",
+  };
   const trialFilled = Object.keys(trialLabels).filter((k) =>
     (discoveryNotes[k] || "").trim()
   );
@@ -699,7 +706,9 @@ export function formatDialerNotes(
     lines.push("");
     lines.push("Trial / setup:");
     for (const k of trialFilled) {
-      lines.push(`- ${trialLabels[k]}: ${discoveryNotes[k].trim()}`);
+      const raw = discoveryNotes[k].trim();
+      const pretty = trialChoiceLabels[raw] || raw;
+      lines.push(`- ${trialLabels[k]}: ${pretty}`);
     }
   }
 

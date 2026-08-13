@@ -49,6 +49,30 @@ const DIALER_OUTCOMES: {
   { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare", callback: "required" },
 ];
 
+function wrapUpMrrForStatus(status: ContactStatus): number | undefined {
+  switch (status) {
+    case "interessato":
+    case "qr code inviato":
+    case "free trial iniziato":
+    case "won":
+    case "lost before free trial":
+    case "lost after free trial":
+      return 0;
+    case "da contattare":
+    case "contattato":
+    case "da richiamare":
+    case "ghosted/bad timing":
+    case "bad_data":
+    case "non_qualificato":
+    case "do_not_contact":
+      return undefined;
+    default: {
+      const _never: never = status;
+      return _never;
+    }
+  }
+}
+
 interface DialerCallDockProps {
   contact: DialerContact;
   disabled?: boolean;
@@ -268,6 +292,7 @@ export function DialerCallDock({
         notes: mergedNotes || undefined,
         callbackAt,
         callbackNote,
+        mrr: wrapUpMrrForStatus(status),
       });
 
       toast.success("Salvato");

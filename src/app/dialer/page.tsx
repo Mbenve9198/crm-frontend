@@ -315,6 +315,7 @@ export default function DialerPage() {
                 <p className="text-xs text-gray-500">
                   {DIALER_DEFAULT_LIST}
                   {user ? ` · ${user.firstName}` : ""}
+                  {" · solo i tuoi contatti"}
                   {powerSession ? " · sessione attiva (auto-dial)" : ""}
                 </p>
               </div>
@@ -424,7 +425,7 @@ export default function DialerPage() {
                     {queueLoading
                       ? "Caricamento…"
                       : contacts.length === 0
-                        ? "Nessun contatto in coda."
+                        ? "Nessun contatto assegnato a te in coda."
                         : "Seleziona un contatto."}
                   </div>
                 ) : (

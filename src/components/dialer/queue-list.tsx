@@ -33,7 +33,7 @@ export function DialerQueueList({
   if (contacts.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-500">
-        Nessun contatto in coda per i filtri selezionati.
+        Nessun contatto assegnato a te in coda.
       </div>
     );
   }

@@ -147,9 +147,31 @@ export function DialerScriptPanel({
             ))}
           </div>
           {activeEarly ? (
-            <p className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm leading-relaxed text-gray-900">
-              {fillScriptTemplate(activeEarly.line, templateVars)}
-            </p>
+            <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+              <p className="text-sm leading-relaxed text-gray-900">
+                {fillScriptTemplate(activeEarly.line, templateVars)}
+              </p>
+              {activeEarly.fields?.length ? (
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {activeEarly.fields.map((field) => (
+                    <label key={field.id} className="block space-y-1">
+                      <span className="text-[11px] font-medium text-gray-600">
+                        {field.label}
+                      </span>
+                      <input
+                        type={field.inputType || "text"}
+                        value={discoveryNotes[field.id] || ""}
+                        onChange={(e) =>
+                          onDiscoveryNoteChange(field.id, e.target.value)
+                        }
+                        placeholder={field.placeholder || ""}
+                        className="w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -660,8 +682,24 @@ export function formatDialerNotes(
   currentReviews?: number | null
 ): string {
   const lines: string[] = [];
+  const earlyLabels: Record<string, string> = {
+    early_busy_callback_time: "Richiamo (occupato)",
+    early_gate_callback_time: "Richiamo (titolare)",
+    early_gate_owner_name: "Nome titolare",
+  };
+  const earlyFilled = Object.keys(earlyLabels).filter((k) =>
+    (discoveryNotes[k] || "").trim()
+  );
+  if (earlyFilled.length) {
+    lines.push("Obiezioni iniziali:");
+    for (const k of earlyFilled) {
+      lines.push(`- ${earlyLabels[k]}: ${discoveryNotes[k].trim()}`);
+    }
+  }
+
   const answered = (discovery || []).filter((q) => (discoveryNotes[q.id] || "").trim());
   if (answered.length) {
+    if (lines.length) lines.push("");
     lines.push("Qualificazione:");
     for (const q of answered) {
       lines.push(`- ${q.label}: ${discoveryNotes[q.id].trim()}`);

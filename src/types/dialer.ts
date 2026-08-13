@@ -105,12 +105,20 @@ export type ColdCallObjectionBranch = {
   needsCovers?: boolean;
 };
 
+export type ColdCallObjectionField = {
+  id: string;
+  label: string;
+  placeholder?: string;
+  inputType?: 'text' | 'tel' | 'number';
+};
+
 export type ColdCallObjection = {
   id?: string;
   short?: string;
   trigger: string;
   line: string;
   placement?: 'early' | 'late';
+  fields?: ColdCallObjectionField[];
   branches?: ColdCallObjectionBranch[];
 };
 

@@ -12,7 +12,8 @@ import {
   formatDialerNotes,
 } from "@/components/dialer/script-panel";
 import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
-import { buildCallbackIso, nextCallbackTimeSlot, toDateStr } from "@/lib/callback-schedule";
+import { wrapUpDialer } from "@/lib/dialer-api";
+import { buildCallbackIso, nextCallbackDateTime } from "@/lib/callback-schedule";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -31,18 +32,22 @@ type CallState =
   | "wrap"
   | "error";
 
-const DIALER_OUTCOMES: { value: CallOutcome; label: string; statusHint?: ContactStatus }[] = [
-  { value: "free-trial-sold", label: "Trial accettato", statusHint: "free trial iniziato" },
-  { value: "callback", label: "Da richiamare", statusHint: "da richiamare" },
-  { value: "first-call", label: "Prima call / contattato", statusHint: "contattato" },
-  { value: "no-answer", label: "Nessuna risposta", statusHint: "da richiamare" },
-  { value: "voicemail", label: "Segreteria", statusHint: "da richiamare" },
-  { value: "not-interested", label: "Non interessato", statusHint: "lost before free trial" },
-  { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare" },
-];
+type CallbackPolicy = "required" | "optional" | "clear";
 
-const CALLBACK_REQUIRED_OUTCOMES: CallOutcome[] = ["callback", "follow-up"];
-const CALLBACK_OPTIONAL_OUTCOMES: CallOutcome[] = ["no-answer", "voicemail"];
+const DIALER_OUTCOMES: {
+  value: CallOutcome;
+  label: string;
+  statusHint?: ContactStatus;
+  callback: CallbackPolicy;
+}[] = [
+  { value: "free-trial-sold", label: "Trial accettato", statusHint: "free trial iniziato", callback: "clear" },
+  { value: "callback", label: "Da richiamare", statusHint: "da richiamare", callback: "required" },
+  { value: "first-call", label: "Prima call / contattato", statusHint: "contattato", callback: "clear" },
+  { value: "no-answer", label: "Nessuna risposta", statusHint: "da richiamare", callback: "optional" },
+  { value: "voicemail", label: "Segreteria", statusHint: "da richiamare", callback: "optional" },
+  { value: "not-interested", label: "Non interessato", statusHint: "lost before free trial", callback: "clear" },
+  { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare", callback: "required" },
+];
 
 interface DialerCallDockProps {
   contact: DialerContact;
@@ -211,19 +216,22 @@ export function DialerCallDock({
 
   const handleOutcomePick = (value: CallOutcome) => {
     setOutcome(value);
-    const hint = DIALER_OUTCOMES.find((o) => o.value === value)?.statusHint;
-    if (hint) setStatus(hint);
-    if (CALLBACK_REQUIRED_OUTCOMES.includes(value) && !callbackDate) {
-      setCallbackDate(toDateStr(new Date()));
-      setCallbackTime(nextCallbackTimeSlot());
+    const meta = DIALER_OUTCOMES.find((o) => o.value === value);
+    if (meta?.statusHint) setStatus(meta.statusHint);
+    if (meta?.callback === "clear") {
+      setCallbackDate("");
+      setCallbackTime("10:00");
+    } else if ((meta?.callback === "required" || meta?.callback === "optional") && !callbackDate) {
+      const slot = nextCallbackDateTime();
+      setCallbackDate(slot.dateStr);
+      setCallbackTime(slot.timeStr);
     }
   };
 
-  const showCallbackPicker =
-    CALLBACK_REQUIRED_OUTCOMES.includes(outcome as CallOutcome) ||
-    CALLBACK_OPTIONAL_OUTCOMES.includes(outcome as CallOutcome) ||
-    status === "da richiamare";
-  const callbackRequired = CALLBACK_REQUIRED_OUTCOMES.includes(outcome as CallOutcome);
+  const callbackPolicy: CallbackPolicy =
+    DIALER_OUTCOMES.find((o) => o.value === outcome)?.callback ?? "clear";
+  const showCallbackPicker = callbackPolicy === "required" || callbackPolicy === "optional";
+  const callbackRequired = callbackPolicy === "required";
 
   const handleSaveAndNext = useCallback(async () => {
     if (!outcome) {
@@ -245,36 +253,22 @@ export function DialerCallDock({
           null
       );
 
-      if (callResult) {
-        await apiClient.updateCall(callResult._id, {
-          notes: mergedNotes || undefined,
-          outcome,
-        });
+      let callbackAt: string | null = null;
+      let callbackNote: string | null = null;
+      if (callbackPolicy === "required" || (callbackPolicy === "optional" && callbackDate)) {
+        callbackAt = buildCallbackIso(callbackDate, callbackTime);
+        callbackNote = (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300);
       }
 
-      if (mergedNotes.trim()) {
-        await apiClient.createActivity(contact._id, {
-          type: "note",
-          title: "Note chiamata",
-          description: mergedNotes.trim(),
-        });
-      }
-
-      if (status !== contact.status) {
-        await apiClient.updateContactStatus(contact._id, { status });
-      }
-
-      if (callbackDate) {
-        await apiClient.updateContactCallback(contact._id, {
-          callbackAt: buildCallbackIso(callbackDate, callbackTime),
-          callbackNote: (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300),
-        });
-      } else if (status !== "da richiamare" && contact.callbackAt) {
-        await apiClient.updateContactCallback(contact._id, {
-          callbackAt: null,
-          callbackNote: null,
-        });
-      }
+      await wrapUpDialer({
+        contactId: contact._id,
+        callId: callResult?._id,
+        outcome,
+        status,
+        notes: mergedNotes || undefined,
+        callbackAt,
+        callbackNote,
+      });
 
       toast.success("Salvato");
       setCallState("idle");
@@ -295,15 +289,14 @@ export function DialerCallDock({
     callResult,
     notes,
     status,
-    contact.status,
     contact._id,
     contact.cardSummary?.reviews,
-    contact.callbackAt,
     currentReviews,
     discovery,
     discoveryNotes,
     callbackDate,
     callbackTime,
+    callbackPolicy,
     callbackRequired,
     onComplete,
     onClearDiscoveryNotes,

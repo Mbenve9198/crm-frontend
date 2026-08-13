@@ -16,19 +16,33 @@ export function toTimeStr(d: Date): string {
   return `${String(h).padStart(2, "0")}:${roundedM}`;
 }
 
-/** Prossimo slot da 30 minuti, così il richiamo cade sempre nel futuro. */
-export function nextCallbackTimeSlot(from = new Date()): string {
-  let h = from.getHours();
-  let m = from.getMinutes();
+/** Prossimo slot da 30 minuti, sempre nel futuro (dopo le 20:00 → domani 08:00). */
+export function nextCallbackDateTime(from = new Date()): { dateStr: string; timeStr: string } {
+  const d = new Date(from);
+  let h = d.getHours();
+  let m = d.getMinutes();
   if (m < 30) {
     m = 30;
   } else {
     h += 1;
     m = 0;
   }
-  if (h < 8) return "08:00";
-  if (h > 20 || (h === 20 && m > 0)) return "20:00";
-  return `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
+  if (h < 8) {
+    return { dateStr: toDateStr(d), timeStr: "08:00" };
+  }
+  if (h > 20 || (h === 20 && m > 0)) {
+    const tomorrow = new Date(d);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return { dateStr: toDateStr(tomorrow), timeStr: "08:00" };
+  }
+  return {
+    dateStr: toDateStr(d),
+    timeStr: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`,
+  };
+}
+
+export function nextCallbackTimeSlot(from = new Date()): string {
+  return nextCallbackDateTime(from).timeStr;
 }
 
 export function getNextMonday(): Date {

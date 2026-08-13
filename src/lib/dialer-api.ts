@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api';
-import type { ApiResponse } from '@/types/contact';
+import type { ApiResponse, Contact, ContactStatus } from '@/types/contact';
+import type { Call, CallOutcome } from '@/types/call';
 import type { ColdCallScript, DialerQueueData, DialerQueueParams } from '@/types/dialer';
 
 export async function getDialerQueue(
@@ -20,4 +21,24 @@ export async function getColdCallScript(
   contactId: string
 ): Promise<ApiResponse<ColdCallScript>> {
   return apiClient.request<ColdCallScript>(`/dialer/contacts/${contactId}/script`);
+}
+
+export interface DialerWrapUpPayload {
+  contactId: string;
+  callId?: string;
+  outcome: CallOutcome;
+  status?: ContactStatus;
+  notes?: string;
+  callbackAt?: string | null;
+  callbackNote?: string | null;
+  mrr?: number;
+}
+
+export async function wrapUpDialer(
+  payload: DialerWrapUpPayload
+): Promise<ApiResponse<{ contact: Contact; call: Call | null }>> {
+  return apiClient.request(`/dialer/wrap-up`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }

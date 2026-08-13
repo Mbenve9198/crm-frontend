@@ -69,9 +69,12 @@ export default function DialerPage() {
     script
   );
 
-  const loadQueue = useCallback(async (): Promise<DialerContact[]> => {
-    setQueueLoading(true);
-    setQueueError(null);
+  const loadQueue = useCallback(async (opts?: { silent?: boolean }): Promise<DialerContact[]> => {
+    const silent = Boolean(opts?.silent);
+    if (!silent) {
+      setQueueLoading(true);
+      setQueueError(null);
+    }
     try {
       const res = await getDialerQueue({
         list: DIALER_DEFAULT_LIST,
@@ -89,25 +92,30 @@ export default function DialerPage() {
           if (prev && list.some((c) => c._id === prev)) return prev;
           return list[0]?._id || null;
         });
+        if (silent) setQueueError(null);
         return list;
       }
-      setQueueError(res.message || "Errore nel caricamento della coda");
-      setContacts([]);
-      setCities([]);
-      setTotal(0);
-      setSelectedId(null);
-      setScript(null);
+      if (!silent) {
+        setQueueError(res.message || "Errore nel caricamento della coda");
+        setContacts([]);
+        setCities([]);
+        setTotal(0);
+        setSelectedId(null);
+        setScript(null);
+      }
       return [];
     } catch (e: unknown) {
-      setQueueError(e instanceof Error ? e.message : "Errore nel caricamento della coda");
-      setContacts([]);
-      setCities([]);
-      setTotal(0);
-      setSelectedId(null);
-      setScript(null);
+      if (!silent) {
+        setQueueError(e instanceof Error ? e.message : "Errore nel caricamento della coda");
+        setContacts([]);
+        setCities([]);
+        setTotal(0);
+        setSelectedId(null);
+        setScript(null);
+      }
       return [];
     } finally {
-      setQueueLoading(false);
+      if (!silent) setQueueLoading(false);
     }
   }, [statusFilter, cityFilter]);
 
@@ -139,7 +147,7 @@ export default function DialerPage() {
   useEffect(() => {
     if (!isAuthenticated || !dialerOk || callActive) return;
     const t = setInterval(() => {
-      void loadQueue();
+      void loadQueue({ silent: true });
     }, 60_000);
     return () => clearInterval(t);
   }, [isAuthenticated, dialerOk, callActive, loadQueue]);
@@ -333,7 +341,9 @@ export default function DialerPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={loadQueue}
+                  onClick={() => {
+                    void loadQueue();
+                  }}
                   disabled={queueLoading || callActive}
                 >
                   <RefreshCw className={`mr-1.5 h-4 w-4 ${queueLoading ? "animate-spin" : ""}`} />

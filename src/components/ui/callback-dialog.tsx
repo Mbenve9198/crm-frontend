@@ -14,13 +14,8 @@ import { Textarea } from "./textarea";
 import { Loader2, Trash2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Contact } from "@/types/contact";
-import {
-  CALLBACK_SHORTCUTS,
-  CALLBACK_TIME_SLOTS,
-  formatShortcutLabel,
-  toDateStr,
-  toTimeStr,
-} from "@/lib/callback-schedule";
+import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
+import { buildCallbackIso, formatShortcutLabel, toDateStr, toTimeStr } from "@/lib/callback-schedule";
 
 interface CallbackDialogProps {
   open: boolean;
@@ -66,18 +61,10 @@ export function CallbackDialog({
     }
   }, [open, currentCallbackAt, currentCallbackNote]);
 
-  const applyShortcut = (getDate: () => Date) => {
-    const d = getDate();
-    setDateStr(toDateStr(d));
-  };
-
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      let callbackAt: string | null = null;
-      if (dateStr) {
-        callbackAt = new Date(`${dateStr}T${timeStr}:00`).toISOString();
-      }
+      const callbackAt = dateStr ? buildCallbackIso(dateStr, timeStr) : null;
       const callbackNote = noteValue.trim() || null;
       const res = await apiClient.updateContactCallback(contactId, { callbackAt, callbackNote });
       if (res.success && res.data) {
@@ -124,60 +111,14 @@ export function CallbackDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Scelte rapide */}
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Scelta rapida</p>
-            <div className="flex flex-wrap gap-2">
-              {CALLBACK_SHORTCUTS.map((s) => {
-                const sDate = toDateStr(s.getDate());
-                const isActive = dateStr === sDate;
-                return (
-                  <button
-                    key={s.label}
-                    type="button"
-                    disabled={busy}
-                    onClick={() => applyShortcut(s.getDate)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                      isActive
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:text-blue-600"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <DialerCallbackPicker
+            dateStr={dateStr}
+            timeStr={timeStr}
+            disabled={busy}
+            onDateChange={setDateStr}
+            onTimeChange={setTimeStr}
+          />
 
-          {/* Data + Ora */}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 block mb-1">Data</label>
-              <input
-                type="date"
-                className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                value={dateStr}
-                onChange={(e) => setDateStr(e.target.value)}
-                disabled={busy}
-              />
-            </div>
-            <div className="w-32">
-              <label className="text-sm font-medium text-gray-700 block mb-1">Ora</label>
-              <select
-                className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                value={timeStr}
-                onChange={(e) => setTimeStr(e.target.value)}
-                disabled={busy}
-              >
-                {CALLBACK_TIME_SLOTS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Nota */}
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">
               Nota <span className="text-gray-400 font-normal">(max 300 caratteri)</span>

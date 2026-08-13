@@ -16,6 +16,21 @@ export function toTimeStr(d: Date): string {
   return `${String(h).padStart(2, "0")}:${roundedM}`;
 }
 
+/** Prossimo slot da 30 minuti, così il richiamo cade sempre nel futuro. */
+export function nextCallbackTimeSlot(from = new Date()): string {
+  let h = from.getHours();
+  let m = from.getMinutes();
+  if (m < 30) {
+    m = 30;
+  } else {
+    h += 1;
+    m = 0;
+  }
+  if (h < 8) return "08:00";
+  if (h > 20 || (h === 20 && m > 0)) return "20:00";
+  return `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
+}
+
 export function getNextMonday(): Date {
   const d = new Date();
   const day = d.getDay();

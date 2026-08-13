@@ -5,22 +5,14 @@ import { apiClient } from "@/lib/api";
 import { Call, CallOutcome, InitiateCallRequest } from "@/types/call";
 import { ContactStatus } from "@/types/contact";
 import { ColdCallDiscoveryQuestion, DialerContact } from "@/types/dialer";
-import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   DiscoveryNotes,
   formatDialerNotes,
 } from "@/components/dialer/script-panel";
 import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
-import { buildCallbackIso } from "@/lib/callback-schedule";
+import { buildCallbackIso, nextCallbackTimeSlot, toDateStr } from "@/lib/callback-schedule";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -221,6 +213,10 @@ export function DialerCallDock({
     setOutcome(value);
     const hint = DIALER_OUTCOMES.find((o) => o.value === value)?.statusHint;
     if (hint) setStatus(hint);
+    if (CALLBACK_REQUIRED_OUTCOMES.includes(value) && !callbackDate) {
+      setCallbackDate(toDateStr(new Date()));
+      setCallbackTime(nextCallbackTimeSlot());
+    }
   };
 
   const showCallbackPicker =
@@ -228,10 +224,6 @@ export function DialerCallDock({
     CALLBACK_OPTIONAL_OUTCOMES.includes(outcome as CallOutcome) ||
     status === "da richiamare";
   const callbackRequired = CALLBACK_REQUIRED_OUTCOMES.includes(outcome as CallOutcome);
-
-  const answeredDiscovery = (discovery || []).filter(
-    (q) => (discoveryNotes[q.id] || "").trim()
-  );
 
   const handleSaveAndNext = useCallback(async () => {
     if (!outcome) {
@@ -424,25 +416,10 @@ export function DialerCallDock({
             ))}
           </div>
 
-          {answeredDiscovery.length > 0 && (
-            <div className="rounded-md border border-amber-100 bg-amber-50/70 px-3 py-2 text-xs text-amber-950">
-              <p className="font-semibold text-amber-800">Qualificazione (dallo script)</p>
-              <ul className="mt-1.5 space-y-0.5">
-                {answeredDiscovery.map((q) => (
-                  <li key={q.id}>
-                    <span className="font-medium">{q.label}:</span>{" "}
-                    {discoveryNotes[q.id]}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {showCallbackPicker && (
             <DialerCallbackPicker
               dateStr={callbackDate}
               timeStr={callbackTime}
-              required={callbackRequired}
               disabled={isSaving}
               onDateChange={setCallbackDate}
               onTimeChange={setCallbackTime}
@@ -450,36 +427,18 @@ export function DialerCallDock({
           )}
 
           <div className="lg:hidden">
-            <label className="mb-1 block text-xs font-medium text-gray-500">
-              Note extra (DM, fascia, WhatsApp…)
-            </label>
             <Textarea
               value={notes}
               onChange={(e) => onNotesChange(e.target.value)}
-              placeholder="Aggiungi ciò che non sta nelle Q…"
+              placeholder="Note per dopo: DM, fascia, WhatsApp…"
               className="min-h-[42px] resize-none bg-white"
               rows={2}
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Status contatto</label>
-            <Select value={status} onValueChange={(v) => setStatus(v as ContactStatus)}>
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {getAllStatuses().map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {getStatusLabel(s)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <Button className="w-full" size="lg" onClick={handleSaveAndNext} disabled={isSaving || !outcome}>
             {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            {autoDial ? "Salva e chiama prossimo" : "Salva tutto e prossimo"}
+            {autoDial ? "Salva e chiama prossimo" : "Salva e prossimo"}
           </Button>
         </div>
       )}

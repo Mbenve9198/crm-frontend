@@ -516,11 +516,6 @@ export default function DialerPage() {
                       />
                     </div>
                 )}
-                <p className="text-[11px] leading-relaxed text-gray-400">
-                  Start: le chiamate partono una dopo l’altra. Salva esito → passa al prossimo e
-                  richiama subito. Pausa ferma l’auto-dial. Obiezioni one-tap sotto lo script
-                  (tasti 1–9). I richiami fissati riappaiono in coda all’orario scelto.
-                </p>
               </div>
             </section>
           </div>

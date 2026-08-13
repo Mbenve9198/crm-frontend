@@ -116,8 +116,6 @@ export function VisibilityCardSummary({
           ) : null}
         </div>
       )}
-
-      )}
     </div>
   );
 }

@@ -37,8 +37,21 @@ export interface DialerWrapUpPayload {
 export async function wrapUpDialer(
   payload: DialerWrapUpPayload
 ): Promise<ApiResponse<{ contact: Contact; call: Call | null }>> {
-  return apiClient.request(`/dialer/wrap-up`, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  });
+  try {
+    return await apiClient.request(`/dialer/wrap-up`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '';
+    if (payload.callId && /chiamata non trovata/i.test(msg)) {
+      const withoutCall: DialerWrapUpPayload = { ...payload };
+      delete withoutCall.callId;
+      return apiClient.request(`/dialer/wrap-up`, {
+        method: 'POST',
+        body: JSON.stringify(withoutCall),
+      });
+    }
+    throw err;
+  }
 }

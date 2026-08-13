@@ -124,6 +124,7 @@ export function DialerCallDock({
   const dialInFlightRef = useRef(false);
   const lastAutoDialKeyRef = useRef<string | null>(null);
   const consecutiveNoPhoneRef = useRef(0);
+  const isSavingRef = useRef(false);
   const onSkipRef = useRef(onSkip);
   const onSessionStallRef = useRef(onSessionStall);
   onSkipRef.current = onSkip;
@@ -241,34 +242,25 @@ export function DialerCallDock({
     handleInitiate,
   ]);
 
-  const handleOutcomePick = (value: CallOutcome) => {
-    setOutcome(value);
-    const meta = DIALER_OUTCOMES.find((o) => o.value === value);
-    if (meta?.statusHint) setStatus(meta.statusHint);
-    if (meta?.callback === "clear") {
-      setCallbackDate("");
-      setCallbackTime("10:00");
-    } else if ((meta?.callback === "required" || meta?.callback === "optional") && !callbackDate) {
-      const slot = nextCallbackDateTime();
-      setCallbackDate(slot.dateStr);
-      setCallbackTime(slot.timeStr);
-    }
-  };
-
   const callbackPolicy: CallbackPolicy =
     DIALER_OUTCOMES.find((o) => o.value === outcome)?.callback ?? "clear";
   const showCallbackPicker = callbackPolicy === "required" || callbackPolicy === "optional";
-  const callbackRequired = callbackPolicy === "required";
 
-  const handleSaveAndNext = useCallback(async () => {
-    if (!outcome) {
+  const handleSaveAndNext = useCallback(async (pickedOutcome?: CallOutcome) => {
+    const selected = pickedOutcome || outcome;
+    if (!selected) {
       toast.error("Seleziona un esito");
       return;
     }
-    if (callbackRequired && !callbackDate) {
+    const meta = DIALER_OUTCOMES.find((o) => o.value === selected);
+    const nextStatus = meta?.statusHint ?? status;
+    const policy = meta?.callback ?? "clear";
+    if (policy === "required" && !callbackDate) {
       toast.error("Fissa data e ora del richiamo");
       return;
     }
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     try {
       const mergedNotes = formatDialerNotes(
@@ -280,10 +272,6 @@ export function DialerCallDock({
           null
       );
 
-      const meta = DIALER_OUTCOMES.find((o) => o.value === outcome);
-      const nextStatus = meta?.statusHint ?? status;
-      const policy = meta?.callback ?? callbackPolicy;
-
       let callbackAt: string | null = null;
       let callbackNote: string | null = null;
       if (policy === "required" || (policy === "optional" && callbackDate)) {
@@ -294,7 +282,7 @@ export function DialerCallDock({
       await wrapUpDialer({
         contactId: contact._id,
         callId: callResult?._id,
-        outcome,
+        outcome: selected,
         status: nextStatus,
         notes: mergedNotes || undefined,
         callbackAt,
@@ -314,6 +302,7 @@ export function DialerCallDock({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Errore nel salvataggio");
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   }, [
@@ -328,12 +317,28 @@ export function DialerCallDock({
     discoveryNotes,
     callbackDate,
     callbackTime,
-    callbackPolicy,
-    callbackRequired,
     onComplete,
     onClearDiscoveryNotes,
     onNotesChange,
   ]);
+
+  const handleOutcomePick = (value: CallOutcome) => {
+    if (isSavingRef.current) return;
+    setOutcome(value);
+    const meta = DIALER_OUTCOMES.find((o) => o.value === value);
+    if (meta?.statusHint) setStatus(meta.statusHint);
+    if (meta?.callback === "clear") {
+      setCallbackDate("");
+      setCallbackTime("10:00");
+      void handleSaveAndNext(value);
+      return;
+    }
+    if ((meta?.callback === "required" || meta?.callback === "optional") && !callbackDate) {
+      const slot = nextCallbackDateTime();
+      setCallbackDate(slot.dateStr);
+      setCallbackTime(slot.timeStr);
+    }
+  };
 
   const busy = callState !== "idle" && callState !== "wrap" && callState !== "error";
 
@@ -424,13 +429,16 @@ export function DialerCallDock({
       {callState === "wrap" && (
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-900">Chiudi la call</p>
-          <p className="text-xs text-gray-500">Scegli l’esito e premi Salva e prossimo.</p>
+          <p className="text-xs text-gray-500">
+            Un tap su Non interessato / Trial / Contattato salva e passa al prossimo. Per i richiami fissa data e ora.
+          </p>
           <div className="flex flex-wrap gap-1.5">
             {DIALER_OUTCOMES.map((o) => (
               <button
                 key={o.value}
                 type="button"
                 onClick={() => handleOutcomePick(o.value)}
+                disabled={isSaving}
                 className={`rounded-md px-2.5 py-1.5 text-xs font-medium border transition-colors ${
                   outcome === o.value
                     ? "border-blue-600 bg-blue-50 text-blue-900"
@@ -462,7 +470,14 @@ export function DialerCallDock({
             />
           </div>
 
-          <Button className="w-full" size="lg" onClick={handleSaveAndNext} disabled={isSaving || !outcome}>
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => {
+              void handleSaveAndNext();
+            }}
+            disabled={isSaving || !outcome}
+          >
             {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
             {autoDial ? "Salva e chiama prossimo" : "Salva e prossimo"}
           </Button>

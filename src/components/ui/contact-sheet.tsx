@@ -381,8 +381,13 @@ export function ContactSheet({
                             </span>
                           </div>
                           {a.description && (
-                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-wrap">
                               {a.description}
+                            </p>
+                          )}
+                          {a.data?.notes && !a.description?.includes(a.data.notes) && (
+                            <p className="text-xs text-gray-500 mt-0.5 line-clamp-2 whitespace-pre-wrap">
+                              {a.data.notes}
                             </p>
                           )}
                           {a.data?.statusChange && (

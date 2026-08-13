@@ -66,6 +66,8 @@ export type DialerContact = {
   source?: string;
   owner?: Contact['owner'];
   city?: string | null;
+  callbackAt?: string | null;
+  callbackNote?: string | null;
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   scriptReady?: boolean;

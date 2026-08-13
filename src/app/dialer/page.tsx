@@ -20,6 +20,7 @@ import {
   DiscoveryNotes,
 } from "@/components/dialer/script-panel";
 import { DialerCallDock } from "@/components/dialer/call-dock";
+import { DialerNotesPanel } from "@/components/dialer/notes-panel";
 import { getColdCallScript, getDialerQueue } from "@/lib/dialer-api";
 import {
   ColdCallScript,
@@ -52,6 +53,7 @@ export default function DialerPage() {
   const scriptRequestId = useRef(0);
 
   const [discoveryNotes, setDiscoveryNotes] = useState<DiscoveryNotes>({});
+  const [freeNotes, setFreeNotes] = useState("");
   const [callActive, setCallActive] = useState(false);
   /** Sessione power: dopo Start le chiamate partono in automatico una dopo l’altra. */
   const [powerSession, setPowerSession] = useState(false);
@@ -135,13 +137,23 @@ export default function DialerPage() {
   }, [isAuthenticated, dialerOk, loadQueue]);
 
   useEffect(() => {
+    if (!isAuthenticated || !dialerOk || callActive) return;
+    const t = setInterval(() => {
+      void loadQueue();
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [isAuthenticated, dialerOk, callActive, loadQueue]);
+
+  useEffect(() => {
     if (selectedId) {
       setDiscoveryNotes({});
+      setFreeNotes("");
       loadScript(selectedId);
     } else {
       setScript(null);
       setScriptError(null);
       setDiscoveryNotes({});
+      setFreeNotes("");
     }
   }, [selectedId, loadScript]);
 
@@ -361,7 +373,7 @@ export default function DialerPage() {
           )}
 
           {/* Layout: coda | script (hero) | scheda compatta */}
-          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
             <section className="flex min-h-0 flex-col border-r border-gray-200 bg-white p-3">
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                 Coda · {total}
@@ -458,6 +470,8 @@ export default function DialerPage() {
                   autoDialNonce={autoDialNonce}
                   discovery={script?.discovery}
                   discoveryNotes={discoveryNotes}
+                  notes={freeNotes}
+                  onNotesChange={setFreeNotes}
                   currentReviews={
                     script?.cardSummary?.reviews ??
                     script?.projectionHints?.reviews ??
@@ -475,17 +489,37 @@ export default function DialerPage() {
 
             <section className="hidden min-h-0 flex-col border-l border-gray-200 bg-white p-3 lg:flex">
               <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                Scheda (slot script)
+                Scheda
               </h2>
-              <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto">
                 <VisibilityCardSummary
                   summary={cardSummary}
                   hasVisibilityCard={hasVisibilityCard}
                 />
-                <p className="mt-4 text-[11px] leading-relaxed text-gray-400">
+                {selectedContact && (
+                    <div className="border-t border-gray-100 pt-3">
+                      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        Note
+                      </h3>
+                      <DialerNotesPanel
+                        discovery={script?.discovery}
+                        discoveryNotes={discoveryNotes}
+                        freeNotes={freeNotes}
+                        onFreeNotesChange={setFreeNotes}
+                        currentReviews={
+                          script?.cardSummary?.reviews ??
+                          script?.projectionHints?.reviews ??
+                          selectedContact.cardSummary?.reviews ??
+                          null
+                        }
+                        disabled={queueLoading}
+                      />
+                    </div>
+                )}
+                <p className="text-[11px] leading-relaxed text-gray-400">
                   Start: le chiamate partono una dopo l’altra. Salva esito → passa al prossimo e
                   richiama subito. Pausa ferma l’auto-dial. Obiezioni one-tap sotto lo script
-                  (tasti 1–9).
+                  (tasti 1–9). I richiami fissati riappaiono in coda all’orario scelto.
                 </p>
               </div>
             </section>

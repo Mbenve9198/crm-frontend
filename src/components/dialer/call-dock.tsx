@@ -19,6 +19,8 @@ import {
   DiscoveryNotes,
   formatDialerNotes,
 } from "@/components/dialer/script-panel";
+import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
+import { buildCallbackIso } from "@/lib/callback-schedule";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -47,6 +49,9 @@ const DIALER_OUTCOMES: { value: CallOutcome; label: string; statusHint?: Contact
   { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare" },
 ];
 
+const CALLBACK_REQUIRED_OUTCOMES: CallOutcome[] = ["callback", "follow-up"];
+const CALLBACK_OPTIONAL_OUTCOMES: CallOutcome[] = ["no-answer", "voicemail"];
+
 interface DialerCallDockProps {
   contact: DialerContact;
   disabled?: boolean;
@@ -56,6 +61,8 @@ interface DialerCallDockProps {
   autoDialNonce?: number;
   discovery?: ColdCallDiscoveryQuestion[];
   discoveryNotes: DiscoveryNotes;
+  notes: string;
+  onNotesChange: (value: string) => void;
   currentReviews?: number | null;
   onSkip: () => void;
   onComplete: () => void;
@@ -72,6 +79,8 @@ export function DialerCallDock({
   autoDialNonce = 0,
   discovery,
   discoveryNotes,
+  notes,
+  onNotesChange,
   currentReviews,
   onSkip,
   onComplete,
@@ -86,7 +95,8 @@ export function DialerCallDock({
 
   const [outcome, setOutcome] = useState<CallOutcome | "">("");
   const [status, setStatus] = useState<ContactStatus>(contact.status);
-  const [notes, setNotes] = useState("");
+  const [callbackDate, setCallbackDate] = useState("");
+  const [callbackTime, setCallbackTime] = useState("10:00");
   const [isSaving, setIsSaving] = useState(false);
 
   const contactIdRef = useRef(contact._id);
@@ -114,7 +124,8 @@ export function DialerCallDock({
     setCallState("idle");
     setCallResult(null);
     setOutcome("");
-    setNotes("");
+    setCallbackDate("");
+    setCallbackTime("10:00");
     setErrorMessage("");
     setStatus(contact.status);
   }, [contact._id, contact.status, callState]);
@@ -212,6 +223,12 @@ export function DialerCallDock({
     if (hint) setStatus(hint);
   };
 
+  const showCallbackPicker =
+    CALLBACK_REQUIRED_OUTCOMES.includes(outcome as CallOutcome) ||
+    CALLBACK_OPTIONAL_OUTCOMES.includes(outcome as CallOutcome) ||
+    status === "da richiamare";
+  const callbackRequired = CALLBACK_REQUIRED_OUTCOMES.includes(outcome as CallOutcome);
+
   const answeredDiscovery = (discovery || []).filter(
     (q) => (discoveryNotes[q.id] || "").trim()
   );
@@ -219,6 +236,10 @@ export function DialerCallDock({
   const handleSaveAndNext = useCallback(async () => {
     if (!outcome) {
       toast.error("Seleziona un esito");
+      return;
+    }
+    if (callbackRequired && !callbackDate) {
+      toast.error("Fissa data e ora del richiamo");
       return;
     }
     setIsSaving(true);
@@ -231,20 +252,45 @@ export function DialerCallDock({
           contact.cardSummary?.reviews ??
           null
       );
+
       if (callResult) {
         await apiClient.updateCall(callResult._id, {
           notes: mergedNotes || undefined,
           outcome,
         });
       }
+
+      if (mergedNotes.trim()) {
+        await apiClient.createActivity(contact._id, {
+          type: "note",
+          title: "Note chiamata",
+          description: mergedNotes.trim(),
+        });
+      }
+
       if (status !== contact.status) {
         await apiClient.updateContactStatus(contact._id, { status });
       }
+
+      if (callbackDate) {
+        await apiClient.updateContactCallback(contact._id, {
+          callbackAt: buildCallbackIso(callbackDate, callbackTime),
+          callbackNote: (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300),
+        });
+      } else if (status !== "da richiamare" && contact.callbackAt) {
+        await apiClient.updateContactCallback(contact._id, {
+          callbackAt: null,
+          callbackNote: null,
+        });
+      }
+
       toast.success("Salvato");
       setCallState("idle");
       setCallResult(null);
       setOutcome("");
-      setNotes("");
+      setCallbackDate("");
+      setCallbackTime("10:00");
+      onNotesChange("");
       onClearDiscoveryNotes?.();
       onComplete();
     } catch {
@@ -260,11 +306,16 @@ export function DialerCallDock({
     contact.status,
     contact._id,
     contact.cardSummary?.reviews,
+    contact.callbackAt,
     currentReviews,
     discovery,
     discoveryNotes,
+    callbackDate,
+    callbackTime,
+    callbackRequired,
     onComplete,
     onClearDiscoveryNotes,
+    onNotesChange,
   ]);
 
   const busy = callState !== "idle" && callState !== "wrap" && callState !== "error";
@@ -387,34 +438,44 @@ export function DialerCallDock({
             </div>
           )}
 
-          <div className="grid gap-2 sm:grid-cols-[180px_1fr]">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">Status contatto</label>
-              <Select value={status} onValueChange={(v) => setStatus(v as ContactStatus)}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAllStatuses().map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {getStatusLabel(s)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-500">
-                Note extra (DM, fascia, WhatsApp…)
-              </label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Aggiungi ciò che non sta nelle Q…"
-                className="min-h-[42px] resize-none bg-white"
-                rows={2}
-              />
-            </div>
+          {showCallbackPicker && (
+            <DialerCallbackPicker
+              dateStr={callbackDate}
+              timeStr={callbackTime}
+              required={callbackRequired}
+              disabled={isSaving}
+              onDateChange={setCallbackDate}
+              onTimeChange={setCallbackTime}
+            />
+          )}
+
+          <div className="lg:hidden">
+            <label className="mb-1 block text-xs font-medium text-gray-500">
+              Note extra (DM, fascia, WhatsApp…)
+            </label>
+            <Textarea
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              placeholder="Aggiungi ciò che non sta nelle Q…"
+              className="min-h-[42px] resize-none bg-white"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Status contatto</label>
+            <Select value={status} onValueChange={(v) => setStatus(v as ContactStatus)}>
+              <SelectTrigger className="bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getAllStatuses().map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {getStatusLabel(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button className="w-full" size="lg" onClick={handleSaveAndNext} disabled={isSaving || !outcome}>
             {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}

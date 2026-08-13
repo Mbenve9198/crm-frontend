@@ -14,6 +14,13 @@ import { Textarea } from "./textarea";
 import { Loader2, Trash2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Contact } from "@/types/contact";
+import {
+  CALLBACK_SHORTCUTS,
+  CALLBACK_TIME_SLOTS,
+  formatShortcutLabel,
+  toDateStr,
+  toTimeStr,
+} from "@/lib/callback-schedule";
 
 interface CallbackDialogProps {
   open: boolean;
@@ -24,54 +31,6 @@ interface CallbackDialogProps {
   currentCallbackNote?: string | null;
   onSaved: (updatedContact: Contact) => void;
 }
-
-const TIME_SLOTS: string[] = [];
-for (let h = 8; h <= 20; h++) {
-  TIME_SLOTS.push(`${String(h).padStart(2, "0")}:00`);
-  if (h < 20) TIME_SLOTS.push(`${String(h).padStart(2, "0")}:30`);
-}
-
-function toDateStr(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function toTimeStr(d: Date): string {
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const roundedM = m < 30 ? "00" : "30";
-  return `${String(h).padStart(2, "0")}:${roundedM}`;
-}
-
-function getNextMonday(): Date {
-  const d = new Date();
-  const day = d.getDay();
-  const diff = day === 1 ? 7 : (1 - day + 7) % 7;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-
-function addDays(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-function formatShortcutLabel(dateStr: string): string {
-  const today = toDateStr(new Date());
-  const tomorrow = toDateStr(addDays(1));
-  if (dateStr === today) return "oggi";
-  if (dateStr === tomorrow) return "domani";
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "short" });
-}
-
-const SHORTCUTS = [
-  { label: "Oggi",           getDate: () => addDays(0) },
-  { label: "Domani",         getDate: () => addDays(1) },
-  { label: "Tra 3 giorni",   getDate: () => addDays(3) },
-  { label: "Lunedì prossimo", getDate: getNextMonday },
-];
 
 export function CallbackDialog({
   open,
@@ -169,7 +128,7 @@ export function CallbackDialog({
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Scelta rapida</p>
             <div className="flex flex-wrap gap-2">
-              {SHORTCUTS.map((s) => {
+              {CALLBACK_SHORTCUTS.map((s) => {
                 const sDate = toDateStr(s.getDate());
                 const isActive = dateStr === sDate;
                 return (
@@ -211,7 +170,7 @@ export function CallbackDialog({
                 onChange={(e) => setTimeStr(e.target.value)}
                 disabled={busy}
               >
-                {TIME_SLOTS.map((t) => (
+                {CALLBACK_TIME_SLOTS.map((t) => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>

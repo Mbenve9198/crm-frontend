@@ -117,11 +117,6 @@ export function VisibilityCardSummary({
         </div>
       )}
 
-      {summary?.hook && (
-        <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 text-sm text-blue-950">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-blue-600">Hook</p>
-          <p className="leading-relaxed">{summary.hook}</p>
-        </div>
       )}
     </div>
   );

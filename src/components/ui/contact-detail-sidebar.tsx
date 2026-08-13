@@ -2531,7 +2531,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                               {activity.description && (
                                 activity.type === 'ai_agent'
                                   ? <AiAgentActivity description={activity.description} />
-                                  : <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                                  : <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{activity.description}</p>
                               )}
                               
                               {activity.data?.messageText && (
@@ -2548,8 +2548,11 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                                 </div>
                               )}
 
-                              {activity.data?.notes && (
-                                <p className="text-sm text-gray-600 mt-1">{activity.data.notes}</p>
+                              {activity.data?.notes && !activity.description?.includes(activity.data.notes) && (
+                                <div className="mt-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Note</p>
+                                  <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{activity.data.notes}</p>
+                                </div>
                               )}
                               
                               {activity.data?.recordingSid && (

@@ -41,10 +41,6 @@ export function nextCallbackDateTime(from = new Date()): { dateStr: string; time
   };
 }
 
-export function nextCallbackTimeSlot(from = new Date()): string {
-  return nextCallbackDateTime(from).timeStr;
-}
-
 export function getNextMonday(): Date {
   const d = new Date();
   const day = d.getDay();

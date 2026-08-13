@@ -45,7 +45,7 @@ const DIALER_OUTCOMES: {
   { value: "first-call", label: "Prima call / contattato", statusHint: "contattato", callback: "clear" },
   { value: "no-answer", label: "Nessuna risposta", statusHint: "da richiamare", callback: "optional" },
   { value: "voicemail", label: "Segreteria", statusHint: "da richiamare", callback: "optional" },
-  { value: "not-interested", label: "Non interessato", statusHint: "lost before free trial", callback: "clear" },
+  { value: "not-interested", label: "Non interessato", statusHint: "do_not_contact", callback: "clear" },
   { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare", callback: "required" },
 ];
 
@@ -133,11 +133,14 @@ export function DialerCallDock({
     consecutiveNoPhoneRef.current = 0;
   }, [autoDialNonce]);
 
-  // Reset dock when switching contact (not mid-call)
+  // Reset dock when switching contact (not mid-call). In wrap non sovrascrivere
+  // lo status scelto dall'esito (altrimenti "Non interessato" torna a da contattare).
   useEffect(() => {
     if (callState !== "idle" && callState !== "wrap" && callState !== "error") return;
     if (contactIdRef.current === contact._id) {
-      setStatus(contact.status);
+      if (callState !== "wrap" || !outcome) {
+        setStatus(contact.status);
+      }
       return;
     }
     contactIdRef.current = contact._id;
@@ -149,7 +152,7 @@ export function DialerCallDock({
     setCallbackTime("10:00");
     setErrorMessage("");
     setStatus(contact.status);
-  }, [contact._id, contact.status, callState]);
+  }, [contact._id, contact.status, callState, outcome]);
 
   useEffect(() => {
     if (callState === "idle" || callState === "error" || callState === "wrap") {
@@ -277,9 +280,13 @@ export function DialerCallDock({
           null
       );
 
+      const meta = DIALER_OUTCOMES.find((o) => o.value === outcome);
+      const nextStatus = meta?.statusHint ?? status;
+      const policy = meta?.callback ?? callbackPolicy;
+
       let callbackAt: string | null = null;
       let callbackNote: string | null = null;
-      if (callbackPolicy === "required" || (callbackPolicy === "optional" && callbackDate)) {
+      if (policy === "required" || (policy === "optional" && callbackDate)) {
         callbackAt = buildCallbackIso(callbackDate, callbackTime);
         callbackNote = (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300);
       }
@@ -288,11 +295,11 @@ export function DialerCallDock({
         contactId: contact._id,
         callId: callResult?._id,
         outcome,
-        status,
+        status: nextStatus,
         notes: mergedNotes || undefined,
         callbackAt,
         callbackNote,
-        mrr: wrapUpMrrForStatus(status),
+        mrr: wrapUpMrrForStatus(nextStatus),
       });
 
       toast.success("Salvato");
@@ -304,8 +311,8 @@ export function DialerCallDock({
       onNotesChange("");
       onClearDiscoveryNotes?.();
       onComplete();
-    } catch {
-      toast.error("Errore nel salvataggio");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Errore nel salvataggio");
     } finally {
       setIsSaving(false);
     }
@@ -417,6 +424,7 @@ export function DialerCallDock({
       {callState === "wrap" && (
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-900">Chiudi la call</p>
+          <p className="text-xs text-gray-500">Scegli l’esito e premi Salva e prossimo.</p>
           <div className="flex flex-wrap gap-1.5">
             {DIALER_OUTCOMES.map((o) => (
               <button

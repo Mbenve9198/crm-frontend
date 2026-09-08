@@ -13,7 +13,12 @@ import {
 } from "@/components/dialer/script-panel";
 import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
 import { wrapUpDialer } from "@/lib/dialer-api";
-import { buildCallbackIso, nextCallbackDateTime } from "@/lib/callback-schedule";
+import {
+  buildCallbackIso,
+  formatCallbackAt,
+  isCallbackDue,
+  nextCallbackDateTime,
+} from "@/lib/callback-schedule";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -224,6 +229,24 @@ export function DialerCallDock({
       return () => clearTimeout(t);
     }
 
+    if (contact.callbackAt && !isCallbackDue(contact.callbackAt)) {
+      const t = setTimeout(() => {
+        if (lastAutoDialKeyRef.current === dialKey) return;
+        lastAutoDialKeyRef.current = dialKey;
+        consecutiveNoPhoneRef.current += 1;
+        const when = formatCallbackAt(contact.callbackAt);
+        toast.message("Richiamo ancora in programma — salto", {
+          description: when ? `${contact.name} · ${when}` : contact.name,
+        });
+        if (consecutiveNoPhoneRef.current >= 8) {
+          onSessionStallRef.current?.();
+          return;
+        }
+        onSkipRef.current();
+      }, 350);
+      return () => clearTimeout(t);
+    }
+
     const t = setTimeout(() => {
       if (lastAutoDialKeyRef.current === dialKey) return;
       lastAutoDialKeyRef.current = dialKey;
@@ -237,6 +260,7 @@ export function DialerCallDock({
     callState,
     contact._id,
     contact.phone,
+    contact.callbackAt,
     contact.name,
     disabled,
     handleInitiate,

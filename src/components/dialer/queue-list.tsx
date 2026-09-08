@@ -76,6 +76,10 @@ export function DialerQueueList({
                     <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       richiamo
                     </span>
+                  ) : callbackLabel ? (
+                    <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-800">
+                      programmato
+                    </span>
                   ) : !contact.hasVisibilityCard ? (
                     <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       incompleta

@@ -5,7 +5,7 @@ import { Contact } from "@/types/contact";
 import { ConversationTimelineMessages } from "@/components/ui/conversation-timeline-messages";
 import { WaEngagementBadge } from "@/components/ui/wa-engagement-badge";
 import {
-  isRankCheckerInboundSource,
+  hasGraderContext,
   isRankCheckerOrganicSource,
   resolveWaEngagementStatus,
 } from "@/lib/wa-engagement";
@@ -58,7 +58,7 @@ export function WaConversationPanel({
   showEngagementBadge = true,
 }: WaConversationPanelProps) {
   const engagement = resolveWaEngagementStatus(contact.properties, messages);
-  const isRankChecker = isRankCheckerInboundSource(contact.source);
+  const isRankChecker = hasGraderContext(contact);
   const isOrganic = isRankCheckerOrganicSource(contact.source);
 
   if (!contact.phone && !isRankChecker) return null;
@@ -121,8 +121,8 @@ export function WaConversationPanel({
 export function pickWhatsappMessages(
   agentConversations: Array<{ channel: string; messages: WaMessage[] }>
 ): WaMessage[] {
-  const wa =
-    agentConversations.find((c) => c.channel === "whatsapp")?.messages ||
-    agentConversations[0]?.messages;
-  return wa || [];
+  return agentConversations
+    .filter((c) => c.channel === "whatsapp")
+    .flatMap((c) => c.messages)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }

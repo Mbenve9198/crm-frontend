@@ -75,11 +75,12 @@ export function buildCallbackIso(dateStr: string, timeStr: string): string {
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
-export function formatCallbackAt(iso?: string | null): string | null {
+export function formatCallbackAt(iso?: string | null, timeZone?: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleString("it-IT", {
+    timeZone,
     day: "numeric",
     month: "short",
     hour: "2-digit",

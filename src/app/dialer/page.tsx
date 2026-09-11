@@ -39,6 +39,7 @@ export default function DialerPage() {
   const dialerOk = canUseDialer(user?.role);
 
   const [statusFilter, setStatusFilter] = useState("da contattare");
+  const [listFilter, setListFilter] = useState(DIALER_DEFAULT_LIST);
   const [cityFilter, setCityFilter] = useState("all");
   const [cities, setCities] = useState<DialerCityFacet[]>([]);
   const [contacts, setContacts] = useState<DialerContact[]>([]);
@@ -77,7 +78,7 @@ export default function DialerPage() {
     }
     try {
       const res = await getDialerQueue({
-        list: DIALER_DEFAULT_LIST,
+        list: listFilter,
         status: statusFilter,
         city: cityFilter === "all" ? undefined : cityFilter,
         limit: 100,
@@ -117,7 +118,7 @@ export default function DialerPage() {
     } finally {
       if (!silent) setQueueLoading(false);
     }
-  }, [statusFilter, cityFilter]);
+  }, [listFilter, statusFilter, cityFilter]);
 
   const loadScript = useCallback(async (contactId: string) => {
     const reqId = ++scriptRequestId.current;
@@ -313,13 +314,30 @@ export default function DialerPage() {
                   Power Dialer
                 </h1>
                 <p className="text-xs text-gray-500">
-                  {DIALER_DEFAULT_LIST}
+                  {listFilter}
                   {user ? ` · ${user.firstName}` : ""}
                   {" · solo i tuoi contatti"}
                   {powerSession ? " · sessione attiva (auto-dial)" : ""}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={listFilter}
+                  onValueChange={(value) => {
+                    setListFilter(value);
+                    setCityFilter("all");
+                  }}
+                  disabled={callActive || powerSession || queueLoading}
+                >
+                  <SelectTrigger aria-label="Lista contatti" className="h-9 w-[240px] bg-white">
+                    <SelectValue placeholder="Lista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[DIALER_DEFAULT_LIST, "Inbound - Rank Checker", "Inbound - Grader recuperati"].map((list) => (
+                      <SelectItem key={list} value={list}>{list}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Select
                   value={statusFilter}
                   onValueChange={(v) => {

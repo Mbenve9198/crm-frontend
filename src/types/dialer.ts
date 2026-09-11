@@ -68,6 +68,9 @@ export type DialerContact = {
   city?: string | null;
   callbackAt?: string | null;
   callbackNote?: string | null;
+  callRequested?: boolean;
+  callScheduledAt?: string | null;
+  callPreference?: string | null;
   cardSummary: DialerCardSummary;
   hasVisibilityCard: boolean;
   scriptReady?: boolean;

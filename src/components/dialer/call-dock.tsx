@@ -16,7 +16,7 @@ import { wrapUpDialer } from "@/lib/dialer-api";
 import {
   buildCallbackIso,
   formatCallbackAt,
-  isCallbackDue,
+  futureCallConstraint,
   nextCallbackDateTime,
 } from "@/lib/callback-schedule";
 import { toast } from "sonner";
@@ -229,8 +229,8 @@ export function DialerCallDock({
       return () => clearTimeout(t);
     }
 
-    const scheduledAt = contact.callbackAt || (contact.callRequested ? contact.callScheduledAt : null);
-    if (scheduledAt && !isCallbackDue(scheduledAt)) {
+    const scheduledAt = futureCallConstraint(contact.callbackAt, contact.callRequested ? contact.callScheduledAt : null);
+    if (scheduledAt) {
       const t = setTimeout(() => {
         if (lastAutoDialKeyRef.current === dialKey) return;
         lastAutoDialKeyRef.current = dialKey;

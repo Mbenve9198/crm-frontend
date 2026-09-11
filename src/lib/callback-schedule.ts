@@ -94,3 +94,15 @@ export function isCallbackDue(iso?: string | null, now = new Date()): boolean {
   if (Number.isNaN(d.getTime())) return false;
   return d.getTime() <= now.getTime();
 }
+
+/** Auto-dial must respect both a manual callback and a recovered booking. */
+export function futureCallConstraint(
+  callbackAt?: string | null,
+  bookingAt?: string | null,
+  now = new Date()
+): string | null {
+  const dates = [callbackAt, bookingAt]
+    .filter((value): value is string => Boolean(value) && Date.parse(value!) > now.getTime())
+    .sort((a, b) => Date.parse(b) - Date.parse(a));
+  return dates[0] || null;
+}

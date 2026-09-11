@@ -2,6 +2,21 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { hasGraderContext, resolveWaEngagementStatus } from '../src/lib/wa-engagement.ts';
 import { acknowledgeContactEdits, applyContactEdits } from '../src/lib/contact-draft.ts';
+import { futureCallConstraint, formatCallbackAt } from '../src/lib/callback-schedule.ts';
+
+describe('recovered call bookings', () => {
+  const now = new Date('2026-09-11T09:00:00Z');
+  it('respects a future booking even when an old callback is past', () => {
+    assert.equal(futureCallConstraint('2026-09-01T09:00:00Z', '2026-09-14T09:00:00Z', now), '2026-09-14T09:00:00Z');
+  });
+  it('respects a later manual callback and ignores invalid or expired dates', () => {
+    assert.equal(futureCallConstraint('2026-09-15T09:00:00Z', '2026-09-14T09:00:00Z', now), '2026-09-15T09:00:00Z');
+    assert.equal(futureCallConstraint('invalid', '2026-09-10T09:00:00Z', now), null);
+  });
+  it('shows bookings in Italian time regardless of the browser timezone', () => {
+    assert.match(formatCallbackAt('2026-09-14T09:00:00Z', 'Europe/Rome'), /11:00/);
+  });
+});
 
 describe('grader CRM presentation', () => {
   it('recognizes grader data on contacts with a historical source', () => {

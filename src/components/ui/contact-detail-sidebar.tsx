@@ -1,6 +1,6 @@
 "use client";
 
-import { mergeFreshContact, contactDraftUpdate } from "@/lib/contact-draft";
+import { acknowledgeContactEdits, applyContactEdits, type ContactDraftEdits } from "@/lib/contact-draft";
 import { hasGraderContext } from "@/lib/wa-engagement";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -920,6 +920,10 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
     notifyRef.current(next);
   }, []);
   const draftBase = useRef<Contact | null>(null);
+  const pendingEdits = useRef<ContactDraftEdits>({});
+  const editRevision = useRef(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const draftSession = useRef(0);
   const currentContactId = useRef(providedContact?._id);
   currentContactId.current = providedContact?._id;
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
@@ -1031,7 +1035,7 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
       if (!options?.silent) setIsLoadingActivities(true);
       const response = await apiClient.getContactActivities(contactId, { limit: 50 });
 
-      if (response.success) {
+      if (currentContactId.current === contactId && response.success) {
         setActivities(response.data.activities);
       }
     } catch (error) {
@@ -1108,23 +1112,21 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
   // Carica activities e dati freschi quando si apre la sidebar
   useEffect(() => {
     let cancelled = false;
+    draftSession.current++;
+    pendingEdits.current = {};
     if (contact && isOpen) {
       setEditedContact({ ...contact });
       draftBase.current = contact;
       apiClient.getContact(contact._id).then((res) => {
         if (cancelled || currentContactId.current !== contact._id) return;
         if (res.success && res.data) {
-          const base = draftBase.current;
+          if (draftBase.current && draftBase.current.updatedAt > res.data.updatedAt) return;
           const fresh = res.data;
-          setEditedContact(previous => mergeFreshContact(previous, base, fresh));
+          setEditedContact(applyContactEdits(fresh, pendingEdits.current));
           draftBase.current = fresh;
           onContactUpdate(res.data);
-        } else {
-          setEditedContact({ ...contact });
         }
-      }).catch(() => {
-        if (!cancelled) setEditedContact({ ...contact });
-      });
+      }).catch(error => console.error('Errore caricamento contatto:', error));
       loadActivities();
       loadAgentConversations();
       loadLandingConversation();
@@ -1157,22 +1159,47 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;
-
-    try {
-      const response = await apiClient.updateContact(editedContact._id, contactDraftUpdate(editedContact, draftBase.current));
-
+    const submitted = editedContact;
+    const patch = { ...pendingEdits.current, propertyUpdates: { ...pendingEdits.current.propertyUpdates } };
+    if (Object.keys(patch).length === 1 && Object.keys(patch.propertyUpdates).length === 0) return;
+    const session = draftSession.current;
+    const revision = editRevision.current;
+    // Keep writes in order; a slower first blur must not overwrite the next edit.
+    const operation = saveQueue.current.then(async () => {
+      const response = await apiClient.updateContact(submitted._id, patch);
+      if (session !== draftSession.current || currentContactId.current !== submitted._id) return;
       if (response.success && response.data) {
-        onContactUpdate(response.data);
-        setEditedContact(response.data);
-        draftBase.current = response.data;
+        const latest = latestSnapshot.current;
+        const fresh = latest?._id === submitted._id && latest.updatedAt > response.data.updatedAt ? latest : response.data;
+        pendingEdits.current = acknowledgeContactEdits(pendingEdits.current, patch, editRevision.current, revision);
+        onContactUpdate(fresh);
+        setEditedContact(applyContactEdits(fresh, pendingEdits.current));
+        draftBase.current = fresh;
       }
-    } catch (error) {
+    });
+    saveQueue.current = operation.catch(error => {
       console.error('Errore aggiornamento contatto:', error);
-    }
+    });
+    await saveQueue.current;
   };
 
   const handleResetChanges = () => {
+    editRevision.current++;
+    pendingEdits.current = {};
     setEditedContact(contact ? { ...contact } : null);
+  };
+
+  const editContactField = (field: 'name' | 'email' | 'phone', value: string) => {
+    editRevision.current++;
+    pendingEdits.current = { ...pendingEdits.current, [field]: value };
+    setEditedContact(previous => previous ? { ...previous, [field]: value } : null);
+  };
+
+  const editContactProperty = (key: string, value: string) => {
+    editRevision.current++;
+    pendingEdits.current = { ...pendingEdits.current,
+      propertyUpdates: { ...pendingEdits.current.propertyUpdates, [key]: value } };
+    setEditedContact(previous => previous ? { ...previous, properties: { ...previous.properties, [key]: value } } : null);
   };
 
   const handleStatusChange = async (newStatus: ContactStatus, mrr?: number, closeDate?: string) => {
@@ -1682,7 +1709,7 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
                     <label className="text-sm font-medium text-gray-700 block mb-1">Nome</label>
                     <Input
                       value={editedContact.name}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, name: e.target.value } : null)}
+                      onChange={(e) => editContactField('name', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1692,7 +1719,7 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
                     <Input
                       type="email"
                       value={editedContact.email || ''}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, email: e.target.value } : null)}
+                      onChange={(e) => editContactField('email', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1701,7 +1728,7 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
                     <label className="text-sm font-medium text-gray-700 block mb-1">Telefono</label>
                     <Input
                       value={editedContact.phone || ''}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                      onChange={(e) => editContactField('phone', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1793,12 +1820,12 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
                       <div><label htmlFor="contact-first-name" className="text-sm font-medium">Nome referente</label>
                         <Input id="contact-first-name" autoComplete="given-name" maxLength={120}
                           value={String(editedContact.properties?.firstName || '')}
-                          onChange={(event) => setEditedContact(prev => prev ? { ...prev, properties: { ...prev.properties, firstName: event.target.value } } : null)}
+                          onChange={(event) => editContactProperty('firstName', event.target.value)}
                           onBlur={() => handleSaveContact()} /></div>
                       <div><label htmlFor="contact-last-name" className="text-sm font-medium">Cognome referente</label>
                         <Input id="contact-last-name" autoComplete="family-name" maxLength={120}
                           value={String(editedContact.properties?.lastName || '')}
-                          onChange={(event) => setEditedContact(prev => prev ? { ...prev, properties: { ...prev.properties, lastName: event.target.value } } : null)}
+                          onChange={(event) => editContactProperty('lastName', event.target.value)}
                           onBlur={() => handleSaveContact()} /></div>
                     </div>
                   )}
@@ -2262,10 +2289,7 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
                             </label>
                             <Input
                               value={String(editedContact.properties?.[key] || '')}
-                              onChange={(e) => setEditedContact(prev => prev ? {
-                                ...prev,
-                                properties: { ...prev.properties, [key]: e.target.value }
-                              } : null)}
+                              onChange={(e) => editContactProperty(key, e.target.value)}
                               onBlur={() => handleSaveContact()}
                               placeholder={`Inserisci ${key.replace(/_/g, ' ')}`}
                             />
@@ -2634,4 +2658,4 @@ export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose
       </div>
     </>
   );
-} 
+}

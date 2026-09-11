@@ -1,30 +1,24 @@
-import type { Contact, UpdateContactRequest } from '../types/contact';
+import type { Contact } from '../types/contact';
 
-/** Keep fields the user edited while refreshing the rest of the contact. */
-export function mergeFreshContact(draft: Contact | null, base: Contact | null, fresh: Contact): Contact {
-  if (!draft || !base || draft._id !== fresh._id) return fresh;
-  return {
-    ...fresh,
-    name: draft.name !== base.name ? draft.name : fresh.name,
-    email: draft.email !== base.email ? draft.email : fresh.email,
-    phone: draft.phone !== base.phone ? draft.phone : fresh.phone,
-    lists: draft.lists !== base.lists ? draft.lists : fresh.lists,
-    properties: { ...fresh.properties, ...changedProperties(draft, base) },
-  };
+/** Only input events create edits; server-derived properties never become dirty. */
+export type ContactDraftEdits = Partial<Pick<Contact, 'name' | 'email' | 'phone' | 'lists'>> & {
+  propertyUpdates?: Contact['properties'];
+};
+
+export function applyContactEdits(fresh: Contact, edits: ContactDraftEdits): Contact {
+  const { propertyUpdates, ...fields } = edits;
+  return { ...fresh, ...fields, properties: { ...fresh.properties, ...propertyUpdates } };
 }
 
-function changedProperties(draft: Contact, base: Contact | null) {
-  return Object.fromEntries(Object.entries(draft.properties || {}).filter(
-    ([key, value]) => value !== base?.properties?.[key]
-  ));
-}
-
-export function contactDraftUpdate(draft: Contact, base: Contact | null): UpdateContactRequest {
-  return {
-    ...(draft.name !== base?.name ? { name: draft.name } : {}),
-    ...(draft.email !== base?.email ? { email: draft.email } : {}),
-    ...(draft.phone !== base?.phone ? { phone: draft.phone } : {}),
-    ...(draft.lists !== base?.lists ? { lists: draft.lists } : {}),
-    propertyUpdates: changedProperties(draft, base),
-  };
+/** Acknowledging an older save must preserve edits made while it was in flight. */
+export function acknowledgeContactEdits(current: ContactDraftEdits, sent: ContactDraftEdits,
+  currentRevision: number, sentRevision: number): ContactDraftEdits {
+  if (currentRevision !== sentRevision) return current;
+  const remaining = { ...current };
+  for (const key of ['name', 'email', 'phone', 'lists'] as const) {
+    if (key in sent && current[key] === sent[key]) delete remaining[key];
+  }
+  remaining.propertyUpdates = Object.fromEntries(Object.entries(current.propertyUpdates || {})
+    .filter(([key, value]) => !(key in (sent.propertyUpdates || {})) || value !== sent.propertyUpdates?.[key]));
+  return remaining;
 }

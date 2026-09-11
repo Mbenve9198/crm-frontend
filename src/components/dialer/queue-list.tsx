@@ -48,6 +48,7 @@ export function DialerQueueList({
           const active = contact._id === selectedId;
           const callbackLabel = formatCallbackAt(contact.callbackAt);
           const due = isCallbackDue(contact.callbackAt);
+          const bookingLabel = formatCallbackAt(contact.callScheduledAt, "Europe/Rome") || contact.callPreference;
           return (
             <li key={contact._id}>
               <button
@@ -72,7 +73,11 @@ export function DialerQueueList({
                       {contact.phone || "Nessun numero"}
                     </p>
                   </div>
-                  {due ? (
+                  {contact.callRequested ? (
+                    <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-800">
+                      Chiamata prenotata
+                    </span>
+                  ) : due ? (
                     <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
                       richiamo
                     </span>
@@ -95,6 +100,11 @@ export function DialerQueueList({
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
+                {contact.callRequested && bookingLabel ? (
+                  <p className="mt-0.5 text-[11px] font-medium text-violet-800">
+                    {bookingLabel} · ora italiana
+                  </p>
+                ) : null}
                 {callbackLabel ? (
                   <p className={`mt-0.5 truncate text-[11px] ${due ? "font-medium text-amber-800" : "text-blue-700"}`}>
                     Richiamo {callbackLabel}

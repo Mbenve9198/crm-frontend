@@ -75,11 +75,12 @@ export function buildCallbackIso(dateStr: string, timeStr: string): string {
   return new Date(`${dateStr}T${timeStr}:00`).toISOString();
 }
 
-export function formatCallbackAt(iso?: string | null): string | null {
+export function formatCallbackAt(iso?: string | null, timeZone?: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleString("it-IT", {
+    timeZone,
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -92,4 +93,16 @@ export function isCallbackDue(iso?: string | null, now = new Date()): boolean {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return false;
   return d.getTime() <= now.getTime();
+}
+
+/** Auto-dial must respect both a manual callback and a recovered booking. */
+export function futureCallConstraint(
+  callbackAt?: string | null,
+  bookingAt?: string | null,
+  now = new Date()
+): string | null {
+  const dates = [callbackAt, bookingAt]
+    .filter((value): value is string => Boolean(value) && Date.parse(value!) > now.getTime())
+    .sort((a, b) => Date.parse(b) - Date.parse(a));
+  return dates[0] || null;
 }

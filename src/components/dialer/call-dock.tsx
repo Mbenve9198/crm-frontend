@@ -16,7 +16,7 @@ import { wrapUpDialer } from "@/lib/dialer-api";
 import {
   buildCallbackIso,
   formatCallbackAt,
-  isCallbackDue,
+  futureCallConstraint,
   nextCallbackDateTime,
 } from "@/lib/callback-schedule";
 import { toast } from "sonner";
@@ -229,12 +229,13 @@ export function DialerCallDock({
       return () => clearTimeout(t);
     }
 
-    if (contact.callbackAt && !isCallbackDue(contact.callbackAt)) {
+    const scheduledAt = futureCallConstraint(contact.callbackAt, contact.callRequested ? contact.callScheduledAt : null);
+    if (scheduledAt) {
       const t = setTimeout(() => {
         if (lastAutoDialKeyRef.current === dialKey) return;
         lastAutoDialKeyRef.current = dialKey;
         consecutiveNoPhoneRef.current += 1;
-        const when = formatCallbackAt(contact.callbackAt);
+        const when = formatCallbackAt(scheduledAt, "Europe/Rome");
         toast.message("Richiamo ancora in programma — salto", {
           description: when ? `${contact.name} · ${when}` : contact.name,
         });
@@ -261,6 +262,8 @@ export function DialerCallDock({
     contact._id,
     contact.phone,
     contact.callbackAt,
+    contact.callRequested,
+    contact.callScheduledAt,
     contact.name,
     disabled,
     handleInitiate,

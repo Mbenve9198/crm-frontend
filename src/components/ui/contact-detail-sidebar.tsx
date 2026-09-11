@@ -1,5 +1,8 @@
 "use client";
 
+import { acknowledgeContactEdits, applyContactEdits, type ContactDraftEdits } from "@/lib/contact-draft";
+import { hasGraderContext } from "@/lib/wa-engagement";
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { X, Plus, Mail, Phone, MessageCircle, Instagram, Clock, ArrowRight, User as UserIcon, Edit, Trash2, Save, XCircle, Users, CalendarClock, StickyNote, Bot, ExternalLink, CreditCard, RefreshCw, ExternalLink as LinkIcon, Search, Loader2, Link } from "lucide-react";
 import { Button } from "./button";
@@ -17,7 +20,6 @@ import { CallbackDialog } from "./callback-dialog";
 import { ConversationTimelineMessages } from "./conversation-timeline-messages";
 import { WaConversationPanel, pickWhatsappMessages } from "./wa-conversation-panel";
 import { WaEngagementBadge } from "./wa-engagement-badge";
-import { isRankCheckerInboundSource } from "@/lib/wa-engagement";
 
 interface ContactDetailSidebarProps {
   contact: Contact | null;
@@ -902,7 +904,28 @@ function SmartleadOutboundSection({ contact }: { contact: Contact }) {
   );
 }
 
-export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate, initialActivity }: ContactDetailSidebarProps) {
+export function ContactDetailSidebar({ contact: providedContact, isOpen, onClose, onContactUpdate: notifyContactUpdate, initialActivity }: ContactDetailSidebarProps) {
+  const [loadedContact, setLoadedContact] = useState<Contact | null>(null);
+  const contact = loadedContact?._id === providedContact?._id && loadedContact &&
+    (!providedContact || loadedContact.updatedAt >= providedContact.updatedAt) ? loadedContact : providedContact;
+  const latestSnapshot = useRef(contact);
+  latestSnapshot.current = contact;
+  const notifyRef = useRef(notifyContactUpdate);
+  notifyRef.current = notifyContactUpdate;
+  const onContactUpdate = useCallback((next: Contact) => {
+    const current = latestSnapshot.current;
+    if (current && (current._id !== next._id || current.updatedAt > next.updatedAt)) return;
+    latestSnapshot.current = next;
+    setLoadedContact(next);
+    notifyRef.current(next);
+  }, []);
+  const draftBase = useRef<Contact | null>(null);
+  const pendingEdits = useRef<ContactDraftEdits>({});
+  const editRevision = useRef(0);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const draftSession = useRef(0);
+  const currentContactId = useRef(providedContact?._id);
+  currentContactId.current = providedContact?._id;
   const [editedContact, setEditedContact] = useState<Contact | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(false);
@@ -1012,7 +1035,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       if (!options?.silent) setIsLoadingActivities(true);
       const response = await apiClient.getContactActivities(contactId, { limit: 50 });
 
-      if (response.success) {
+      if (currentContactId.current === contactId && response.success) {
         setActivities(response.data.activities);
       }
     } catch (error) {
@@ -1031,11 +1054,13 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     if (!contactId) return;
     try {
       if (!options?.silent) setIsLoadingAgent(true);
-      const res = await apiClient.request<AgentConversation[]>(
-        `/agent/conversations?contactId=${contactId}&status=all&limit=10`
-      );
-      if (res.success && res.data) {
-        setAgentConversations(Array.isArray(res.data) ? res.data : []);
+      const [res, whatsapp] = await Promise.all([
+        apiClient.request<AgentConversation[]>(`/agent/conversations?contactId=${contactId}&status=all&limit=10`),
+        apiClient.request<AgentConversation[]>(`/agent/conversations?contactId=${contactId}&status=all&channel=whatsapp&limit=100`),
+      ]);
+      if (currentContactId.current === contactId && res.success && whatsapp.success) {
+        const merged = new Map([...(res.data || []), ...(whatsapp.data || [])].map(item => [item._id, item]));
+        setAgentConversations([...merged.values()]);
       }
     } catch (error) {
       console.error("Errore caricamento conversazioni agent:", error);
@@ -1047,7 +1072,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   const timelineItems = useMemo<TimelineItem[]>(() => {
     const items: TimelineItem[] = [];
     const showPinnedWaPanel =
-      (isRankCheckerInboundSource(contact?.source) && !!contact?.phone) ||
+      (hasGraderContext(contact) && !!contact?.phone) ||
       contact?.source === "inbound_menu_landing" ||
       contact?.source === "inbound_social_proof" ||
       contact?.source === "inbound_qr_recensioni";
@@ -1077,7 +1102,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
     return items.sort(
       (a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime()
     );
-  }, [activities, agentConversations, contact?.source, contact?.phone]);
+  }, [activities, agentConversations, contact]);
 
   const whatsappMessages = useMemo(
     () => pickWhatsappMessages(agentConversations),
@@ -1087,17 +1112,21 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
   // Carica activities e dati freschi quando si apre la sidebar
   useEffect(() => {
     let cancelled = false;
+    draftSession.current++;
+    pendingEdits.current = {};
     if (contact && isOpen) {
+      setEditedContact({ ...contact });
+      draftBase.current = contact;
       apiClient.getContact(contact._id).then((res) => {
-        if (cancelled) return;
+        if (cancelled || currentContactId.current !== contact._id) return;
         if (res.success && res.data) {
-          setEditedContact({ ...res.data });
-        } else {
-          setEditedContact({ ...contact });
+          if (draftBase.current && draftBase.current.updatedAt > res.data.updatedAt) return;
+          const fresh = res.data;
+          setEditedContact(applyContactEdits(fresh, pendingEdits.current));
+          draftBase.current = fresh;
+          onContactUpdate(res.data);
         }
-      }).catch(() => {
-        if (!cancelled) setEditedContact({ ...contact });
-      });
+      }).catch(error => console.error('Errore caricamento contatto:', error));
       loadActivities();
       loadAgentConversations();
       loadLandingConversation();
@@ -1117,35 +1146,60 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
 
   useEffect(() => {
     if (!contactId || !isOpen) return;
+    let cancelled = false;
     const interval = setInterval(() => {
+      loadActivities({ silent: true });
       loadAgentConversations({ silent: true });
+      apiClient.getContact(contactId).then((res) => {
+        if (!cancelled && currentContactId.current === contactId && res.success && res.data) onContactUpdate(res.data);
+      }).catch((error) => console.error('Errore aggiornamento contatto:', error));
     }, 30000);
-    return () => clearInterval(interval);
-  }, [contactId, isOpen, loadAgentConversations]);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [contactId, isOpen, loadAgentConversations, loadActivities, onContactUpdate]);
 
   const handleSaveContact = async () => {
     if (!editedContact || !contact) return;
-
-    try {
-      const response = await apiClient.updateContact(editedContact._id, {
-        name: editedContact.name,
-        email: editedContact.email,
-        phone: editedContact.phone,
-        lists: editedContact.lists,
-        properties: editedContact.properties
-      });
-
+    const submitted = editedContact;
+    const patch = { ...pendingEdits.current, propertyUpdates: { ...pendingEdits.current.propertyUpdates } };
+    if (Object.keys(patch).length === 1 && Object.keys(patch.propertyUpdates).length === 0) return;
+    const session = draftSession.current;
+    const revision = editRevision.current;
+    // Keep writes in order; a slower first blur must not overwrite the next edit.
+    const operation = saveQueue.current.then(async () => {
+      const response = await apiClient.updateContact(submitted._id, patch);
+      if (session !== draftSession.current || currentContactId.current !== submitted._id) return;
       if (response.success && response.data) {
-        onContactUpdate(response.data);
-        setEditedContact(response.data);
+        const latest = latestSnapshot.current;
+        const fresh = latest?._id === submitted._id && latest.updatedAt > response.data.updatedAt ? latest : response.data;
+        pendingEdits.current = acknowledgeContactEdits(pendingEdits.current, patch, editRevision.current, revision);
+        onContactUpdate(fresh);
+        setEditedContact(applyContactEdits(fresh, pendingEdits.current));
+        draftBase.current = fresh;
       }
-    } catch (error) {
+    });
+    saveQueue.current = operation.catch(error => {
       console.error('Errore aggiornamento contatto:', error);
-    }
+    });
+    await saveQueue.current;
   };
 
   const handleResetChanges = () => {
+    editRevision.current++;
+    pendingEdits.current = {};
     setEditedContact(contact ? { ...contact } : null);
+  };
+
+  const editContactField = (field: 'name' | 'email' | 'phone', value: string) => {
+    editRevision.current++;
+    pendingEdits.current = { ...pendingEdits.current, [field]: value };
+    setEditedContact(previous => previous ? { ...previous, [field]: value } : null);
+  };
+
+  const editContactProperty = (key: string, value: string) => {
+    editRevision.current++;
+    pendingEdits.current = { ...pendingEdits.current,
+      propertyUpdates: { ...pendingEdits.current.propertyUpdates, [key]: value } };
+    setEditedContact(previous => previous ? { ...previous, properties: { ...previous.properties, [key]: value } } : null);
   };
 
   const handleStatusChange = async (newStatus: ContactStatus, mrr?: number, closeDate?: string) => {
@@ -1655,7 +1709,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <label className="text-sm font-medium text-gray-700 block mb-1">Nome</label>
                     <Input
                       value={editedContact.name}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, name: e.target.value } : null)}
+                      onChange={(e) => editContactField('name', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1665,7 +1719,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <Input
                       type="email"
                       value={editedContact.email || ''}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, email: e.target.value } : null)}
+                      onChange={(e) => editContactField('email', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1674,7 +1728,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     <label className="text-sm font-medium text-gray-700 block mb-1">Telefono</label>
                     <Input
                       value={editedContact.phone || ''}
-                      onChange={(e) => setEditedContact(prev => prev ? { ...prev, phone: e.target.value } : null)}
+                      onChange={(e) => editContactField('phone', e.target.value)}
                       onBlur={() => handleSaveContact()}
                     />
                   </div>
@@ -1760,6 +1814,21 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                       </div>
                     )}
                   </div>
+
+                  {(contact.properties?.firstName || contact.properties?.lastName) && (
+                    <div className="grid grid-cols-2 gap-3 border-t pt-4">
+                      <div><label htmlFor="contact-first-name" className="text-sm font-medium">Nome referente</label>
+                        <Input id="contact-first-name" autoComplete="given-name" maxLength={120}
+                          value={String(editedContact.properties?.firstName || '')}
+                          onChange={(event) => editContactProperty('firstName', event.target.value)}
+                          onBlur={() => handleSaveContact()} /></div>
+                      <div><label htmlFor="contact-last-name" className="text-sm font-medium">Cognome referente</label>
+                        <Input id="contact-last-name" autoComplete="family-name" maxLength={120}
+                          value={String(editedContact.properties?.lastName || '')}
+                          onChange={(event) => editContactProperty('lastName', event.target.value)}
+                          onBlur={() => handleSaveContact()} /></div>
+                    </div>
+                  )}
 
                   {(contact.source === 'smartlead_outbound' || contact.properties?.smartlead_lead_id) && (
                     <SmartleadOutboundSection contact={editedContact || contact} />
@@ -2006,7 +2075,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                   )}
 
                   {/* Conversazione agente Rank Checker — sempre visibile per lead inbound */}
-                  {isRankCheckerInboundSource(contact.source) && contact.phone && (
+                  {hasGraderContext(contact) && contact.phone && (
                     <div className="border-t pt-4">
                       <WaConversationPanel
                         contact={contact}
@@ -2016,8 +2085,47 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                     </div>
                   )}
 
+                        {/* 🆕 Info Richiesta Chiamata */}
+                        {contact.properties?.callRequested && (
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-lg">📞</span>
+                              <span className="text-xs font-bold text-green-800">CHIAMATA RICHIESTA</span>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-600">Preferenza:</span>
+                                <span className="text-sm font-bold text-green-700 capitalize">
+                                  {contact.properties.callPreference as string || 'Non specificata'}
+                                </span>
+                              </div>
+                              {contact.properties.callRequestedAt && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-600">Richiesta il:</span>
+                                  <span className="text-xs text-gray-700">
+                                    {new Date(contact.properties.callRequestedAt as string).toLocaleString('it-IT', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </span>
+                                </div>
+                              )}
+                              {contact.properties.callNote && (
+                                <div className="mt-2 pt-2 border-t border-green-200">
+                                  <span className="text-xs text-gray-600 block mb-1">Note:</span>
+                                  <span className="text-xs text-gray-800 italic">
+                                    {contact.properties.callNote as string}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                   {/* Dati Rank Checker (per lead organici e prova gratuita) */}
-                  {(contact.source === 'inbound_rank_checker' || contact.source === 'inbound_prova_gratuita') && contact.rankCheckerData && (
+                  {contact.rankCheckerData && (contact.rankCheckerData.placeId || contact.properties?.rankCheckerReport) && (
                     <div className="border-t pt-4">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg">🎯</span>
@@ -2154,44 +2262,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                           </a>
                         )}
 
-                        {/* 🆕 Info Richiesta Chiamata */}
-                        {contact.properties?.callRequested && (
-                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-lg">📞</span>
-                              <span className="text-xs font-bold text-green-800">CHIAMATA RICHIESTA</span>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs text-gray-600">Preferenza:</span>
-                                <span className="text-sm font-bold text-green-700 capitalize">
-                                  {contact.properties.callPreference as string || 'Non specificata'}
-                                </span>
-                              </div>
-                              {contact.properties.callRequestedAt && (
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-600">Richiesta il:</span>
-                                  <span className="text-xs text-gray-700">
-                                    {new Date(contact.properties.callRequestedAt as string).toLocaleString('it-IT', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </span>
-                                </div>
-                              )}
-                              {contact.properties.callNote && (
-                                <div className="mt-2 pt-2 border-t border-green-200">
-                                  <span className="text-xs text-gray-600 block mb-1">Note:</span>
-                                  <span className="text-xs text-gray-800 italic">
-                                    {contact.properties.callNote as string}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
+
                       </div>
                     </div>
                   )}
@@ -2218,10 +2289,7 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
                             </label>
                             <Input
                               value={String(editedContact.properties?.[key] || '')}
-                              onChange={(e) => setEditedContact(prev => prev ? {
-                                ...prev,
-                                properties: { ...prev.properties, [key]: e.target.value }
-                              } : null)}
+                              onChange={(e) => editContactProperty(key, e.target.value)}
                               onBlur={() => handleSaveContact()}
                               placeholder={`Inserisci ${key.replace(/_/g, ' ')}`}
                             />
@@ -2590,4 +2658,4 @@ export function ContactDetailSidebar({ contact, isOpen, onClose, onContactUpdate
       </div>
     </>
   );
-} 
+}

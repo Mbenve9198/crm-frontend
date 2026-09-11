@@ -4,6 +4,15 @@ export type WaEngagementStatus =
   | "autoresponder_only"
   | "empty";
 
+export function hasGraderContext(contact?: {
+  source?: string;
+  properties?: Record<string, string | number | boolean>;
+  rankCheckerData?: { placeId?: string };
+} | null): boolean {
+  return !!contact && (isRankCheckerInboundSource(contact.source) ||
+    !!contact.properties?.graderLeadId || !!contact.properties?.rankCheckerReport || !!contact.rankCheckerData?.placeId);
+}
+
 export type WaMessageLike = {
   role: string;
   metadata?: { isAutoresponder?: boolean };

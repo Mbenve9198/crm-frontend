@@ -110,6 +110,7 @@ export type Contact = {
 
 // Tipo specifico per l'aggiornamento del contatto
 export type UpdateContactRequest = {
+  propertyUpdates?: Record<string, string | number | boolean | null>;
   name?: string;
   email?: string;
   phone?: string;

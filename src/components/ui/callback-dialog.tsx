@@ -14,7 +14,7 @@ import { Textarea } from "./textarea";
 import { Loader2, Trash2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { Contact } from "@/types/contact";
-import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
+import { CallbackPicker } from "@/components/ui/callback-picker";
 import { buildCallbackIso, formatShortcutLabel, toDateStr, toTimeStr } from "@/lib/callback-schedule";
 
 interface CallbackDialogProps {
@@ -111,7 +111,7 @@ export function CallbackDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <DialerCallbackPicker
+          <CallbackPicker
             dateStr={dateStr}
             timeStr={timeStr}
             disabled={busy}

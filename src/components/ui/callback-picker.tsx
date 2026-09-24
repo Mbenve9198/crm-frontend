@@ -7,30 +7,39 @@ import {
   toDateStr,
 } from "@/lib/callback-schedule";
 
-interface DialerCallbackPickerProps {
+interface CallbackPickerProps {
   dateStr: string;
   timeStr: string;
   disabled?: boolean;
   onDateChange: (value: string) => void;
   onTimeChange: (value: string) => void;
+  /** Se presente, mostra "Nessun richiamo" per svuotare la data già scelta. */
+  onClear?: () => void;
 }
 
-export function DialerCallbackPicker({
+/**
+ * Sceglie data e ora di un richiamo. Parte sempre vuoto: il richiamo è una
+ * scelta esplicita dell'operatore, mai un default precompilato.
+ */
+export function CallbackPicker({
   dateStr,
   timeStr,
   disabled = false,
   onDateChange,
   onTimeChange,
-}: DialerCallbackPickerProps) {
+  onClear,
+}: CallbackPickerProps) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-gray-700">
-        Quando richiami?
+        Richiamo <span className="font-normal text-gray-500">(opzionale)</span>
         {dateStr ? (
           <span className="ml-1 text-blue-700">
             {formatShortcutLabel(dateStr)} · {timeStr}
           </span>
-        ) : null}
+        ) : (
+          <span className="ml-1 font-normal text-gray-400">nessuno</span>
+        )}
       </p>
       <div className="flex flex-wrap gap-1.5">
         {CALLBACK_SHORTCUTS.map((s) => {
@@ -52,6 +61,16 @@ export function DialerCallbackPicker({
             </button>
           );
         })}
+        {onClear && dateStr ? (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onClear}
+            className="rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700"
+          >
+            Nessun richiamo
+          </button>
+        ) : null}
       </div>
       <div className="flex gap-2">
         <input

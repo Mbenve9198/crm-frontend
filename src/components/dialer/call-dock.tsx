@@ -378,8 +378,10 @@ export function DialerCallDock({
     onBusyChange?.(busy || callState === "wrap");
   }, [busy, callState, onBusyChange]);
 
+  // min-h-0 + overflow: su schermi bassi (tablet da 600px) la chiusura call
+  // scorre dentro il dock invece di spingere fuori la pagina.
   return (
-    <div className="border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
+    <div className="min-h-0 overflow-y-auto overscroll-contain border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
       {callState === "idle" && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="min-w-0 flex-1">

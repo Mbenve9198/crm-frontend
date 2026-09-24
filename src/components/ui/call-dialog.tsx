@@ -35,6 +35,12 @@ const newOutcomes: Exclude<CallOutcome, 'not-logged'>[] = [
   'first-call', 'follow-up', 'callback', 'voicemail', 'no-answer', 'free-trial-sold', 'deal-closed',
 ];
 
+const WINDOW_WIDTH = 360;
+/** Distanza minima dai bordi dello schermo. */
+const WINDOW_MARGIN = 8;
+/** Altezza stimata allo step iniziale, usata solo per centrare all'apertura. */
+const INITIAL_HEIGHT = 480;
+
 export interface CallDialogHandle {
   close: () => Promise<void>;
 }
@@ -68,25 +74,60 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
 
   // Posizione finestra flottante
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [viewportHeight, setViewportHeight] = useState(0);
   const [initialized, setInitialized] = useState(false);
   const dragging = useRef(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const contentInnerRef = useRef<HTMLDivElement>(null);
 
   // Posizione iniziale: centro dello schermo
   useEffect(() => {
     if (isOpen && !initialized) {
       setPosition({
-        x: (window.innerWidth - 360) / 2,
-        y: (window.innerHeight - 480) / 2,
+        x: Math.max(WINDOW_MARGIN, (window.innerWidth - WINDOW_WIDTH) / 2),
+        y: Math.max(WINDOW_MARGIN, (window.innerHeight - INITIAL_HEIGHT) / 2),
       });
+      setViewportHeight(window.innerHeight);
       setInitialized(true);
     }
     if (!isOpen) setInitialized(false);
   }, [isOpen, initialized]);
 
-  // Drag handlers
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
+  // Tiene la finestra dentro lo schermo. Se il contenuto cresce (lo step di
+  // esito col richiamo è alto ~700px) o lo schermo cambia (rotazione del
+  // tablet), la sposta in su quanto basta; se non ci sta comunque, il
+  // contenuto scorre dentro la finestra invece di uscire dal fondo.
+  useEffect(() => {
+    if (!isOpen || !initialized) return;
+    const fit = () => {
+      const header = headerRef.current;
+      const content = contentRef.current;
+      if (!header || !content) return;
+      const vh = window.innerHeight;
+      const naturalHeight = header.offsetHeight + content.scrollHeight + 2; // + bordi
+      setViewportHeight(vh);
+      setPosition((prev) => {
+        const x = Math.max(WINDOW_MARGIN, Math.min(prev.x, window.innerWidth - WINDOW_WIDTH - WINDOW_MARGIN));
+        const y = Math.max(WINDOW_MARGIN, Math.min(prev.y, vh - WINDOW_MARGIN - naturalHeight));
+        return x === prev.x && y === prev.y ? prev : { x, y };
+      });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    if (contentInnerRef.current) observer.observe(contentInnerRef.current);
+    window.addEventListener('resize', fit);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', fit);
+    };
+  }, [isOpen, initialized]);
+
+  // Drag handlers: pointer events così si trascina anche col dito su tablet.
+  const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return;
     dragging.current = true;
     dragOffset.current = {
       x: e.clientX - position.x,
@@ -96,19 +137,21 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
   }, [position]);
 
   useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => {
+    const onPointerMove = (e: PointerEvent) => {
       if (!dragging.current) return;
       setPosition({
-        x: Math.max(0, Math.min(window.innerWidth - 360, e.clientX - dragOffset.current.x)),
-        y: Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y)),
+        x: Math.max(WINDOW_MARGIN, Math.min(window.innerWidth - WINDOW_WIDTH - WINDOW_MARGIN, e.clientX - dragOffset.current.x)),
+        y: Math.max(WINDOW_MARGIN, Math.min(window.innerHeight - 100, e.clientY - dragOffset.current.y)),
       });
     };
-    const onMouseUp = () => { dragging.current = false; };
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
+    const onPointerUp = () => { dragging.current = false; };
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
     return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
     };
   }, []);
 
@@ -454,13 +497,18 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
       {isOpen && initialized && (
         <div
           ref={windowRef}
-          style={{ left: position.x, top: position.y }}
-          className="fixed z-50 w-[360px] bg-white rounded-xl shadow-2xl border border-gray-200 select-none"
+          style={{
+            left: position.x,
+            top: position.y,
+            maxHeight: viewportHeight ? viewportHeight - position.y - WINDOW_MARGIN : undefined,
+          }}
+          className="fixed z-50 flex w-[360px] flex-col overflow-hidden bg-white rounded-xl shadow-2xl border border-gray-200 select-none"
         >
           {/* Barra del titolo — drag handle */}
           <div
-            className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-t-xl border-b border-gray-200 cursor-grab active:cursor-grabbing"
-            onMouseDown={onMouseDown}
+            ref={headerRef}
+            className="flex shrink-0 touch-none items-center justify-between px-4 py-3 bg-gray-50 rounded-t-xl border-b border-gray-200 cursor-grab active:cursor-grabbing"
+            onPointerDown={onPointerDown}
           >
             <div className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-gray-600" />
@@ -479,9 +527,9 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
             </div>
           </div>
 
-          {/* Contenuto */}
-          <div className="p-4">
-            {renderContent()}
+          {/* Contenuto: scorre se la finestra non ci sta nello schermo */}
+          <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+            <div ref={contentInnerRef}>{renderContent()}</div>
           </div>
         </div>
       )}

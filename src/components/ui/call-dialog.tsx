@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
+import { createPortal } from "react-dom";
 import { Phone, AlertCircle, CheckCircle, XCircle, GripHorizontal } from "lucide-react";
 import { Button } from "./button";
 import { Textarea } from "./textarea";
@@ -82,6 +83,7 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
   const headerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const contentInnerRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
 
   // Posizione iniziale: centro dello schermo
   useEffect(() => {
@@ -107,7 +109,8 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
       const content = contentRef.current;
       if (!header || !content) return;
       const vh = window.innerHeight;
-      const naturalHeight = header.offsetHeight + content.scrollHeight + 2; // + bordi
+      const footerHeight = footerRef.current?.offsetHeight ?? 0;
+      const naturalHeight = header.offsetHeight + content.scrollHeight + footerHeight + 2; // + bordi
       setViewportHeight(vh);
       setPosition((prev) => {
         const x = Math.max(WINDOW_MARGIN, Math.min(prev.x, window.innerWidth - WINDOW_WIDTH - WINDOW_MARGIN));
@@ -450,24 +453,6 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
                 già fissato in precedenza viene rimosso.
               </p>
             </div>
-            <div className="flex flex-col gap-2">
-              <Button
-                onClick={() => void handleSaveAndClose(true)}
-                disabled={!outcome || !callbackDate || isSaving}
-                className="w-full"
-                title={callbackDate ? undefined : 'Scegli data e ora del richiamo'}
-              >
-                {isSaving ? 'Salvando...' : 'Salva con richiamo'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => void handleSaveAndClose(false)}
-                disabled={!outcome || isSaving}
-                className="w-full"
-              >
-                {isSaving ? 'Salvando...' : 'Salva senza richiamo'}
-              </Button>
-            </div>
           </div>
         );
 
@@ -488,13 +473,42 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
     }
   };
 
+  // Azioni di salvataggio fuori dall'area che scorre: restano sempre visibili,
+  // anche se su un tablet lo scroll della finestra non dovesse partire.
+  const renderFooter = () => {
+    if (callState !== 'finished') return null;
+    return (
+      <div ref={footerRef} className="flex shrink-0 flex-col gap-2 border-t border-gray-200 bg-white p-3">
+        <Button
+          onClick={() => void handleSaveAndClose(true)}
+          disabled={!outcome || !callbackDate || isSaving}
+          className="w-full"
+          title={callbackDate ? undefined : 'Scegli data e ora del richiamo'}
+        >
+          {isSaving ? 'Salvando...' : 'Salva con richiamo'}
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => void handleSaveAndClose(false)}
+          disabled={!outcome || isSaving}
+          className="w-full"
+        >
+          {isSaving ? 'Salvando...' : 'Salva senza richiamo'}
+        </Button>
+      </div>
+    );
+  };
+
   return (
     <>
       {open === undefined && (
         <div onClick={() => setIsOpen(true)}>{trigger}</div>
       )}
 
-      {isOpen && initialized && (
+      {/* Portale sul body: la finestra viene aperta anche dentro la scheda contatto,
+          che ha una trasformazione CSS; lì un position: fixed non è più ancorato
+          allo schermo e su Safari iOS lo scroll interno può non funzionare. */}
+      {isOpen && initialized && typeof document !== 'undefined' && createPortal(
         <div
           ref={windowRef}
           style={{
@@ -531,7 +545,10 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
           <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
             <div ref={contentInnerRef}>{renderContent()}</div>
           </div>
-        </div>
+
+          {renderFooter()}
+        </div>,
+        document.body
       )}
     </>
   );

@@ -5,9 +5,11 @@ import { Phone, AlertCircle, CheckCircle, XCircle, GripHorizontal } from "lucide
 import { Button } from "./button";
 import { Textarea } from "./textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select";
+import { CallbackPicker } from "./callback-picker";
 import { Call, CallOutcome, InitiateCallRequest } from "@/types/call";
 import { Contact } from "@/types/contact";
 import { apiClient } from "@/lib/api";
+import { buildCallbackIso } from "@/lib/callback-schedule";
 import { toast } from "sonner";
 
 type CallState = 'idle' | 'initiating' | 'calling-you' | 'connecting-contact' | 'in-conversation' | 'finished' | 'error';
@@ -57,6 +59,9 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
   const [callResult, setCallResult] = useState<Call | null>(null);
   const [notes, setNotes] = useState('');
   const [outcome, setOutcome] = useState<CallOutcome | ''>('');
+  // Richiamo: vuoto di default, si fissa solo se l'operatore lo sceglie.
+  const [callbackDate, setCallbackDate] = useState('');
+  const [callbackTime, setCallbackTime] = useState('10:00');
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [waitingStartTime, setWaitingStartTime] = useState<number | null>(null);
@@ -149,7 +154,15 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
     }
   };
 
-  const handleSaveResult = async (outcomeOverride?: CallOutcome) => {
+  /**
+   * opts.callback: 'set' fissa il richiamo scelto, 'clear' lo azzera (anche uno
+   * fissato in precedenza). Senza opts il richiamo non viene toccato: serve per
+   * i salvataggi automatici come 'not-logged'.
+   */
+  const handleSaveResult = async (
+    outcomeOverride?: CallOutcome,
+    opts?: { callback?: 'set' | 'clear' }
+  ) => {
     const finalOutcome = outcomeOverride ?? (outcome as CallOutcome);
     if (!finalOutcome) {
       toast.error('Seleziona un esito per la chiamata');
@@ -163,8 +176,32 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
         notes: outcomeOverride ? undefined : notes,
         outcome: finalOutcome,
       });
+
+      let callbackSaved = false;
+      let callbackFailed = false;
+      if (opts?.callback) {
+        const wantsCallback = opts.callback === 'set' && Boolean(callbackDate);
+        try {
+          await apiClient.updateContactCallback(contact._id, {
+            callbackAt: wantsCallback ? buildCallbackIso(callbackDate, callbackTime) : null,
+            callbackNote: wantsCallback
+              ? (notes.trim() || 'Richiamo fissato dopo la chiamata').slice(0, 300)
+              : null,
+          });
+          callbackSaved = wantsCallback;
+        } catch {
+          callbackFailed = true;
+        }
+      }
+
       if (finalOutcome !== 'not-logged') {
-        toast.success('Esito chiamata salvato con successo');
+        if (callbackFailed) {
+          toast.error('Esito salvato, ma il richiamo non è stato salvato');
+        } else {
+          toast.success(
+            callbackSaved ? 'Esito salvato · richiamo fissato' : 'Esito chiamata salvato con successo'
+          );
+        }
       }
       if (onCallComplete && callResult) onCallComplete(callResult);
     } catch {
@@ -213,19 +250,23 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
     setCallResult(null);
     setNotes('');
     setOutcome('');
+    setCallbackDate('');
+    setCallbackTime('10:00');
     setErrorMessage('');
     setWaitingStartTime(null);
   };
 
   useImperativeHandle(ref, () => ({ close: handleClose }));
 
-  const handleSaveAndClose = async () => {
-    await handleSaveResult();
+  const handleSaveAndClose = async (withCallback: boolean) => {
+    await handleSaveResult(undefined, { callback: withCallback ? 'set' : 'clear' });
     setIsOpen(false);
     setCallState('idle');
     setCallResult(null);
     setNotes('');
     setOutcome('');
+    setCallbackDate('');
+    setCallbackTime('10:00');
     setErrorMessage('');
     setWaitingStartTime(null);
   };
@@ -352,9 +393,36 @@ export const CallDialog = forwardRef<CallDialogHandle, CallDialogProps>(function
               <label className="text-sm font-medium">Note (opzionale)</label>
               <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Aggiungi note sulla conversazione..." rows={3} />
             </div>
-            <div className="flex gap-2">
-              <Button onClick={handleSaveAndClose} disabled={!outcome || isSaving} className="w-full">
-                {isSaving ? 'Salvando...' : 'Salva Esito'}
+            <div className="rounded-lg border border-gray-200 p-3">
+              <CallbackPicker
+                dateStr={callbackDate}
+                timeStr={callbackTime}
+                disabled={isSaving}
+                onDateChange={setCallbackDate}
+                onTimeChange={setCallbackTime}
+                onClear={() => setCallbackDate('')}
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                Lo status del contatto non cambia. Salvando senza richiamo, un richiamo
+                già fissato in precedenza viene rimosso.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={() => void handleSaveAndClose(true)}
+                disabled={!outcome || !callbackDate || isSaving}
+                className="w-full"
+                title={callbackDate ? undefined : 'Scegli data e ora del richiamo'}
+              >
+                {isSaving ? 'Salvando...' : 'Salva con richiamo'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => void handleSaveAndClose(false)}
+                disabled={!outcome || isSaving}
+                className="w-full"
+              >
+                {isSaving ? 'Salvando...' : 'Salva senza richiamo'}
               </Button>
             </div>
           </div>

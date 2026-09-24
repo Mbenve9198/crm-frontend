@@ -11,14 +11,14 @@ import {
   DiscoveryNotes,
   formatDialerNotes,
 } from "@/components/dialer/script-panel";
-import { DialerCallbackPicker } from "@/components/dialer/callback-picker";
+import { CallbackPicker } from "@/components/ui/callback-picker";
 import { wrapUpDialer } from "@/lib/dialer-api";
 import {
   buildCallbackIso,
   formatCallbackAt,
   futureCallConstraint,
-  nextCallbackDateTime,
 } from "@/lib/callback-schedule";
+import { getAllStatuses, getStatusLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
 import {
   CheckCircle,
@@ -37,8 +37,16 @@ type CallState =
   | "wrap"
   | "error";
 
-type CallbackPolicy = "required" | "optional" | "clear";
+/**
+ * "clear": un tap salva e passa al prossimo, azzerando un eventuale richiamo.
+ * "optional": resta aperta la scelta se fissare il richiamo oppure no.
+ */
+type CallbackPolicy = "optional" | "clear";
 
+/**
+ * statusHint è il solo status applicato senza intervento manuale, e non vale mai
+ * "da richiamare": quello si mette solo dal selettore status della chiusura.
+ */
 const DIALER_OUTCOMES: {
   value: CallOutcome;
   label: string;
@@ -46,15 +54,18 @@ const DIALER_OUTCOMES: {
   callback: CallbackPolicy;
 }[] = [
   { value: "free-trial-sold", label: "Trial accettato", statusHint: "free trial iniziato", callback: "clear" },
-  { value: "callback", label: "Da richiamare", statusHint: "da richiamare", callback: "required" },
+  { value: "callback", label: "Da richiamare", callback: "optional" },
   { value: "first-call", label: "Prima call / contattato", statusHint: "contattato", callback: "clear" },
-  { value: "no-answer", label: "Nessuna risposta", statusHint: "da richiamare", callback: "optional" },
-  { value: "voicemail", label: "Segreteria", statusHint: "da richiamare", callback: "optional" },
+  { value: "no-answer", label: "Nessuna risposta", callback: "optional" },
+  { value: "voicemail", label: "Segreteria", callback: "optional" },
   { value: "not-interested", label: "Non interessato", statusHint: "do_not_contact", callback: "clear" },
-  { value: "follow-up", label: "Follow-up fissato", statusHint: "da richiamare", callback: "required" },
+  { value: "follow-up", label: "Follow-up fissato", callback: "optional" },
 ];
 
-function wrapUpMrrForStatus(status: ContactStatus): number | undefined {
+const STATUS_OPTIONS = getAllStatuses();
+
+function wrapUpMrrForStatus(status?: ContactStatus): number | undefined {
+  if (!status) return undefined;
   switch (status) {
     case "interessato":
     case "qr code inviato":
@@ -120,7 +131,8 @@ export function DialerCallDock({
   const [waitingStartTime, setWaitingStartTime] = useState<number | null>(null);
 
   const [outcome, setOutcome] = useState<CallOutcome | "">("");
-  const [status, setStatus] = useState<ContactStatus>(contact.status);
+  /** "" = non cambiare lo status del contatto. */
+  const [statusOverride, setStatusOverride] = useState<ContactStatus | "">("");
   const [callbackDate, setCallbackDate] = useState("");
   const [callbackTime, setCallbackTime] = useState("10:00");
   const [isSaving, setIsSaving] = useState(false);
@@ -139,26 +151,20 @@ export function DialerCallDock({
     consecutiveNoPhoneRef.current = 0;
   }, [autoDialNonce]);
 
-  // Reset dock when switching contact (not mid-call). In wrap non sovrascrivere
-  // lo status scelto dall'esito (altrimenti "Non interessato" torna a da contattare).
+  // Reset dock when switching contact (not mid-call).
   useEffect(() => {
     if (callState !== "idle" && callState !== "wrap" && callState !== "error") return;
-    if (contactIdRef.current === contact._id) {
-      if (callState !== "wrap" || !outcome) {
-        setStatus(contact.status);
-      }
-      return;
-    }
+    if (contactIdRef.current === contact._id) return;
     contactIdRef.current = contact._id;
     dialInFlightRef.current = false;
     setCallState("idle");
     setCallResult(null);
     setOutcome("");
+    setStatusOverride("");
     setCallbackDate("");
     setCallbackTime("10:00");
     setErrorMessage("");
-    setStatus(contact.status);
-  }, [contact._id, contact.status, callState, outcome]);
+  }, [contact._id, callState]);
 
   useEffect(() => {
     if (callState === "idle" || callState === "error" || callState === "wrap") {
@@ -271,21 +277,25 @@ export function DialerCallDock({
 
   const callbackPolicy: CallbackPolicy =
     DIALER_OUTCOMES.find((o) => o.value === outcome)?.callback ?? "clear";
-  const showCallbackPicker = callbackPolicy === "required" || callbackPolicy === "optional";
+  const showCallbackPicker = callbackPolicy === "optional";
 
-  const handleSaveAndNext = useCallback(async (pickedOutcome?: CallOutcome) => {
+  /**
+   * withCallback = l'operatore ha scelto di fissare il richiamo. Senza quella
+   * scelta si salva callbackAt: null, che azzera anche un richiamo precedente.
+   */
+  const handleSaveAndNext = useCallback(async (
+    pickedOutcome?: CallOutcome,
+    opts?: { withCallback?: boolean }
+  ) => {
     const selected = pickedOutcome || outcome;
     if (!selected) {
       toast.error("Seleziona un esito");
       return;
     }
     const meta = DIALER_OUTCOMES.find((o) => o.value === selected);
-    const nextStatus = meta?.statusHint ?? status;
-    const policy = meta?.callback ?? "clear";
-    if (policy === "required" && !callbackDate) {
-      toast.error("Fissa data e ora del richiamo");
-      return;
-    }
+    // Lo status cambia solo se lo scegli a mano o se l'esito chiude il lead:
+    // fissare un richiamo non porta mai il contatto in "da richiamare".
+    const nextStatus = statusOverride || meta?.statusHint;
     if (isSavingRef.current) return;
     isSavingRef.current = true;
     setIsSaving(true);
@@ -299,12 +309,11 @@ export function DialerCallDock({
           null
       );
 
-      let callbackAt: string | null = null;
-      let callbackNote: string | null = null;
-      if (policy === "required" || (policy === "optional" && callbackDate)) {
-        callbackAt = buildCallbackIso(callbackDate, callbackTime);
-        callbackNote = (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300);
-      }
+      const wantsCallback = Boolean(opts?.withCallback && callbackDate);
+      const callbackAt = wantsCallback ? buildCallbackIso(callbackDate, callbackTime) : null;
+      const callbackNote = wantsCallback
+        ? (notes.trim() || mergedNotes.trim() || "Richiamo fissato dal dialer").slice(0, 300)
+        : null;
 
       await wrapUpDialer({
         contactId: contact._id,
@@ -317,10 +326,11 @@ export function DialerCallDock({
         mrr: wrapUpMrrForStatus(nextStatus),
       });
 
-      toast.success("Salvato");
+      toast.success(wantsCallback ? "Salvato · richiamo fissato" : "Salvato");
       setCallState("idle");
       setCallResult(null);
       setOutcome("");
+      setStatusOverride("");
       setCallbackDate("");
       setCallbackTime("10:00");
       onNotesChange("");
@@ -336,7 +346,7 @@ export function DialerCallDock({
     outcome,
     callResult,
     notes,
-    status,
+    statusOverride,
     contact._id,
     contact.cardSummary?.reviews,
     currentReviews,
@@ -353,17 +363,12 @@ export function DialerCallDock({
     if (isSavingRef.current) return;
     setOutcome(value);
     const meta = DIALER_OUTCOMES.find((o) => o.value === value);
-    if (meta?.statusHint) setStatus(meta.statusHint);
+    // Gli esiti che chiudono la call salvano subito e azzerano il richiamo.
+    // Sugli altri non precompiliamo nulla: la data la mette l'operatore.
     if (meta?.callback === "clear") {
       setCallbackDate("");
       setCallbackTime("10:00");
       void handleSaveAndNext(value);
-      return;
-    }
-    if ((meta?.callback === "required" || meta?.callback === "optional") && !callbackDate) {
-      const slot = nextCallbackDateTime();
-      setCallbackDate(slot.dateStr);
-      setCallbackTime(slot.timeStr);
     }
   };
 
@@ -457,7 +462,8 @@ export function DialerCallDock({
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-900">Chiudi la call</p>
           <p className="text-xs text-gray-500">
-            Un tap su Non interessato / Trial / Contattato salva e passa al prossimo. Per i richiami fissa data e ora.
+            Un tap su Non interessato / Trial / Contattato salva e passa al prossimo.
+            Sugli altri esiti scegli tu se fissare un richiamo: lo status non cambia da solo.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {DIALER_OUTCOMES.map((o) => (
@@ -477,13 +483,37 @@ export function DialerCallDock({
             ))}
           </div>
 
+          <div className="space-y-1">
+            <label
+              htmlFor="wrap-status"
+              className="text-xs font-medium text-gray-700"
+            >
+              Status contatto
+            </label>
+            <select
+              id="wrap-status"
+              value={statusOverride}
+              onChange={(e) => setStatusOverride(e.target.value as ContactStatus | "")}
+              disabled={isSaving}
+              className="flex h-9 w-full rounded-md border border-gray-200 bg-white px-2 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <option value="">Non cambiare ({getStatusLabel(contact.status)})</option>
+              {STATUS_OPTIONS.map((st) => (
+                <option key={st} value={st}>
+                  {getStatusLabel(st)}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {showCallbackPicker && (
-            <DialerCallbackPicker
+            <CallbackPicker
               dateStr={callbackDate}
               timeStr={callbackTime}
               disabled={isSaving}
               onDateChange={setCallbackDate}
               onTimeChange={setCallbackTime}
+              onClear={() => setCallbackDate("")}
             />
           )}
 
@@ -497,17 +527,45 @@ export function DialerCallDock({
             />
           </div>
 
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={() => {
-              void handleSaveAndNext();
-            }}
-            disabled={isSaving || !outcome}
-          >
-            {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            {autoDial ? "Salva e chiama prossimo" : "Salva e prossimo"}
-          </Button>
+          {showCallbackPicker ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                size="lg"
+                onClick={() => {
+                  void handleSaveAndNext(undefined, { withCallback: false });
+                }}
+                disabled={isSaving}
+              >
+                {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                Salva senza richiamo
+              </Button>
+              <Button
+                className="flex-1"
+                size="lg"
+                onClick={() => {
+                  void handleSaveAndNext(undefined, { withCallback: true });
+                }}
+                disabled={isSaving || !callbackDate}
+                title={callbackDate ? undefined : "Scegli data e ora del richiamo"}
+              >
+                Salva con richiamo
+              </Button>
+            </div>
+          ) : (
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => {
+                void handleSaveAndNext();
+              }}
+              disabled={isSaving || !outcome}
+            >
+              {isSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              {autoDial ? "Salva e chiama prossimo" : "Salva e prossimo"}
+            </Button>
+          )}
         </div>
       )}
 
